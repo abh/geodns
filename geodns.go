@@ -34,6 +34,7 @@ type Zone struct {
 	Origin    string
 	Labels    labels
 	LenLabels int
+	Options   Options
 }
 
 var (
@@ -63,17 +64,13 @@ func main() {
 	Zone.Origin = "ntppool.org"
 	Zone.LenLabels = dns.LenLabels(Zone.Origin)
 
-	Options := new(Options)
-
-	//var objmap map[string]json.RawMessage
-	var objmap map[string]interface{}
-
 	b, err := ioutil.ReadFile("ntppool.org.json")
 	if err != nil {
 		panic(err)
 	}
 
 	if err == nil {
+		var objmap map[string]interface{}
 		err := json.Unmarshal(b, &objmap)
 		if err != nil {
 			panic(err)
@@ -89,9 +86,9 @@ func main() {
 			case "ttl", "serial":
 				switch option := k; option {
 				case "ttl":
-					Options.Ttl = int(v.(float64))
+					Zone.Options.Ttl = int(v.(float64))
 				case "serial":
-					Options.Serial = int(v.(float64))
+					Zone.Options.Serial = int(v.(float64))
 				}
 				continue
 
@@ -100,7 +97,7 @@ func main() {
 			}
 		}
 
-		setupZoneData(data, Zone, Options)
+		setupZoneData(data, Zone)
 
 	}
 
@@ -108,10 +105,10 @@ func main() {
 
 	//fmt.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
 
-	runServe(Zone, Options)
+	runServe(Zone)
 }
 
-func setupZoneData(data map[string]interface{}, Zone *Zone, Options *Options) {
+func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 	var recordTypes = map[string]uint16{
 		"a":    dns.TypeA,
@@ -160,8 +157,8 @@ func setupZoneData(data map[string]interface{}, Zone *Zone, Options *Options) {
 				record := new(Record)
 
 				var h dns.RR_Header
-				fmt.Println("TTL OPTIONS", Options.Ttl)
-				h.Ttl = uint32(Options.Ttl)
+				// fmt.Println("TTL OPTIONS", Zone.Options.Ttl)
+				h.Ttl = uint32(Zone.Options.Ttl)
 				h.Class = dns.ClassINET
 				h.Rrtype = dnsType
 

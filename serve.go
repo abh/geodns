@@ -16,7 +16,7 @@ func getQuestionName(z *Zone, req *dns.Msg) string {
 	return strings.Join(ql, ".")
 }
 
-func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone, opt *Options) {
+func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name, dns.Rr_str[req.Question[0].Qtype], req.MsgHdr.Id, w.RemoteAddr())
 
 	fmt.Println("Got request", req)
@@ -67,9 +67,9 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone, opt *Options) {
 	return
 }
 
-func runServe(Zone *Zone, Options *Options) {
+func runServe(Zone *Zone) {
 
-	dns.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) { serve(w, r, Zone, Options) })
+	dns.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) { serve(w, r, Zone) })
 	// Only listen on UDP
 	go func() {
 		if err := dns.ListenAndServe(*listen, "udp", nil); err != nil {
