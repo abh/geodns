@@ -104,6 +104,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone, Options *Options) {
 	var recordTypes = map[string]uint16{
 		"a":    dns.TypeA,
 		"aaaa": dns.TypeAAAA,
+		"ns":   dns.TypeNS,
 	}
 
 	for dk, dv := range data {
@@ -112,15 +113,17 @@ func setupZoneData(data map[string]interface{}, Zone *Zone, Options *Options) {
 
 		Zone.Labels[dk] = new(Label)
 		label := Zone.Labels[dk]
-		//make([]Server, len(Records))
+
+		// BUG(ask) Read 'ttl' value in label data
 
 		for rType, dnsType := range recordTypes {
+
 			fmt.Println(rType, dnsType)
 
 			var rdata = dv.(map[string]interface{})[rType]
 
 			if rdata == nil {
-				fmt.Printf("No %s records for label %s", rType, dk)
+				fmt.Printf("No %s records for label %s\n", rType, dk)
 				continue
 			}
 
@@ -139,47 +142,54 @@ func setupZoneData(data map[string]interface{}, Zone *Zone, Options *Options) {
 			label.Records[dnsType] = make([]Record, len(Records[rType]))
 
 			for i := 0; i < len(Records[rType]); i++ {
-				foo := Records[rType][i].([]interface{})
-				//fmt.Printf("FOO TYPE %T %s\n", foo, foo)
-				record := new(Record)
-				ip := foo[0].(string)
 
-				var err error
-				record.Weight, err = strconv.Atoi(foo[1].(string))
-				if err != nil {
-					panic("Error converting weight to integer")
-				}
+				fmt.Printf("RT %T %#v\n", Records[rType][i], Records[rType][i])
+
+				record := new(Record)
 
 				var h dns.RR_Header
 				fmt.Println("TTL OPTIONS", Options.Ttl)
 				h.Ttl = uint32(Options.Ttl)
 				h.Class = dns.ClassINET
-
 				h.Rrtype = dnsType
 
-				fmt.Println("H", h)
-
 				switch dnsType {
-				case dns.TypeA:
-					rr := new(dns.RR_A)
-					rr.Hdr = h
-					rr.A = net.ParseIP(ip)
-					if rr.A == nil {
-						panic("Bad A record")
+				case dns.TypeA, dns.TypeAAAA:
+					rec := Records[rType][i].([]interface{})
+					ip := rec[0].(string)
+					var err error
+					record.Weight, err = strconv.Atoi(rec[1].(string))
+					if err != nil {
+						panic("Error converting weight to integer")
 					}
-					record.RR = rr
-				case dns.TypeAAAA:
-					rr := new(dns.RR_AAAA)
-					rr.Hdr = h
-					rr.AAAA = net.ParseIP(ip)
-					if rr.AAAA == nil {
-						panic("Bad AAAA record")
+					switch dnsType {
+					case dns.TypeA:
+						rr := &dns.RR_A{Hdr: h}
+						rr.A = net.ParseIP(ip)
+						if rr.A == nil {
+							panic("Bad A record")
+						}
+						record.RR = rr
+					case dns.TypeAAAA:
+						rr := &dns.RR_AAAA{Hdr: h}
+						rr.AAAA = net.ParseIP(ip)
+						if rr.AAAA == nil {
+							panic("Bad AAAA record")
+						}
+						record.RR = rr
 					}
+				case dns.TypeNS:
+					ns := Records[rType][i].(string)
+					if h.Ttl < 43000 {
+						h.Ttl = 43200
+					}
+					rr := &dns.RR_NS{Hdr: h}
+					rr.Ns = ns
 					record.RR = rr
+
 				default:
 					fmt.Println("type:", rType)
 					panic("Don't know how to handle this type")
-
 				}
 
 				if record.RR == nil {

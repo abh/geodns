@@ -24,7 +24,8 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone, opt *Options) {
 	m.MsgHdr.Authoritative = true
 
 	// TODO: Function to find appropriate label with records
-	if region, ok := z.Labels["2"]; ok {
+	if region, ok := z.Labels[""]; ok {
+		fmt.Println("REG", region)
 		if region_rr := region.Records[req.Question[0].Qtype]; region_rr != nil {
 			//fmt.Printf("REGION_RR %T %v\n", region_rr, region_rr)
 			max := len(region_rr)
