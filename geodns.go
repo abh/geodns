@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"strconv"
+	//"strings"
 )
 
 type Options struct {
@@ -30,8 +31,9 @@ type Label struct {
 type labels map[string]*Label
 
 type Zone struct {
-	Origin string
-	Labels labels
+	Origin    string
+	Labels    labels
+	LenLabels int
 }
 
 var (
@@ -39,6 +41,13 @@ var (
 	flaglog = flag.Bool("log", false, "be more verbose")
 	flagrun = flag.Bool("run", false, "run server")
 )
+
+func (z *Zone) findLabels(s string) *Label {
+	if label, ok := z.Labels[s]; ok {
+		return label
+	}
+	return nil
+}
 
 func main() {
 
@@ -50,7 +59,10 @@ func main() {
 	Zone := new(Zone)
 	Zone.Labels = make(labels)
 
-	Zone.Origin = "ntppool.org" // TODO, read multiple files etc
+	// BUG(ask) Doesn't read multiple .json zone files yet
+	Zone.Origin = "ntppool.org"
+	Zone.LenLabels = dns.LenLabels(Zone.Origin)
+
 	Options := new(Options)
 
 	//var objmap map[string]json.RawMessage
