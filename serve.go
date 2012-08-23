@@ -16,6 +16,8 @@ func getQuestionName(z *Zone, req *dns.Msg) string {
 	return strings.Join(ql, ".")
 }
 
+var geoIP = setupGeoIP()
+
 func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone, zoneName string) {
 	logPrintf("[zone %s/%s] incoming %s %s %d from %s\n", zoneName, z.Origin, req.Question[0].Name, dns.Rr_str[req.Question[0].Qtype], req.MsgHdr.Id, w.RemoteAddr())
 
@@ -27,9 +29,11 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone, zoneName string) {
 
 	raddr := w.RemoteAddr()
 
-	gi := setupGeoIP()
-	country := gi.GetCountry(raddr.String())
-	fmt.Println("Country:", country)
+	var country *string
+	if geoIP != nil {
+		country = geoIP.GetCountry(raddr.String())
+		fmt.Println("Country:", country)
+	}
 
 	m := new(dns.Msg)
 	m.SetReply(req)
