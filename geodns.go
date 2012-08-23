@@ -140,7 +140,20 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 			Records := make(map[string][]interface{})
 
-			Records[rType] = rdata.([]interface{})
+			switch rdata.(type) {
+			case map[string]interface{}:
+				// Handle map[ns2.example.net:<nil> ns1.example.net:<nil>]
+				tmp := make([]interface{}, 0)
+				for rdata_k, rdata_v := range rdata.(map[string]interface{}) {
+					if rdata_v == nil {
+						rdata_v = ""
+					}
+					tmp = append(tmp, []string{rdata_k, rdata_v.(string)})
+				}
+				Records[rType] = tmp
+			default:
+				Records[rType] = rdata.([]interface{})
+			}
 
 			//fmt.Printf("RECORDS %s TYPE-REC %T\n", Records, Records)
 
@@ -167,9 +180,14 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					rec := Records[rType][i].([]interface{})
 					ip := rec[0].(string)
 					var err error
-					record.Weight, err = strconv.Atoi(rec[1].(string))
-					if err != nil {
-						panic("Error converting weight to integer")
+					switch rec[1].(type) {
+					case string:
+						record.Weight, err = strconv.Atoi(rec[1].(string))
+						if err != nil {
+							panic("Error converting weight to integer")
+						}
+					case float64:
+						record.Weight = int(rec[1].(float64))
 					}
 					switch dnsType {
 					case dns.TypeA:
@@ -188,12 +206,27 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						record.RR = rr
 					}
 				case dns.TypeNS:
-					ns := Records[rType][i].(string)
+					rec := Records[rType][i]
+					rr := &dns.RR_NS{Hdr: h}
+
+					switch rec.(type) {
+					case string:
+						rr.Ns = rec.(string)
+					case []string:
+						recl := rec.([]string)
+						fmt.Println("RECL:", recl)
+						rr.Ns = recl[0]
+						if len(recl[1]) > 0 {
+							fmt.Println("NS records with names syntax not supported")
+						}
+					default:
+						fmt.Printf("Data: %T %#v\n", rec, rec)
+						panic("Unrecognized NS format/syntax")
+					}
+
 					if h.Ttl < 43000 {
 						h.Ttl = 43200
 					}
-					rr := &dns.RR_NS{Hdr: h}
-					rr.Ns = ns
 					record.RR = rr
 
 				default:
