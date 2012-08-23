@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"path"
 	"strconv"
-	//"strings"
+	"strings"
 )
 
 type Options struct {
@@ -29,6 +30,8 @@ type Label struct {
 }
 
 type labels map[string]*Label
+
+type Zones map[string]*Zone
 
 type Zone struct {
 	Origin    string
@@ -57,17 +60,42 @@ func main() {
 	}
 	flag.Parse()
 
-	Zone := new(Zone)
-	Zone.Labels = make(labels)
+	dirName := "dns"
 
-	// BUG(ask) Doesn't read multiple .json zone files yet
-	Zone.Origin = "ntppool.org"
-	Zone.LenLabels = dns.LenLabels(Zone.Origin)
-
-	b, err := ioutil.ReadFile("ntppool.org.json")
+	dir, err := ioutil.ReadDir(dirName)
 	if err != nil {
 		panic(err)
 	}
+
+	Zones := make(Zones)
+
+	for i, file := range dir {
+		fileName := file.Name()
+		if !strings.HasSuffix(strings.ToLower(fileName), ".json") {
+			continue
+		}
+		zoneName := fileName[0:strings.LastIndex(fileName, ".")]
+		fmt.Println("FILE:", i, file, zoneName)
+		config := readZoneFile(path.Join(dirName, fileName))
+		config.Origin = zoneName
+		Zones[zoneName] = config
+	}
+
+	fmt.Println("ZONES", Zones)
+
+	runServe(&Zones)
+}
+
+func readZoneFile(fileName string) *Zone {
+
+	b, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		panic(err)
+	}
+
+	Zone := new(Zone)
+	Zone.Labels = make(labels)
+	Zone.LenLabels = dns.LenLabels(Zone.Origin)
 
 	if err == nil {
 		var objmap map[string]interface{}
@@ -105,7 +133,7 @@ func main() {
 
 	//fmt.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
 
-	runServe(Zone)
+	return Zone
 }
 
 func setupZoneData(data map[string]interface{}, Zone *Zone) {
@@ -127,12 +155,10 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 		for rType, dnsType := range recordTypes {
 
-			fmt.Println(rType, dnsType)
-
 			var rdata = dv.(map[string]interface{})[rType]
 
 			if rdata == nil {
-				fmt.Printf("No %s records for label %s\n", rType, dk)
+				//fmt.Printf("No %s records for label %s\n", rType, dk)
 				continue
 			}
 
