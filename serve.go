@@ -12,14 +12,13 @@ import (
 func getQuestionName(z *Zone, req *dns.Msg) string {
 	lx := dns.SplitLabels(req.Question[0].Name)
 	ql := lx[0 : len(lx)-z.LenLabels-1]
-	fmt.Println("LX:", ql, lx, z.LenLabels)
 	return strings.Join(ql, ".")
 }
 
 var geoIP = setupGeoIP()
 
-func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone, zoneName string) {
-	logPrintf("[zone %s/%s] incoming %s %s %d from %s\n", zoneName, z.Origin, req.Question[0].Name, dns.Rr_str[req.Question[0].Qtype], req.MsgHdr.Id, w.RemoteAddr())
+func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
+	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name, dns.Rr_str[req.Question[0].Qtype], req.MsgHdr.Id, w.RemoteAddr())
 
 	fmt.Printf("ZONE DATA  %#v\n", z)
 
@@ -77,15 +76,19 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone, zoneName string) {
 	return
 }
 
+func setupServer(Zone Zone) func(dns.ResponseWriter, *dns.Msg) {
+	return func(w dns.ResponseWriter, r *dns.Msg) {
+		fmt.Println("Going to call serve with", Zone.Origin)
+		serve(w, r, &Zone)
+	}
+}
+
 func runServe(Zones *Zones) {
 
 	for zoneName, Zone := range *Zones {
 		// BUG(ask) For some reason the closure here gets setup so only the second zone gets used
 		fmt.Printf("Configuring zoneName %s %#v\n", zoneName, Zone)
-		dns.HandleFunc(zoneName, func(w dns.ResponseWriter, r *dns.Msg) {
-			fmt.Println("Going to call serve with", zoneName)
-			serve(w, r, Zone, zoneName)
-		})
+		dns.HandleFunc(zoneName, setupServer(*Zone))
 	}
 	// Only listen on UDP for now
 	go func() {
