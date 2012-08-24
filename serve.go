@@ -1,8 +1,8 @@
 package main
 
 import (
-	"dns"
 	"fmt"
+	"github.com/miekg/dns"
 	"log"
 	"os"
 	"os/signal"
