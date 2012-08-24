@@ -1,10 +1,10 @@
 package main
 
 import (
-	"dns"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/miekg/dns"
 	"io/ioutil"
 	"net"
 	"path"
