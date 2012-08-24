@@ -46,11 +46,29 @@ var (
 	flagrun = flag.Bool("run", false, "run server")
 )
 
-func (z *Zone) findLabels(s string) *Label {
-	if label, ok := z.Labels[s]; ok {
-		return label
+func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
+
+	selectors := []string{}
+
+	if len(cc) > 0 {
+		if len(s) > 0 {
+			cc = s + "." + cc
+		}
+		selectors = append(selectors, cc)
 	}
-	return nil
+	// TODO(ask) Add continent, see https://github.com/abh/geodns/issues/1
+	selectors = append(selectors, s)
+
+	for _, name := range selectors {
+		if label, ok := z.Labels[name]; ok {
+			// return the label if it has the right records
+			if label.Records[qtype] != nil {
+				fmt.Println("ALBEL", label)
+				return label
+			}
+		}
+	}
+	return z.Labels[s]
 }
 
 func main() {

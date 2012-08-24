@@ -18,7 +18,11 @@ func getQuestionName(z *Zone, req *dns.Msg) string {
 var geoIP = setupGeoIP()
 
 func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
-	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name, dns.Rr_str[req.Question[0].Qtype], req.MsgHdr.Id, w.RemoteAddr())
+
+	qtype := req.Question[0].Qtype
+
+	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
+		dns.Rr_str[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
 	fmt.Printf("ZONE DATA  %#v\n", z)
 
@@ -39,7 +43,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	m.MsgHdr.Authoritative = true
 
 	// TODO(ask): Function to find appropriate label with records based on the country/continent	
-	labels := z.findLabels(label)
+	labels := z.findLabels(label, *country, qtype)
 	if labels == nil {
 		// return NXDOMAIN
 		m.SetRcode(req, dns.RcodeNameError)
@@ -50,7 +54,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	fmt.Println("Has the label, looking for records")
 
-	if region_rr := labels.Records[req.Question[0].Qtype]; region_rr != nil {
+	if region_rr := labels.Records[qtype]; region_rr != nil {
 		//fmt.Printf("REGION_RR %T %v\n", region_rr, region_rr)
 		max := len(region_rr)
 		if max > 4 {
@@ -78,7 +82,6 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 func setupServer(Zone Zone) func(dns.ResponseWriter, *dns.Msg) {
 	return func(w dns.ResponseWriter, r *dns.Msg) {
-		fmt.Println("Going to call serve with", Zone.Origin)
 		serve(w, r, &Zone)
 	}
 }
@@ -86,8 +89,6 @@ func setupServer(Zone Zone) func(dns.ResponseWriter, *dns.Msg) {
 func runServe(Zones *Zones) {
 
 	for zoneName, Zone := range *Zones {
-		// BUG(ask) For some reason the closure here gets setup so only the second zone gets used
-		fmt.Printf("Configuring zoneName %s %#v\n", zoneName, Zone)
 		dns.HandleFunc(zoneName, setupServer(*Zone))
 	}
 	// Only listen on UDP for now
