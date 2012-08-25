@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/miekg/dns"
 	"log"
 	"os"
@@ -24,16 +23,16 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
 		dns.Rr_str[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
-	//fmt.Printf("ZONE DATA  %#v\n", z)
+	//log.Printf("ZONE DATA  %#v\n", z)
 
-	fmt.Println("Got request", req)
+	log.Println("Got request", req)
 
 	label := getQuestionName(z, req)
 
 	var country *string
 	if geoIP != nil {
 		country = geoIP.GetCountry(w.RemoteAddr().String())
-		fmt.Println("Country:", country)
+		log.Println("Country:", country)
 	}
 
 	m := new(dns.Msg)
@@ -55,15 +54,15 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		return
 	}
 
-	fmt.Println("Has the label, looking for records")
+	log.Println("Has the label, looking for records")
 
 	if servers := labels.Picker(qtype, 4); servers != nil {
 		var rrs []dns.RR
 		for _, record := range servers {
 			rr := record.RR
-			fmt.Println("RR", rr)
+			log.Println("RR", rr)
 			rr.Header().Name = req.Question[0].Name
-			fmt.Println(rr)
+			log.Println(rr)
 			rrs = append(rrs, rr)
 		}
 		m.Answer = rrs
@@ -73,7 +72,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		m.Ns = append(m.Ns, z.Labels[""].Records[dns.TypeSOA][0].RR)
 	}
 
-	fmt.Println("Writing reply")
+	log.Println("Writing reply")
 
 	w.Write(m)
 	return

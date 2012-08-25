@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"github.com/abh/geoip"
+	"log"
 )
 
 func setupGeoIP() *geoip.GeoIP {
@@ -10,7 +10,7 @@ func setupGeoIP() *geoip.GeoIP {
 
 	gi := geoip.GeoIP_Open(file)
 	if gi == nil {
-		fmt.Printf("Could not open GeoIP database\n")
+		log.Printf("Could not open GeoIP database\n")
 		return nil
 	}
 	return gi

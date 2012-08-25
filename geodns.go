@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"github.com/miekg/dns"
 	"io/ioutil"
+	"log"
 	"net"
 	"path"
 	"sort"
@@ -83,6 +83,8 @@ func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
 
 func main() {
 
+	log.SetPrefix("geodns ")
+
 	flag.Usage = func() {
 		flag.PrintDefaults()
 	}
@@ -103,12 +105,12 @@ func main() {
 			continue
 		}
 		zoneName := fileName[0:strings.LastIndex(fileName, ".")]
-		fmt.Println("FILE:", i, file, zoneName)
+		log.Println("FILE:", i, file, zoneName)
 		config := readZoneFile(zoneName, path.Join(dirName, fileName))
 		Zones[zoneName] = config
 	}
 
-	fmt.Println("ZONES", Zones)
+	log.Println("ZONES", Zones)
 
 	runServe(&Zones)
 }
@@ -131,12 +133,12 @@ func readZoneFile(zoneName, fileName string) *Zone {
 		if err != nil {
 			panic(err)
 		}
-		//fmt.Println(objmap)
+		//log.Println(objmap)
 
 		var data map[string]interface{}
 
 		for k, v := range objmap {
-			fmt.Printf("k: %s v: %#v, T: %T\n", k, v, v)
+			log.Printf("k: %s v: %#v, T: %T\n", k, v, v)
 
 			switch k {
 			case "ttl", "serial":
@@ -157,9 +159,9 @@ func readZoneFile(zoneName, fileName string) *Zone {
 
 	}
 
-	//fmt.Printf("ZO T: %T %s\n", Zones["0.us"], Zones["0.us"])
+	//log.Printf("ZO T: %T %s\n", Zones["0.us"], Zones["0.us"])
 
-	//fmt.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
+	//log.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
 
 	return Zone
 }
@@ -174,7 +176,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 	for dk, dv := range data {
 
-		fmt.Printf("K %s V %s TYPE-V %T\n", dk, dv, dv)
+		log.Printf("K %s V %s TYPE-V %T\n", dk, dv, dv)
 
 		Zone.Labels[dk] = new(Label)
 		label := Zone.Labels[dk]
@@ -186,11 +188,11 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 			var rdata = dv.(map[string]interface{})[rType]
 
 			if rdata == nil {
-				//fmt.Printf("No %s records for label %s\n", rType, dk)
+				//log.Printf("No %s records for label %s\n", rType, dk)
 				continue
 			}
 
-			fmt.Printf("rdata %s TYPE-R %T\n", rdata, rdata)
+			log.Printf("rdata %s TYPE-R %T\n", rdata, rdata)
 
 			records := make(map[string][]interface{})
 
@@ -209,7 +211,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				records[rType] = rdata.([]interface{})
 			}
 
-			//fmt.Printf("RECORDS %s TYPE-REC %T\n", Records, Records)
+			//log.Printf("RECORDS %s TYPE-REC %T\n", Records, Records)
 
 			if label.Records == nil {
 				label.Records = make(map[uint16]Records)
@@ -220,12 +222,12 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 			for i := 0; i < len(records[rType]); i++ {
 
-				fmt.Printf("RT %T %#v\n", records[rType][i], records[rType][i])
+				log.Printf("RT %T %#v\n", records[rType][i], records[rType][i])
 
 				record := new(Record)
 
 				var h dns.RR_Header
-				// fmt.Println("TTL OPTIONS", Zone.Options.Ttl)
+				// log.Println("TTL OPTIONS", Zone.Options.Ttl)
 				h.Ttl = uint32(Zone.Options.Ttl)
 				h.Class = dns.ClassINET
 				h.Rrtype = dnsType
@@ -270,13 +272,13 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						rr.Ns = rec.(string)
 					case []string:
 						recl := rec.([]string)
-						fmt.Println("RECL:", recl)
+						log.Println("RECL:", recl)
 						rr.Ns = recl[0]
 						if len(recl[1]) > 0 {
-							fmt.Println("NS records with names syntax not supported")
+							log.Println("NS records with names syntax not supported")
 						}
 					default:
-						fmt.Printf("Data: %T %#v\n", rec, rec)
+						log.Printf("Data: %T %#v\n", rec, rec)
 						panic("Unrecognized NS format/syntax")
 					}
 
@@ -286,7 +288,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					record.RR = rr
 
 				default:
-					fmt.Println("type:", rType)
+					log.Println("type:", rType)
 					panic("Don't know how to handle this type")
 				}
 
@@ -304,7 +306,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 	setupSOA(Zone)
 
-	//fmt.Println(Zones[k])
+	//log.Println(Zones[k])
 }
 
 func setupSOA(Zone *Zone) {
@@ -322,12 +324,12 @@ func setupSOA(Zone *Zone) {
 		" 5400 5400 2419200 " +
 		strconv.Itoa(Zone.Options.Ttl)
 
-	fmt.Println("SOA: ", s)
+	log.Println("SOA: ", s)
 
 	rr, err := dns.NewRR(s)
 
 	if err != nil {
-		fmt.Println("SOA Error", err)
+		log.Println("SOA Error", err)
 		panic("Could not setup SOA")
 	}
 
