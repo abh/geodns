@@ -78,6 +78,10 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		m.Answer = rrs
 	}
 
+	if len(m.Answer) == 0 {
+		m.Ns = append(m.Ns, z.Labels[""].Records[dns.TypeSOA][0].RR)
+	}
+
 	fmt.Println("Writing reply")
 
 	w.Write(m)
