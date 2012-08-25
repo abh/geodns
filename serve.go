@@ -30,19 +30,17 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	label := getQuestionName(z, req)
 
-	raddr := w.RemoteAddr()
-
 	var country *string
 	if geoIP != nil {
-		country = geoIP.GetCountry(raddr.String())
+		country = geoIP.GetCountry(w.RemoteAddr().String())
 		fmt.Println("Country:", country)
 	}
 
 	m := new(dns.Msg)
 	m.SetReply(req)
-	ednsFromRequest(req, m)
-
-	m.MsgHdr.Authoritative = true
+	if e := m.IsEdns0(); e != nil {
+		m.SetEdns0(4096, e.Do())
+	}
 	m.Authoritative = true
 
 	labels := z.findLabels(label, *country, qtype)
@@ -114,14 +112,4 @@ func runServe(Zones *Zones) {
 		}
 	}
 
-}
-
-func ednsFromRequest(req, m *dns.Msg) {
-	for _, r := range req.Extra {
-		if r.Header().Rrtype == dns.TypeOPT {
-			m.SetEdns0(4096, r.(*dns.RR_OPT).Do())
-			return
-		}
-	}
-	return
 }
