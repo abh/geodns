@@ -40,14 +40,17 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	m := new(dns.Msg)
 	m.SetReply(req)
-	m.MsgHdr.Authoritative = true
+	ednsFromRequest(req, m)
 
-	// TODO(ask): Function to find appropriate label with records based on the country/continent	
+	m.MsgHdr.Authoritative = true
+	m.Authoritative = true
+
 	labels := z.findLabels(label, *country, qtype)
 	if labels == nil {
 		// return NXDOMAIN
 		m.SetRcode(req, dns.RcodeNameError)
-		ednsFromRequest(req, m)
+		m.Authoritative = true
+
 		w.Write(m)
 		return
 	}
@@ -75,7 +78,6 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	fmt.Println("Writing reply")
 
-	ednsFromRequest(req, m)
 	w.Write(m)
 	return
 }
