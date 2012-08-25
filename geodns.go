@@ -296,7 +296,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				label.Records[dnsType][i] = *record
 			}
-			if label.Weight > 0 {
+			if label.Weight[dnsType] > 0 {
 				sort.Sort(RecordsByWeight{label.Records[dnsType]})
 			}
 		}
