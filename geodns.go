@@ -63,7 +63,6 @@ func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
 		if label, ok := z.Labels[name]; ok {
 			// return the label if it has the right records
 			if label.Records[qtype] != nil {
-				fmt.Println("ALBEL", label)
 				return label
 			}
 		}
@@ -94,8 +93,7 @@ func main() {
 		}
 		zoneName := fileName[0:strings.LastIndex(fileName, ".")]
 		fmt.Println("FILE:", i, file, zoneName)
-		config := readZoneFile(path.Join(dirName, fileName))
-		config.Origin = zoneName
+		config := readZoneFile(zoneName, path.Join(dirName, fileName))
 		Zones[zoneName] = config
 	}
 
@@ -104,7 +102,7 @@ func main() {
 	runServe(&Zones)
 }
 
-func readZoneFile(fileName string) *Zone {
+func readZoneFile(zoneName, fileName string) *Zone {
 
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -114,6 +112,7 @@ func readZoneFile(fileName string) *Zone {
 	Zone := new(Zone)
 	Zone.Labels = make(labels)
 	Zone.LenLabels = dns.LenLabels(Zone.Origin)
+	Zone.Origin = zoneName
 
 	if err == nil {
 		var objmap map[string]interface{}
@@ -286,5 +285,39 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 			}
 		}
 	}
+
+	setupSOA(Zone)
+
 	//fmt.Println(Zones[k])
+}
+
+func setupSOA(Zone *Zone) {
+	label := Zone.Labels[""]
+
+	primaryNs := "ns"
+
+	if record, ok := label.Records[dns.TypeNS]; ok {
+		primaryNs = record[0].RR.(*dns.RR_NS).Ns
+	}
+
+	s := Zone.Origin + ". 3600 IN SOA " +
+		primaryNs + " support.bitnames.com. " +
+		strconv.Itoa(Zone.Options.Serial) +
+		" 5400 5400 2419200 " +
+		strconv.Itoa(Zone.Options.Ttl)
+
+	fmt.Println("SOA: ", s)
+
+	rr, err := dns.NewRR(s)
+
+	if err != nil {
+		fmt.Println("SOA Error", err)
+		panic("Could not setup SOA")
+	}
+
+	record := Record{RR: rr}
+
+	label.Records[dns.TypeSOA] = make([]Record, 1)
+	label.Records[dns.TypeSOA][0] = record
+
 }

@@ -51,6 +51,8 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		m.SetRcode(req, dns.RcodeNameError)
 		m.Authoritative = true
 
+		m.Ns = []dns.RR{z.Labels[""].Records[dns.TypeSOA][0].RR}
+
 		w.Write(m)
 		return
 	}
