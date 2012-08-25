@@ -59,14 +59,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	fmt.Println("Has the label, looking for records")
 
-	if region_rr := labels.Records[qtype]; region_rr != nil {
-		//fmt.Printf("REGION_RR %T %v\n", region_rr, region_rr)
-		max := len(region_rr)
-		if max > 4 {
-			max = 4
-		}
-		// TODO(ask) Pick random servers based on weight, not just the first 'max' entries
-		servers := region_rr[0:max]
+	if servers := labels.Picker(qtype, 4); servers != nil {
 		var rrs []dns.RR
 		for _, record := range servers {
 			rr := record.RR

@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -22,11 +23,21 @@ type Record struct {
 	Weight int
 }
 
+type Records []Record
+
+func (s Records) Len() int      { return len(s) }
+func (s Records) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+type RecordsByWeight struct{ Records }
+
+func (s RecordsByWeight) Less(i, j int) bool { return s.Records[i].Weight > s.Records[j].Weight }
+
 type Label struct {
 	Label    string
 	MaxHosts int
 	Ttl      int
-	Records  map[uint16][]Record
+	Records  map[uint16]Records
+	Weight   map[uint16]int
 }
 
 type labels map[string]*Label
@@ -181,7 +192,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 			fmt.Printf("rdata %s TYPE-R %T\n", rdata, rdata)
 
-			Records := make(map[string][]interface{})
+			records := make(map[string][]interface{})
 
 			switch rdata.(type) {
 			case map[string]interface{}:
@@ -193,22 +204,23 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					}
 					tmp = append(tmp, []string{rdata_k, rdata_v.(string)})
 				}
-				Records[rType] = tmp
+				records[rType] = tmp
 			default:
-				Records[rType] = rdata.([]interface{})
+				records[rType] = rdata.([]interface{})
 			}
 
 			//fmt.Printf("RECORDS %s TYPE-REC %T\n", Records, Records)
 
 			if label.Records == nil {
-				label.Records = make(map[uint16][]Record)
+				label.Records = make(map[uint16]Records)
+				label.Weight = make(map[uint16]int)
 			}
 
-			label.Records[dnsType] = make([]Record, len(Records[rType]))
+			label.Records[dnsType] = make(Records, len(records[rType]))
 
-			for i := 0; i < len(Records[rType]); i++ {
+			for i := 0; i < len(records[rType]); i++ {
 
-				fmt.Printf("RT %T %#v\n", Records[rType][i], Records[rType][i])
+				fmt.Printf("RT %T %#v\n", records[rType][i], records[rType][i])
 
 				record := new(Record)
 
@@ -220,7 +232,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				switch dnsType {
 				case dns.TypeA, dns.TypeAAAA:
-					rec := Records[rType][i].([]interface{})
+					rec := records[rType][i].([]interface{})
 					ip := rec[0].(string)
 					var err error
 					switch rec[1].(type) {
@@ -229,6 +241,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						if err != nil {
 							panic("Error converting weight to integer")
 						}
+						label.Weight[dnsType] += record.Weight
 					case float64:
 						record.Weight = int(rec[1].(float64))
 					}
@@ -249,7 +262,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						record.RR = rr
 					}
 				case dns.TypeNS:
-					rec := Records[rType][i]
+					rec := records[rType][i]
 					rr := &dns.RR_NS{Hdr: h}
 
 					switch rec.(type) {
@@ -282,6 +295,9 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				}
 
 				label.Records[dnsType][i] = *record
+			}
+			if label.Weight > 0 {
+				sort.Sort(RecordsByWeight{label.Records[dnsType]})
 			}
 		}
 	}
