@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 )
 
 func (label *Label) Picker(dnsType uint16, max int) Records {
@@ -20,14 +21,36 @@ func (label *Label) Picker(dnsType uint16, max int) Records {
 			max = rr_count
 		}
 
-		fmt.Println("Total weight", label.Weight[dnsType])
+		servers := make([]Record, len(label_rr))
+		copy(servers, label_rr)
+		result := make([]Record, max)
+		sum := label.Weight[dnsType]
+		sum2 := 0
+		for _, r := range servers {
+			sum2 += r.Weight
+		}
 
-		// TODO(ask) Pick random servers based on weight, not just the first 'max' entries
-		servers := label_rr[0:max]
+		for si := 0; si < max; si++ {
+			n := rand.Intn(sum + 1)
+			s := 0
 
-		fmt.Println("SERVERS", servers)
+			for i := range servers {
+				s += int(servers[i].Weight)
+				if s >= n {
+					fmt.Println("Picked record", i, servers[i])
+					sum -= servers[i].Weight
+					result[si] = servers[i]
 
-		return servers
+					// remove the server from the list
+					servers = append(servers[:i], servers[i+1:]...)
+					break
+				}
+			}
+		}
+
+		fmt.Println("SERVERS", result)
+
+		return result
 	}
 	return nil
 }

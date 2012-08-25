@@ -24,7 +24,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
 		dns.Rr_str[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
-	fmt.Printf("ZONE DATA  %#v\n", z)
+	//fmt.Printf("ZONE DATA  %#v\n", z)
 
 	fmt.Println("Got request", req)
 
