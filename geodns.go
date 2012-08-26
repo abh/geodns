@@ -84,6 +84,7 @@ func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
 func main() {
 
 	log.SetPrefix("geodns ")
+	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
 
 	flag.Usage = func() {
 		flag.PrintDefaults()
