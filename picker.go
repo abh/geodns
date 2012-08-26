@@ -25,10 +25,6 @@ func (label *Label) Picker(dnsType uint16, max int) Records {
 		copy(servers, label_rr)
 		result := make([]Record, max)
 		sum := label.Weight[dnsType]
-		sum2 := 0
-		for _, r := range servers {
-			sum2 += r.Weight
-		}
 
 		for si := 0; si < max; si++ {
 			n := rand.Intn(sum + 1)
