@@ -29,7 +29,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	label := getQuestionName(z, req)
 
-	var country *string
+	var country string
 	if geoIP != nil {
 		country = geoIP.GetCountry(w.RemoteAddr().String())
 		log.Println("Country:", country)
@@ -42,7 +42,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 	m.Authoritative = true
 
-	labels := z.findLabels(label, *country, qtype)
+	labels := z.findLabels(label, country, qtype)
 	if labels == nil {
 		// return NXDOMAIN
 		m.SetRcode(req, dns.RcodeNameError)
