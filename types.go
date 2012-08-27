@@ -42,6 +42,14 @@ type Zone struct {
 	Options   Options
 }
 
+func (l *Label) firstRR(dnsType uint16) dns.RR {
+	return l.Records[dnsType][0].RR
+}
+
+func (z *Zone) SoaRR() dns.RR {
+	return z.Labels[""].firstRR(dns.TypeSOA)
+}
+
 func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
 
 	selectors := []string{}
@@ -58,6 +66,7 @@ func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
 	for _, name := range selectors {
 		if label, ok := z.Labels[name]; ok {
 			// return the label if it has the right records
+			// TODO(ask) Should this also look for CNAME or aliases?
 			if label.Records[qtype] != nil {
 				return label
 			}

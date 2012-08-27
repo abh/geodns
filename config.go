@@ -123,9 +123,11 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 	var recordTypes = map[string]uint16{
-		"a":    dns.TypeA,
-		"aaaa": dns.TypeAAAA,
-		"ns":   dns.TypeNS,
+		"a":     dns.TypeA,
+		"aaaa":  dns.TypeAAAA,
+		"ns":    dns.TypeNS,
+		"cname": dns.TypeCNAME,
+		"alias": dns.TypeMF,
 	}
 
 	for dk, dv := range data {
@@ -134,6 +136,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 		Zone.Labels[dk] = new(Label)
 		label := Zone.Labels[dk]
+		label.Label = dk
 
 		// BUG(ask) Read 'ttl' value in label data
 
@@ -146,13 +149,13 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				continue
 			}
 
-			//log.Printf("rdata %s TYPE-R %T\n", rdata, rdata)
+			log.Printf("rdata %s TYPE-R %T\n", rdata, rdata)
 
 			records := make(map[string][]interface{})
 
 			switch rdata.(type) {
 			case map[string]interface{}:
-				// Handle map[ns2.example.net:<nil> ns1.example.net:<nil>]
+				// Handle NS map syntax, map[ns2.example.net:<nil> ns1.example.net:<nil>]
 				tmp := make([]interface{}, 0)
 				for rdata_k, rdata_v := range rdata.(map[string]interface{}) {
 					if rdata_v == nil {
@@ -160,6 +163,11 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					}
 					tmp = append(tmp, []string{rdata_k, rdata_v.(string)})
 				}
+				records[rType] = tmp
+			case string:
+				// CNAME and alias
+				tmp := make([]interface{}, 1)
+				tmp[0] = rdata.(string)
 				records[rType] = tmp
 			default:
 				records[rType] = rdata.([]interface{})
@@ -185,6 +193,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				h.Ttl = uint32(Zone.Options.Ttl)
 				h.Class = dns.ClassINET
 				h.Rrtype = dnsType
+				h.Name = label.Label + "." + Zone.Origin + "."
 
 				switch dnsType {
 				case dns.TypeA, dns.TypeAAAA:
@@ -217,6 +226,19 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						}
 						record.RR = rr
 					}
+
+				case dns.TypeCNAME:
+					rec := records[rType][i]
+					rr := &dns.RR_CNAME{Hdr: h}
+					rr.Target = rec.(string)
+					record.RR = rr
+
+				case dns.TypeMF:
+					rec := records[rType][i]
+					rr := &dns.RR_MF{Hdr: h}
+					rr.Mf = rec.(string)
+					record.RR = rr
+
 				case dns.TypeNS:
 					rec := records[rType][i]
 					rr := &dns.RR_NS{Hdr: h}

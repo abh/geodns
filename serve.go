@@ -40,13 +40,20 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 	m.Authoritative = true
 
+	// TODO(ask) Fix the findLabels API to make this work better
+	if alias := z.findLabels(label, "", dns.TypeMF); alias != nil &&
+		alias.Records[dns.TypeMF] != nil {
+		// We found an alias record, so pretend the question was for that name instead
+		label = alias.firstRR(dns.TypeMF).(*dns.RR_MF).Mf
+	}
+
 	labels := z.findLabels(label, country, qtype)
 	if labels == nil {
 		// return NXDOMAIN
 		m.SetRcode(req, dns.RcodeNameError)
 		m.Authoritative = true
 
-		m.Ns = []dns.RR{z.Labels[""].Records[dns.TypeSOA][0].RR}
+		m.Ns = []dns.RR{z.SoaRR()}
 
 		w.Write(m)
 		return
@@ -67,7 +74,12 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 
 	if len(m.Answer) == 0 {
-		m.Ns = append(m.Ns, z.Labels[""].Records[dns.TypeSOA][0].RR)
+
+		if cname := z.Labels[label].firstRR(dns.TypeCNAME); cname != nil {
+			m.Answer = append(m.Answer, cname)
+		} else {
+			m.Ns = append(m.Ns, z.SoaRR())
+		}
 	}
 
 	log.Println("Writing reply")
