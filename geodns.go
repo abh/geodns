@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"os/signal"
 )
 
 var (
@@ -26,5 +28,20 @@ func main() {
 	Zones := make(Zones)
 
 	configReader(dirName, Zones)
-	runServe(&Zones)
+	startServer(&Zones)
+
+	if *flagrun {
+		sig := make(chan os.Signal)
+		signal.Notify(sig, os.Interrupt)
+
+	forever:
+		for {
+			select {
+			case <-sig:
+				log.Printf("geodns: signal received, stopping")
+				break forever
+			}
+		}
+	}
+
 }

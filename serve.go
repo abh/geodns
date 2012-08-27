@@ -3,8 +3,6 @@ package main
 import (
 	"github.com/miekg/dns"
 	"log"
-	"os"
-	"os/signal"
 	"strings"
 )
 
@@ -84,31 +82,16 @@ func setupServer(Zone Zone) func(dns.ResponseWriter, *dns.Msg) {
 	}
 }
 
-func runServe(Zones *Zones) {
+func startServer(Zones *Zones) {
 
 	for zoneName, Zone := range *Zones {
 		dns.HandleFunc(zoneName, setupServer(*Zone))
 	}
 	// Only listen on UDP for now
 	go func() {
+		log.Printf("Opening on %s %s", *listen, "udp")
 		if err := dns.ListenAndServe(*listen, "udp", nil); err != nil {
 			log.Fatalf("geodns: failed to setup %s %s", *listen, "udp")
 		}
 	}()
-
-	if *flagrun {
-
-		sig := make(chan os.Signal)
-		signal.Notify(sig, os.Interrupt)
-
-	forever:
-		for {
-			select {
-			case <-sig:
-				log.Printf("geodns: signal received, stopping")
-				break forever
-			}
-		}
-	}
-
 }
