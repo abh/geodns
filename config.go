@@ -77,8 +77,8 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 
 	Zone := new(Zone)
 	Zone.Labels = make(labels)
-	Zone.LenLabels = dns.LenLabels(Zone.Origin)
 	Zone.Origin = zoneName
+	Zone.LenLabels = dns.LenLabels(Zone.Origin)
 
 	if err == nil {
 		var objmap map[string]interface{}

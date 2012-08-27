@@ -8,7 +8,7 @@ import (
 
 func getQuestionName(z *Zone, req *dns.Msg) string {
 	lx := dns.SplitLabels(req.Question[0].Name)
-	ql := lx[0 : len(lx)-z.LenLabels-1]
+	ql := lx[0 : len(lx)-z.LenLabels]
 	return strings.Join(ql, ".")
 }
 
