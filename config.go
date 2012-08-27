@@ -10,27 +10,49 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
+var configLastRead = map[string]time.Time{}
+
 func configReader(dirName string, Zones Zones) {
+	go func() {
+		for {
+			configReadDir(dirName, Zones)
+			time.Sleep(5 * time.Second)
+		}
+	}()
+}
+
+func configReadDir(dirName string, Zones Zones) {
+
 	dir, err := ioutil.ReadDir(dirName)
 	if err != nil {
 		panic(err)
 	}
 
-	for i, file := range dir {
+	var seenFiles = map[string]bool{}
+
+	for _, file := range dir {
 		fileName := file.Name()
 		if !strings.HasSuffix(strings.ToLower(fileName), ".json") {
 			continue
 		}
-		zoneName := fileName[0:strings.LastIndex(fileName, ".")]
-		log.Println("FILE:", i, file, zoneName)
-		config := readZoneFile(zoneName, path.Join(dirName, fileName))
-		Zones[zoneName] = config
-		dns.HandleFunc(zoneName, setupServerFunc(config))
-	}
 
-	log.Println("ZONES", Zones)
+		seenFiles[fileName] = true
+
+		if lastRead, ok := configLastRead[fileName]; !ok || file.ModTime().After(lastRead) {
+			log.Println("Updated file, going to read", fileName)
+			configLastRead[fileName] = file.ModTime()
+			zoneName := fileName[0:strings.LastIndex(fileName, ".")]
+			//log.Println("FILE:", i, file, zoneName)
+			config := readZoneFile(zoneName, path.Join(dirName, fileName))
+			Zones[zoneName] = config
+			dns.HandleFunc(zoneName, setupServerFunc(config))
+		}
+
+		// TODO(ask) Disable zones not seen in two subsequent runs
+	}
 }
 
 func readZoneFile(zoneName, fileName string) *Zone {
