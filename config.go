@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"path"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -45,11 +47,11 @@ func configReadDir(dirName string, Zones Zones) {
 			configLastRead[fileName] = file.ModTime()
 			zoneName := fileName[0:strings.LastIndex(fileName, ".")]
 			//log.Println("FILE:", i, file, zoneName)
-			config := readZoneFile(zoneName, path.Join(dirName, fileName))
-			if config == nil {
-				log.Println("config is nil")
+			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
+			if config == nil || err != nil {
+				log.Println("error reading file: ", err)
 			}
-			if config != nil {
+			if config != nil && err == nil {
 				Zones[zoneName] = config
 				dns.HandleFunc(zoneName, setupServerFunc(config))
 			}
@@ -59,14 +61,15 @@ func configReadDir(dirName string, Zones Zones) {
 	}
 }
 
-func readZoneFile(zoneName, fileName string) *Zone {
+func readZoneFile(zoneName, fileName string) (*Zone, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("reading %s failed: %s", zoneName, err)
+			debug.PrintStack()
 		}
 	}()
 
-	b, err := ioutil.ReadFile(fileName)
+	fh, err := os.Open(fileName)
 	if err != nil {
 		log.Println("Could not read ", fileName, ": ", err)
 		panic(err)
@@ -79,7 +82,8 @@ func readZoneFile(zoneName, fileName string) *Zone {
 
 	if err == nil {
 		var objmap map[string]interface{}
-		err := json.Unmarshal(b, &objmap)
+		decoder := json.NewDecoder(fh)
+		err := decoder.Decode(&objmap)
 		if err != nil {
 			panic(err)
 		}
@@ -113,7 +117,7 @@ func readZoneFile(zoneName, fileName string) *Zone {
 
 	//log.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
 
-	return Zone
+	return Zone, nil
 }
 
 func setupZoneData(data map[string]interface{}, Zone *Zone) {
