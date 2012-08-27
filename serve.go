@@ -76,17 +76,14 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	return
 }
 
-func setupServer(Zone Zone) func(dns.ResponseWriter, *dns.Msg) {
+func setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {
 	return func(w dns.ResponseWriter, r *dns.Msg) {
-		serve(w, r, &Zone)
+		serve(w, r, Zone)
 	}
 }
 
 func startServer(Zones *Zones) {
 
-	for zoneName, Zone := range *Zones {
-		dns.HandleFunc(zoneName, setupServer(*Zone))
-	}
 	// Only listen on UDP for now
 	go func() {
 		log.Printf("Opening on %s %s", *listen, "udp")

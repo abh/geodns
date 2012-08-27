@@ -27,8 +27,8 @@ func main() {
 
 	Zones := make(Zones)
 
-	configReader(dirName, Zones)
-	startServer(&Zones)
+	go configReader(dirName, Zones)
+	go startServer(&Zones)
 
 	if *flagrun {
 		sig := make(chan os.Signal)

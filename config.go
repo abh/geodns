@@ -8,7 +8,6 @@ import (
 	"net"
 	"path"
 	"sort"
-
 	"strconv"
 	"strings"
 )
@@ -28,6 +27,7 @@ func configReader(dirName string, Zones Zones) {
 		log.Println("FILE:", i, file, zoneName)
 		config := readZoneFile(zoneName, path.Join(dirName, fileName))
 		Zones[zoneName] = config
+		dns.HandleFunc(zoneName, setupServerFunc(config))
 	}
 
 	log.Println("ZONES", Zones)
