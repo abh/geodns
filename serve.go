@@ -74,9 +74,11 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 
 	if len(m.Answer) == 0 {
-
-		if cname := z.Labels[label].firstRR(dns.TypeCNAME); cname != nil {
-			m.Answer = append(m.Answer, cname)
+		if labels := z.Labels[label]; labels != nil {
+			if _, ok := labels.Records[dns.TypeCNAME]; ok {
+				cname := labels.firstRR(dns.TypeCNAME)
+				m.Answer = append(m.Answer, cname)
+			}
 		} else {
 			m.Ns = append(m.Ns, z.SoaRR())
 		}
