@@ -68,7 +68,8 @@ func readZoneFile(zoneName, fileName string) *Zone {
 
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		panic("Could not read " + fileName + ": " + err)
+		log.Println("Could not read ", fileName, ": ", err)
+		panic(err)
 	}
 
 	Zone := new(Zone)
