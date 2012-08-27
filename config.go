@@ -56,7 +56,7 @@ func readZoneFile(zoneName, fileName string) *Zone {
 		var data map[string]interface{}
 
 		for k, v := range objmap {
-			log.Printf("k: %s v: %#v, T: %T\n", k, v, v)
+			//log.Printf("k: %s v: %#v, T: %T\n", k, v, v)
 
 			switch k {
 			case "ttl", "serial":
@@ -94,7 +94,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 	for dk, dv := range data {
 
-		log.Printf("K %s V %s TYPE-V %T\n", dk, dv, dv)
+		//log.Printf("K %s V %s TYPE-V %T\n", dk, dv, dv)
 
 		Zone.Labels[dk] = new(Label)
 		label := Zone.Labels[dk]
@@ -110,7 +110,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				continue
 			}
 
-			log.Printf("rdata %s TYPE-R %T\n", rdata, rdata)
+			//log.Printf("rdata %s TYPE-R %T\n", rdata, rdata)
 
 			records := make(map[string][]interface{})
 
@@ -140,7 +140,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 			for i := 0; i < len(records[rType]); i++ {
 
-				log.Printf("RT %T %#v\n", records[rType][i], records[rType][i])
+				//log.Printf("RT %T %#v\n", records[rType][i], records[rType][i])
 
 				record := new(Record)
 
