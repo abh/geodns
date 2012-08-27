@@ -25,7 +25,6 @@ func configReader(dirName string, Zones Zones) {
 }
 
 func configReadDir(dirName string, Zones Zones) {
-
 	dir, err := ioutil.ReadDir(dirName)
 	if err != nil {
 		panic(err)
@@ -47,8 +46,13 @@ func configReadDir(dirName string, Zones Zones) {
 			zoneName := fileName[0:strings.LastIndex(fileName, ".")]
 			//log.Println("FILE:", i, file, zoneName)
 			config := readZoneFile(zoneName, path.Join(dirName, fileName))
-			Zones[zoneName] = config
-			dns.HandleFunc(zoneName, setupServerFunc(config))
+			if config == nil {
+				log.Println("config is nil")
+			}
+			if config != nil {
+				Zones[zoneName] = config
+				dns.HandleFunc(zoneName, setupServerFunc(config))
+			}
 		}
 
 		// TODO(ask) Disable zones not seen in two subsequent runs
@@ -56,10 +60,15 @@ func configReadDir(dirName string, Zones Zones) {
 }
 
 func readZoneFile(zoneName, fileName string) *Zone {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("reading %s failed: %s", zoneName, err)
+		}
+	}()
 
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		panic(err)
+		panic("Could not read " + fileName + ": " + err)
 	}
 
 	Zone := new(Zone)
