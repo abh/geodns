@@ -1,15 +1,32 @@
 package main
 
 import (
+	"github.com/miekg/dns"
 	"math/rand"
 )
 
-func (label *Label) Picker(dnsType uint16, max int) Records {
+func (label *Label) Picker(qtype uint16, max int) Records {
 
-	if label_rr := label.Records[dnsType]; label_rr != nil {
+	if qtype == dns.TypeANY {
+		result := make([]Record, 0)
+		for rtype, _ := range label.Records {
+
+			rtype_records := label.Picker(rtype, max)
+
+			tmp_result := make(Records, len(result)+len(rtype_records))
+
+			copy(tmp_result, result)
+			copy(tmp_result[len(result):], rtype_records)
+			result = tmp_result
+		}
+
+		return result
+	}
+
+	if label_rr := label.Records[qtype]; label_rr != nil {
 
 		// not "balanced", just return all
-		if label.Weight[dnsType] == 0 {
+		if label.Weight[qtype] == 0 {
 			return label_rr
 		}
 
@@ -21,7 +38,7 @@ func (label *Label) Picker(dnsType uint16, max int) Records {
 		servers := make([]Record, len(label_rr))
 		copy(servers, label_rr)
 		result := make([]Record, max)
-		sum := label.Weight[dnsType]
+		sum := label.Weight[qtype]
 
 		for si := 0; si < max; si++ {
 			n := rand.Intn(sum + 1)

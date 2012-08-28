@@ -52,6 +52,11 @@ func (z *Zone) SoaRR() dns.RR {
 
 func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
 
+	if qtype == dns.TypeANY {
+		// short-circuit mostly to avoid subtle bugs later
+		return z.Labels[s]
+	}
+
 	selectors := []string{}
 
 	if len(cc) > 0 {
