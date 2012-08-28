@@ -96,13 +96,11 @@ func setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {
 	}
 }
 
-func startServer(Zones *Zones) {
+func listenAndServe(Zones *Zones) {
 
 	// Only listen on UDP for now
-	go func() {
-		log.Printf("Opening on %s %s", *listen, "udp")
-		if err := dns.ListenAndServe(*listen, "udp", nil); err != nil {
-			log.Fatalf("geodns: failed to setup %s %s", *listen, "udp")
-		}
-	}()
+	log.Printf("Opening on %s %s", *listen, "udp")
+	if err := dns.ListenAndServe(*listen, "udp", nil); err != nil {
+		log.Fatalf("geodns: failed to setup %s %s", *listen, "udp")
+	}
 }
