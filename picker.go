@@ -1,15 +1,12 @@
 package main
 
 import (
-	"log"
 	"math/rand"
 )
 
 func (label *Label) Picker(dnsType uint16, max int) Records {
 
 	if label_rr := label.Records[dnsType]; label_rr != nil {
-
-		log.Printf("REGION_RR %i %T %v\n", len(label_rr), label_rr, label_rr)
 
 		// not "balanced", just return all
 		if label.Weight[dnsType] == 0 {
@@ -33,7 +30,6 @@ func (label *Label) Picker(dnsType uint16, max int) Records {
 			for i := range servers {
 				s += int(servers[i].Weight)
 				if s >= n {
-					log.Println("Picked record", i, servers[i])
 					sum -= servers[i].Weight
 					result[si] = servers[i]
 
@@ -43,8 +39,6 @@ func (label *Label) Picker(dnsType uint16, max int) Records {
 				}
 			}
 		}
-
-		log.Println("SERVERS", result)
 
 		return result
 	}

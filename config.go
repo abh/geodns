@@ -149,7 +149,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				continue
 			}
 
-			log.Printf("rdata %s TYPE-R %T\n", rdata, rdata)
+			//log.Printf("rdata %s TYPE-R %T\n", rdata, rdata)
 
 			records := make(map[string][]interface{})
 
@@ -248,7 +248,6 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						rr.Ns = rec.(string)
 					case []string:
 						recl := rec.([]string)
-						log.Println("RECL:", recl)
 						rr.Ns = recl[0]
 						if len(recl[1]) > 0 {
 							log.Println("NS records with names syntax not supported")

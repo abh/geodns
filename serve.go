@@ -21,16 +21,18 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
 		dns.Rr_str[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
-	//log.Printf("ZONE DATA  %#v\n", z)
-
-	log.Println("Got request", req)
+	if *flaglog {
+		log.Println("Got request", req)
+	}
 
 	label := getQuestionName(z, req)
 
 	var country string
 	if geoIP != nil {
 		country = geoIP.GetCountry(w.RemoteAddr().String())
-		log.Println("Country:", country)
+		if *flaglog {
+			log.Println("Country:", country)
+		}
 	}
 
 	m := new(dns.Msg)
@@ -59,13 +61,10 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		return
 	}
 
-	log.Println("Has the label, looking for records")
-
 	if servers := labels.Picker(qtype, 4); servers != nil {
 		var rrs []dns.RR
 		for _, record := range servers {
 			rr := record.RR
-			log.Println("RR", rr)
 			rr.Header().Name = req.Question[0].Name
 			log.Println(rr)
 			rrs = append(rrs, rr)
@@ -83,8 +82,6 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			m.Ns = append(m.Ns, z.SoaRR())
 		}
 	}
-
-	log.Println("Writing reply")
 
 	w.Write(m)
 	return
