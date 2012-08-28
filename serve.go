@@ -1,9 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/miekg/dns"
 	"log"
+	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
 func getQuestionName(z *Zone, req *dns.Msg) string {
@@ -20,6 +24,9 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
 		dns.Rr_str[qtype], req.MsgHdr.Id, w.RemoteAddr())
+
+	// is this safe/atomic or does it need to go through a channel?
+	qCounter++
 
 	logPrintln("Got request", req)
 
@@ -47,6 +54,14 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	labels := z.findLabels(label, country, qtype)
 	if labels == nil {
+
+		if label == "_status" && (qtype == dns.TypeANY || qtype == dns.TypeTXT) {
+			m.Answer = statusRR(z)
+			m.Authoritative = true
+			w.Write(m)
+			return
+		}
+
 		// return NXDOMAIN
 		m.SetRcode(req, dns.RcodeNameError)
 		m.Authoritative = true
@@ -82,6 +97,31 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	w.Write(m)
 	return
+}
+
+func statusRR(z *Zone) []dns.RR {
+	var h dns.RR_Header
+	h.Ttl = 1
+	h.Class = dns.ClassINET
+	h.Rrtype = dns.TypeTXT
+	h.Name = "_status." + z.Origin + "."
+	rr := &dns.RR_TXT{Hdr: h}
+
+	status := map[string]string{"v": VERSION, "id": *listen}
+
+	var hostname, err = os.Hostname()
+	if err == nil {
+		status["h"] = hostname
+	}
+	status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
+	status["qs"] = strconv.FormatUint(qCounter, 10)
+
+	js, err := json.Marshal(status)
+	//log.Println("status", status, string(js), err)
+	rr.Txt = []string{string(js)}
+	rrs := make([]dns.RR, 1)
+	rrs[0] = rr
+	return rrs
 }
 
 func setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {

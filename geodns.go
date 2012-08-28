@@ -5,7 +5,13 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 )
+
+const VERSION = "2.0"
+
+var timeStarted = time.Now()
+var qCounter uint64 = 0
 
 var (
 	listen  = flag.String("listen", ":8053", "set the listener address")
@@ -18,6 +24,8 @@ func main() {
 	log.SetPrefix("geodns ")
 	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
 	flag.Parse()
+
+	log.Printf("Starting geodns/%s\n", VERSION)
 
 	dirName := "dns"
 
