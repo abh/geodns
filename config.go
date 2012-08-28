@@ -61,6 +61,16 @@ func configReadDir(dirName string, Zones Zones) {
 	}
 }
 
+func setupPgeodnsZone(Zones Zones) {
+	zoneName := "pgeodns"
+	Zone := new(Zone)
+	Zone.Labels = make(labels)
+	Zone.Origin = zoneName
+	Zone.LenLabels = dns.LenLabels(Zone.Origin)
+	Zones[zoneName] = Zone
+	dns.HandleFunc(zoneName, setupServerFunc(Zone))
+}
+
 func readZoneFile(zoneName, fileName string) (*Zone, error) {
 	defer func() {
 		if err := recover(); err != nil {

@@ -31,6 +31,8 @@ func main() {
 
 	Zones := make(Zones)
 
+	setupPgeodnsZone(Zones)
+
 	go configReader(dirName, Zones)
 	go listenAndServe(&Zones)
 
@@ -42,5 +44,4 @@ func main() {
 		log.Printf("geodns: signal received, stopping")
 		os.Exit(0)
 	}
-
 }
