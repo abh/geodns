@@ -67,6 +67,11 @@ func setupPgeodnsZone(Zones Zones) {
 	Zone.Labels = make(labels)
 	Zone.Origin = zoneName
 	Zone.LenLabels = dns.LenLabels(Zone.Origin)
+	label := new(Label)
+	label.Records = make(map[uint16]Records)
+	label.Weight = make(map[uint16]int)
+	Zone.Labels[""] = label
+	setupSOA(Zone)
 	Zones[zoneName] = Zone
 	dns.HandleFunc(zoneName, setupServerFunc(Zone))
 }
