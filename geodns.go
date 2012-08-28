@@ -34,14 +34,9 @@ func main() {
 		sig := make(chan os.Signal)
 		signal.Notify(sig, os.Interrupt)
 
-	forever:
-		for {
-			select {
-			case <-sig:
-				log.Printf("geodns: signal received, stopping")
-				break forever
-			}
-		}
+		<-sig
+		log.Printf("geodns: signal received, stopping")
+		os.Exit(0)
 	}
 
 }
