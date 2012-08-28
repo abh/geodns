@@ -149,6 +149,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 		//log.Printf("K %s V %s TYPE-V %T\n", dk, dv, dv)
 
+		dk = strings.ToLower(dk)
 		Zone.Labels[dk] = new(Label)
 		label := Zone.Labels[dk]
 		label.Label = dk
