@@ -273,6 +273,8 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						panic("Unrecognized NS format/syntax")
 					}
 
+					rr.Ns = dns.Fqdn(rr.Ns)
+
 					if h.Ttl < 43000 {
 						h.Ttl = 43200
 					}
