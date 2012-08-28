@@ -21,18 +21,14 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
 		dns.Rr_str[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
-	if *flaglog {
-		log.Println("Got request", req)
-	}
+	logPrintln("Got request", req)
 
 	label := getQuestionName(z, req)
 
 	var country string
 	if geoIP != nil {
 		country = geoIP.GetCountry(w.RemoteAddr().String())
-		if *flaglog {
-			log.Println("Country:", country)
-		}
+		logPrintln("Country:", country)
 	}
 
 	m := new(dns.Msg)
@@ -66,7 +62,6 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		for _, record := range servers {
 			rr := record.RR
 			rr.Header().Name = req.Question[0].Name
-			log.Println(rr)
 			rrs = append(rrs, rr)
 		}
 		m.Answer = rrs
@@ -82,6 +77,8 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			m.Ns = append(m.Ns, z.SoaRR())
 		}
 	}
+
+	logPrintln(m)
 
 	w.Write(m)
 	return
