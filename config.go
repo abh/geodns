@@ -228,32 +228,26 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					}
 					switch dnsType {
 					case dns.TypeA:
-						rr := &dns.RR_A{Hdr: h}
-						rr.A = net.ParseIP(ip)
-						if rr.A == nil {
-							panic("Bad A record")
+						if x := net.ParseIP(ip); x != nil {
+							record.RR = &dns.RR_A{Hdr: h, A: x}
+							break
 						}
-						record.RR = rr
+						panic("Bad A record")
 					case dns.TypeAAAA:
-						rr := &dns.RR_AAAA{Hdr: h}
-						rr.AAAA = net.ParseIP(ip)
-						if rr.AAAA == nil {
-							panic("Bad AAAA record")
+						if x := net.ParseIP(ip); x != nil {
+							record.RR = &dns.RR_AAAA{Hdr: h, AAAA: x}
+							break
 						}
-						record.RR = rr
+						panic("Bad AAAA record")
 					}
 
 				case dns.TypeCNAME:
 					rec := records[rType][i]
-					rr := &dns.RR_CNAME{Hdr: h}
-					rr.Target = rec.(string)
-					record.RR = rr
+					record.RR = &dns.RR_CNAME{Hdr: h, Target: dns.Fqdn(rec.(string))}
 
 				case dns.TypeMF:
 					rec := records[rType][i]
-					rr := &dns.RR_MF{Hdr: h}
-					rr.Mf = rec.(string)
-					record.RR = rr
+					record.RR = &dns.RR_MF{Hdr: h, Mf: dns.Fqdn(rec.(string))}
 
 				case dns.TypeNS:
 					rec := records[rType][i]
