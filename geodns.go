@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"time"
 )
 
@@ -17,6 +18,9 @@ var (
 	listen  = flag.String("listen", ":8053", "set the listener address")
 	flaglog = flag.Bool("log", false, "be more verbose")
 	flagrun = flag.Bool("run", false, "run server")
+
+	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 func main() {
@@ -26,6 +30,25 @@ func main() {
 	flag.Parse()
 
 	log.Printf("Starting geodns/%s\n", VERSION)
+
+	if *cpuprofile != "" {
+		prof, err := os.Create(*cpuprofile)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		pprof.StartCPUProfile(prof)
+		defer func() {
+			log.Println("closing file")
+			prof.Close()
+		}()
+		defer func() {
+			log.Println("stopping profile")
+			pprof.StopCPUProfile()
+		}()
+	}
+
+	go monitor()
 
 	dirName := "dns"
 
@@ -37,11 +60,21 @@ func main() {
 	go listenAndServe(&Zones)
 
 	if *flagrun {
-		sig := make(chan os.Signal)
-		signal.Notify(sig, os.Interrupt)
+		terminate := make(chan os.Signal)
+		signal.Notify(terminate, os.Interrupt)
 
-		<-sig
+		<-terminate
 		log.Printf("geodns: signal received, stopping")
-		os.Exit(0)
+
+		if *memprofile != "" {
+			f, err := os.Create(*memprofile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			pprof.WriteHeapProfile(f)
+			f.Close()
+		}
+
+		//os.Exit(0)
 	}
 }
