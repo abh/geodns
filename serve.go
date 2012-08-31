@@ -137,4 +137,5 @@ func listenAndServe(Zones *Zones) {
 	if err := dns.ListenAndServe(*listen, "udp", nil); err != nil {
 		log.Fatalf("geodns: failed to setup %s %s", *listen, "udp")
 	}
+	log.Fatalf("geodns: ListenAndServe unexpectedly returned")
 }
