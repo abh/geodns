@@ -1,0 +1,4 @@
+#!/bin/sh
+#go get -v
+go build -ldflags "-X main.gitVersion `git rev-parse --short=8  HEAD`" -v
+go install

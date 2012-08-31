@@ -9,7 +9,8 @@ import (
 	"time"
 )
 
-const VERSION = "2.0"
+var VERSION string = "2.0"
+var gitVersion string
 
 var timeStarted = time.Now()
 var qCounter uint64 = 0
@@ -23,13 +24,19 @@ var (
 	memprofile = flag.String("memprofile", "", "write memory profile to this file")
 )
 
-func main() {
+func init() {
+	if len(gitVersion) > 0 {
+		VERSION = VERSION + "/" + gitVersion
+	}
 
 	log.SetPrefix("geodns ")
 	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
+}
+
+func main() {
 	flag.Parse()
 
-	log.Printf("Starting geodns/%s\n", VERSION)
+	log.Printf("Starting geodns %s\n", VERSION)
 
 	if *cpuprofile != "" {
 		prof, err := os.Create(*cpuprofile)
