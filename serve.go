@@ -95,6 +95,8 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	logPrintln(m)
 
+	// Ideally you would check the return code here, and perform SERVFAIL in case of
+	// an error.
 	w.Write(m)
 	return
 }
