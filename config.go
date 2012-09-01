@@ -49,7 +49,6 @@ func configReadDir(dirName string, Zones Zones) {
 			zoneName := fileName[0:strings.LastIndex(fileName, ".")]
 			//log.Println("FILE:", i, file, zoneName)
 			runtime.GC()
-
 			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
 			if config == nil || err != nil {
 				log.Println("error reading file: ", err)
@@ -251,7 +250,8 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				case dns.TypeMF:
 					rec := records[rType][i]
-					record.RR = &dns.RR_MF{Hdr: h, Mf: dns.Fqdn(rec.(string))}
+					// MF records (how we store aliases) are not FQDNs
+					record.RR = &dns.RR_MF{Hdr: h, Mf: rec.(string)}
 
 				case dns.TypeNS:
 					rec := records[rType][i]
