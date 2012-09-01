@@ -251,6 +251,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				case dns.TypeNS:
 					rec := records[rType][i]
+					h.Ttl = 86400
 					rr := &dns.RR_NS{Hdr: h}
 
 					switch rec.(type) {
