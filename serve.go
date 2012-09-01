@@ -102,14 +102,10 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 }
 
 func statusRR(z *Zone) []dns.RR {
-	var h dns.RR_Header
-	h.Ttl = 1
-	h.Class = dns.ClassINET
-	h.Rrtype = dns.TypeTXT
+	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
 	h.Name = "_status." + z.Origin + "."
-	rr := &dns.RR_TXT{Hdr: h}
 
-	status := map[string]string{"v": VERSION, "id": *listen}
+	status := map[string]string{"v": VERSION, "id": serverId}
 
 	var hostname, err = os.Hostname()
 	if err == nil {
@@ -119,11 +115,8 @@ func statusRR(z *Zone) []dns.RR {
 	status["qs"] = strconv.FormatUint(qCounter, 10)
 
 	js, err := json.Marshal(status)
-	//log.Println("status", status, string(js), err)
-	rr.Txt = []string{string(js)}
-	rrs := make([]dns.RR, 1)
-	rrs[0] = rr
-	return rrs
+
+	return []dns.RR{&dns.RR_TXT{Hdr: h, Txt: []string{string(js)}}}
 }
 
 func setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {
@@ -132,12 +125,20 @@ func setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {
 	}
 }
 
-func listenAndServe(Zones *Zones) {
+func listenAndServe(ip string, Zones *Zones) {
 
-	// Only listen on UDP for now
-	log.Printf("Opening on %s %s", *listen, "udp")
-	if err := dns.ListenAndServe(*listen, "udp", nil); err != nil {
-		log.Fatalf("geodns: failed to setup %s %s", *listen, "udp")
+	prots := []string{"udp", "tcp"}
+
+	for _, prot := range prots {
+		go func(p string) {
+			server := &dns.Server{Addr: ip, Net: p}
+
+			log.Printf("Opening on %s %s", ip, p)
+			if err := server.ListenAndServe(); err != nil {
+				log.Fatalf("geodns: failed to setup %s %s: %s", ip, p, err)
+			}
+			log.Fatalf("geodns: ListenAndServe unexpectedly returned")
+		}(prot)
 	}
-	log.Fatalf("geodns: ListenAndServe unexpectedly returned")
+
 }
