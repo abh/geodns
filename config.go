@@ -255,15 +255,18 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				case dns.TypeNS:
 					rec := records[rType][i]
-					h.Ttl = 86400
-					rr := &dns.RR_NS{Hdr: h}
+					if h.Ttl < 86400 {
+						h.Ttl = 86400
+					}
+
+					var ns string
 
 					switch rec.(type) {
 					case string:
-						rr.Ns = rec.(string)
+						ns = rec.(string)
 					case []string:
 						recl := rec.([]string)
-						rr.Ns = recl[0]
+						ns = recl[0]
 						if len(recl[1]) > 0 {
 							log.Println("NS records with names syntax not supported")
 						}
@@ -272,11 +275,8 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						panic("Unrecognized NS format/syntax")
 					}
 
-					rr.Ns = dns.Fqdn(rr.Ns)
+					rr := &dns.RR_NS{Hdr: h, Ns: dns.Fqdn(ns)}
 
-					if h.Ttl < 43000 {
-						h.Ttl = 43200
-					}
 					record.RR = rr
 
 				default:
