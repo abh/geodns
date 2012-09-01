@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"runtime"
 	"runtime/debug"
 	"sort"
 	"strconv"
@@ -47,6 +48,8 @@ func configReadDir(dirName string, Zones Zones) {
 			configLastRead[fileName] = file.ModTime()
 			zoneName := fileName[0:strings.LastIndex(fileName, ".")]
 			//log.Println("FILE:", i, file, zoneName)
+			runtime.GC()
+
 			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
 			if config == nil || err != nil {
 				log.Println("error reading file: ", err)
@@ -54,6 +57,7 @@ func configReadDir(dirName string, Zones Zones) {
 			if config != nil && err == nil {
 				Zones[zoneName] = config
 				dns.HandleFunc(zoneName, setupServerFunc(config))
+				runtime.GC()
 			}
 		}
 
