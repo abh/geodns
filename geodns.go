@@ -80,6 +80,10 @@ func main() {
 				strings.LastIndex(host, "]") == len(host)-1:
 				ip = host[1 : len(host)-1]
 				port = ""
+			case strings.Contains(err.Error(), "too many colons in address"):
+				// a:b::c
+				ip = host
+				port = ""
 			default:
 				log.Fatalf("Could not parse %s: %s\n", host, err)
 			}
