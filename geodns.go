@@ -20,7 +20,7 @@ var qCounter uint64 = 0
 
 var (
 	flagconfig = flag.String("config", "./dns/", "directory of zone files")
-	flagint    = flag.String("interface", "*", "set the listener address")
+	flaginter  = flag.String("interface", "*", "set the listener address")
 	flagport   = flag.String("port", "53", "default port number")
 	flaglog    = flag.Bool("log", false, "be more verbose")
 	flagrun    = flag.Bool("run", false, "run server")
@@ -60,6 +60,23 @@ func main() {
 		}()
 	}
 
+	if *flaginter == "*" {
+		addrs, _ := net.InterfaceAddrs()
+		ips := make([]string, 0)
+		for _, addr := range addrs {
+			log.Println("I", addr)
+			ip, _, err := net.ParseCIDR(addr.String())
+			if err != nil {
+				continue
+			}
+			if !(ip.IsLoopback() || ip.IsGlobalUnicast()) {
+				continue
+			}
+			ips = append(ips, ip.String())
+		}
+		*flaginter = strings.Join(ips, ",")
+	}
+
 	go monitor()
 
 	dirName := *flagconfig
@@ -69,7 +86,7 @@ func main() {
 	setupPgeodnsZone(Zones)
 
 	go configReader(dirName, Zones)
-	for _, host := range strings.Split(*flagint, ",") {
+	for _, host := range strings.Split(*flaginter, ",") {
 		ip, port, err := net.SplitHostPort(host)
 		if err != nil {
 			switch {
