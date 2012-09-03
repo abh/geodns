@@ -21,7 +21,7 @@ curl -o dns/example.com.json http://tmp.askask.com/2012/08/dns/example.com.json
 
 ## Run it
 
-`go run *.go -log -run`
+`go run *.go -run -log -interface 127.1 -port 8053`
 
 To test the responses run
 

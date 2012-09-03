@@ -19,10 +19,11 @@ var timeStarted = time.Now()
 var qCounter uint64 = 0
 
 var (
-	flagint  = flag.String("interface", "*", "set the listener address")
-	flagport = flag.String("port", "53", "default port number")
-	flaglog  = flag.Bool("log", false, "be more verbose")
-	flagrun  = flag.Bool("run", false, "run server")
+	flagconfig = flag.String("config", "./dns/", "directory of zone files")
+	flagint    = flag.String("interface", "*", "set the listener address")
+	flagport   = flag.String("port", "53", "default port number")
+	flaglog    = flag.Bool("log", false, "be more verbose")
+	flagrun    = flag.Bool("run", false, "run server")
 
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile = flag.String("memprofile", "", "write memory profile to this file")
@@ -61,7 +62,7 @@ func main() {
 
 	go monitor()
 
-	dirName := "dns"
+	dirName := *flagconfig
 
 	Zones := make(Zones)
 
