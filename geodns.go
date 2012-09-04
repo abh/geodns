@@ -64,7 +64,6 @@ func main() {
 		addrs, _ := net.InterfaceAddrs()
 		ips := make([]string, 0)
 		for _, addr := range addrs {
-			log.Println("I", addr)
 			ip, _, err := net.ParseCIDR(addr.String())
 			if err != nil {
 				continue
