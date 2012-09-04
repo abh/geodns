@@ -99,7 +99,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	if err != nil {
 		// if Pack'ing fails the Write fails. Return SERVFAIL.
 		log.Println("Error writing packet", m)
-		dns.Failed(w, req)
+		dns.HandleFailed(w, req)
 	}
 	return
 }
