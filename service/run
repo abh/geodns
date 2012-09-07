@@ -1,5 +1,6 @@
 #!/bin/sh
 exec 2>&1
-IP=`head -1 env/IP`
 cd /opt/geodns
-exec softlimit -d500000000 ./geodns --interface "$IP" -run
+IP=`head -1 env/IP`
+CONFIG=`head -1 env/CONFIG`
+exec softlimit -d500000000 ./geodns --interface="$IP" --config="$CONFIG" --run
