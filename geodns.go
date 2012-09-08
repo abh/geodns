@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var VERSION string = "2.0"
+var VERSION string = "2.0.1"
 var gitVersion string
 var serverId string
 
@@ -23,7 +23,6 @@ var (
 	flaginter  = flag.String("interface", "*", "set the listener address")
 	flagport   = flag.String("port", "53", "default port number")
 	flaglog    = flag.Bool("log", false, "be more verbose")
-	flagrun    = flag.Bool("run", false, "run server")
 
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile = flag.String("memprofile", "", "write memory profile to this file")
@@ -91,22 +90,21 @@ func main() {
 		go listenAndServe(host, &Zones)
 	}
 
-	if *flagrun {
-		terminate := make(chan os.Signal)
-		signal.Notify(terminate, os.Interrupt)
+	terminate := make(chan os.Signal)
+	signal.Notify(terminate, os.Interrupt)
 
-		<-terminate
-		log.Printf("geodns: signal received, stopping")
+	<-terminate
+	log.Printf("geodns: signal received, stopping")
 
-		if *memprofile != "" {
-			f, err := os.Create(*memprofile)
-			if err != nil {
-				log.Fatal(err)
-			}
-			pprof.WriteHeapProfile(f)
-			f.Close()
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal(err)
 		}
-
-		//os.Exit(0)
+		pprof.WriteHeapProfile(f)
+		f.Close()
 	}
+
+	//os.Exit(0)
+
 }
