@@ -1,6 +1,7 @@
 package main
 
 import (
+	"geodns/countries"
 	"github.com/miekg/dns"
 )
 
@@ -60,12 +61,15 @@ func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
 	selectors := []string{}
 
 	if len(cc) > 0 {
+		continent := countries.CountryContinent[cc]
 		if len(s) > 0 {
 			cc = s + "." + cc
+			if len(continent) > 0 {
+				continent = s + "." + continent
+			}
 		}
-		selectors = append(selectors, cc)
+		selectors = append(selectors, cc, continent)
 	}
-	// TODO(ask) Add continent, see https://github.com/abh/geodns/issues/1
 	selectors = append(selectors, s)
 
 	for _, name := range selectors {
