@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"geodns/countries"
 	"github.com/miekg/dns"
 	"log"
 	"os"
@@ -57,6 +58,22 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 		if label == "_status" && (qtype == dns.TypeANY || qtype == dns.TypeTXT) {
 			m.Answer = statusRR(z)
+			m.Authoritative = true
+			w.Write(m)
+			return
+		}
+
+		if label == "_country" && (qtype == dns.TypeANY || qtype == dns.TypeTXT) {
+			h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
+			h.Name = "_country." + z.Origin + "."
+
+			m.Answer = []dns.RR{&dns.RR_TXT{Hdr: h,
+				Txt: []string{
+					string(country),
+					string(countries.CountryContinent[country]),
+				},
+			}}
+
 			m.Authoritative = true
 			w.Write(m)
 			return
