@@ -35,7 +35,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	var country string
 	if geoIP != nil {
-		country = geoIP.GetCountry(w.RemoteAddr().String())
+		country = strings.ToLower(geoIP.GetCountry(w.RemoteAddr().String()))
 		logPrintln("Country:", country)
 	}
 
