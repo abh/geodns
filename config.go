@@ -228,6 +228,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						label.Weight[dnsType] += record.Weight
 					case float64:
 						record.Weight = int(rec[1].(float64))
+						label.Weight[dnsType] += record.Weight
 					}
 					switch dnsType {
 					case dns.TypeA:
