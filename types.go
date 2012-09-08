@@ -55,6 +55,8 @@ func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
 
 	if qtype == dns.TypeANY {
 		// short-circuit mostly to avoid subtle bugs later
+		// to be correct we should run through all the selectors and
+		// pick types not already picked
 		return z.Labels[s]
 	}
 
@@ -74,8 +76,19 @@ func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
 
 	for _, name := range selectors {
 		if label, ok := z.Labels[name]; ok {
+
+			// look for aliases
+			if label.Records[dns.TypeMF] != nil {
+				name = label.firstRR(dns.TypeMF).(*dns.RR_MF).Mf
+				// BUG(ask) - restructure this so it supports chains of aliases
+				label, ok = z.Labels[name]
+				if label == nil {
+					continue
+				}
+			}
+
 			// return the label if it has the right records
-			// TODO(ask) Should this also look for CNAME or aliases?
+			// TODO(ask) Should this also look for CNAME records?
 			if label.Records[qtype] != nil {
 				return label
 			}
