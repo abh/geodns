@@ -1,0 +1,3 @@
+language: go
+before_install:
+  - sudo apt-get install libgeoip-dev libgeo-ip-perl
