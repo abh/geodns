@@ -113,12 +113,14 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 			//log.Printf("k: %s v: %#v, T: %T\n", k, v, v)
 
 			switch k {
-			case "ttl", "serial":
+			case "ttl", "serial", "max_hosts":
 				switch option := k; option {
 				case "ttl":
 					Zone.Options.Ttl = int(v.(float64))
 				case "serial":
 					Zone.Options.Serial = int(v.(float64))
+				case "max_hosts":
+					Zone.Options.MaxHosts = int(v.(float64))
 				}
 				continue
 
@@ -159,9 +161,14 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		label := Zone.Labels[dk]
 		label.Label = dk
 		label.Ttl = Zone.Options.Ttl
+		label.MaxHosts = Zone.Options.MaxHosts
 
 		if ttl, ok := dv["ttl"]; ok {
 			label.Ttl = int(ttl.(float64))
+		}
+
+		if maxHosts, ok := dv["max_hosts"]; ok {
+			label.MaxHosts = int(maxHosts.(float64))
 		}
 
 		for rType, dnsType := range recordTypes {

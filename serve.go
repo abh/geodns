@@ -89,7 +89,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		return
 	}
 
-	if servers := labels.Picker(qtype, 4); servers != nil {
+	if servers := labels.Picker(qtype, labels.MaxHosts); servers != nil {
 		var rrs []dns.RR
 		for _, record := range servers {
 			rr := record.RR

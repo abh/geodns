@@ -6,8 +6,9 @@ import (
 )
 
 type Options struct {
-	Serial int
-	Ttl    int
+	Serial   int
+	Ttl      int
+	MaxHosts int
 }
 
 type Record struct {
