@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"geodns/countries"
+	"github.com/abh/geodns/countries"
 	"github.com/miekg/dns"
 	"log"
 	"os"

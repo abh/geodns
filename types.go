@@ -1,7 +1,7 @@
 package main
 
 import (
-	"geodns/countries"
+	"github.com/abh/geodns/countries"
 	"github.com/miekg/dns"
 )
 

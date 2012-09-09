@@ -1,3 +1,11 @@
 language: go
 before_install:
-  - sudo apt-get install libgeoip-dev libgeo-ip-perl
+  - sudo apt-get install libgeoip-dev bzr
+install:
+  - go get github.com/miekg/dns
+  - go get github.com/abh/geoip
+  - go get launchpad.net/gocheck
+  - go get -v
+  - go build -v
+  - go install
+
