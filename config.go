@@ -118,11 +118,11 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 			case "ttl", "serial", "max_hosts":
 				switch option := k; option {
 				case "ttl":
-					Zone.Options.Ttl = int(v.(float64))
+					Zone.Options.Ttl = valueToInt(v)
 				case "serial":
-					Zone.Options.Serial = int(v.(float64))
+					Zone.Options.Serial = valueToInt(v)
 				case "max_hosts":
-					Zone.Options.MaxHosts = int(v.(float64))
+					Zone.Options.MaxHosts = valueToInt(v)
 				}
 				continue
 
@@ -166,11 +166,11 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		label.MaxHosts = Zone.Options.MaxHosts
 
 		if ttl, ok := dv["ttl"]; ok {
-			label.Ttl = int(ttl.(float64))
+			label.Ttl = valueToInt(ttl)
 		}
 
 		if maxHosts, ok := dv["max_hosts"]; ok {
-			label.MaxHosts = int(maxHosts.(float64))
+			label.MaxHosts = valueToInt(maxHosts)
 		}
 
 		for rType, dnsType := range recordTypes {
@@ -345,4 +345,21 @@ func setupSOA(Zone *Zone) {
 	label.Records[dns.TypeSOA] = make([]Record, 1)
 	label.Records[dns.TypeSOA][0] = record
 
+}
+
+func valueToInt(v interface{}) (rv int) {
+	switch v.(type) {
+	case string:
+		i, err := strconv.Atoi(v.(string))
+		if err != nil {
+			panic("Error converting weight to integer")
+		}
+		rv = i
+	case float64:
+		rv = int(v.(float64))
+	default:
+		log.Println("Can't convert", v, "to integer")
+		panic("Can't convert value")
+	}
+	return rv
 }
