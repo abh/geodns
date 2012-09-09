@@ -5,6 +5,7 @@ import (
 	"github.com/abh/geodns/countries"
 	"github.com/miekg/dns"
 	"log"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -35,7 +36,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	var country string
 	if geoIP != nil {
-		ip := w.RemoteAddr().String()
+		ip, _, _ := net.SplitHostPort(w.RemoteAddr().String())
 		country = strings.ToLower(geoIP.GetCountry(ip))
 		logPrintln("Country:", ip, country)
 	}
