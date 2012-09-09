@@ -35,8 +35,9 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	var country string
 	if geoIP != nil {
-		country = strings.ToLower(geoIP.GetCountry(w.RemoteAddr().String()))
-		logPrintln("Country:", country)
+		ip := w.RemoteAddr().String()
+		country = strings.ToLower(geoIP.GetCountry(ip))
+		logPrintln("Country:", ip, country)
 	}
 
 	m := new(dns.Msg)
@@ -69,6 +70,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 			m.Answer = []dns.RR{&dns.RR_TXT{Hdr: h,
 				Txt: []string{
+					w.RemoteAddr().String(),
 					string(country),
 					string(countries.CountryContinent[country]),
 				},
