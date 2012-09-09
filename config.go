@@ -97,6 +97,8 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 	Zone.Labels = make(labels)
 	Zone.Origin = zoneName
 	Zone.LenLabels = dns.LenLabels(Zone.Origin)
+	Zone.Options.Ttl = 120
+	Zone.Options.MaxHosts = 2
 
 	if err == nil {
 		var objmap map[string]interface{}
