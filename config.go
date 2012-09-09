@@ -148,7 +148,9 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		"alias": dns.TypeMF,
 	}
 
-	for dk, dv := range data {
+	for dk, dv_inter := range data {
+
+		dv := dv_inter.(map[string]interface{})
 
 		//log.Printf("K %s V %s TYPE-V %T\n", dk, dv, dv)
 
@@ -156,12 +158,15 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		Zone.Labels[dk] = new(Label)
 		label := Zone.Labels[dk]
 		label.Label = dk
+		label.Ttl = Zone.Options.Ttl
 
-		// BUG(ask) Read 'ttl' value in label data
+		if ttl, ok := dv["ttl"]; ok {
+			label.Ttl = int(ttl.(float64))
+		}
 
 		for rType, dnsType := range recordTypes {
 
-			var rdata = dv.(map[string]interface{})[rType]
+			var rdata = dv[rType]
 
 			if rdata == nil {
 				//log.Printf("No %s records for label %s\n", rType, dk)
@@ -209,7 +214,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				var h dns.RR_Header
 				// log.Println("TTL OPTIONS", Zone.Options.Ttl)
-				h.Ttl = uint32(Zone.Options.Ttl)
+				h.Ttl = uint32(label.Ttl)
 				h.Class = dns.ClassINET
 				h.Rrtype = dnsType
 				h.Name = label.Label + "." + Zone.Origin + "."
