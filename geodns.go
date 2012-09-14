@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var VERSION string = "2.0.2"
+var VERSION string = "2.1.0"
 var gitVersion string
 var serverId string
 
@@ -22,6 +22,7 @@ var (
 	flagconfig = flag.String("config", "./dns/", "directory of zone files")
 	flaginter  = flag.String("interface", "*", "set the listener address")
 	flagport   = flag.String("port", "53", "default port number")
+	flaghttp   = flag.String("http", ":8053", "http listen address (:8053)")
 	flaglog    = flag.Bool("log", false, "be more verbose")
 
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -75,6 +76,8 @@ func main() {
 		*flaginter = strings.Join(ips, ",")
 	}
 
+	inter := getInterfaces()
+
 	go monitor()
 
 	dirName := *flagconfig
@@ -85,7 +88,6 @@ func main() {
 
 	go configReader(dirName, Zones)
 
-	inter := getInterfaces()
 	for _, host := range inter {
 		go listenAndServe(host, &Zones)
 	}
