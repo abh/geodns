@@ -1,6 +1,6 @@
 #!/bin/sh
 #go get -v
-REVISION=`git rev-parse --short=6  HEAD`
+REVISION=`git rev-parse --short=5  HEAD`
 echo $REVISION > REVISION
 go build -ldflags "-X main.gitVersion $REVISION" -v
 go install
