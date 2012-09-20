@@ -39,14 +39,15 @@ func (h *monitorHub) run() {
 		select {
 		case c := <-h.register:
 			h.connections[c] = true
+			log.Println("Queuing initial status")
 			c.send <- initialStatus()
 		case c := <-h.unregister:
+			log.Println("Unregistering connection")
 			delete(h.connections, c)
-			//close(c.send) // double close makes us panic
 		case m := <-h.broadcast:
 			for c := range h.connections {
 				if len(c.send)+5 > cap(c.send) {
-					log.Println("Too close to cap")
+					log.Println("WS connection too close to cap")
 					c.send <- `{"error": "too slow"}`
 					close(c.send)
 					go c.ws.Close()
@@ -93,6 +94,7 @@ func (c *wsConnection) writer() {
 }
 
 func wsHandler(ws *websocket.Conn) {
+	log.Println("Starting new WS connection")
 	c := &wsConnection{send: make(chan string, 180), ws: ws}
 	hub.register <- c
 	defer func() {
