@@ -105,7 +105,7 @@ func wsHandler(ws *websocket.Conn) {
 
 func initialStatus() string {
 	status := map[string]string{"v": VERSION, "id": serverId}
-	var hostname, err = os.Hostname()
+	hostname, err := os.Hostname()
 	if err == nil {
 		status["h"] = hostname
 	}

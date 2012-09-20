@@ -19,12 +19,10 @@ import (
 var configLastRead = map[string]time.Time{}
 
 func configReader(dirName string, Zones Zones) {
-	go func() {
-		for {
-			configReadDir(dirName, Zones)
-			time.Sleep(5 * time.Second)
-		}
-	}()
+	for {
+		configReadDir(dirName, Zones)
+		time.Sleep(5 * time.Second)
+	}
 }
 
 func configReadDir(dirName string, Zones Zones) {
@@ -33,7 +31,7 @@ func configReadDir(dirName string, Zones Zones) {
 		panic(err)
 	}
 
-	var seenFiles = map[string]bool{}
+	seenFiles := map[string]bool{}
 
 	for _, file := range dir {
 		fileName := file.Name()
@@ -144,7 +142,7 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 
 func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
-	var recordTypes = map[string]uint16{
+	recordTypes := map[string]uint16{
 		"a":     dns.TypeA,
 		"aaaa":  dns.TypeAAAA,
 		"ns":    dns.TypeNS,
@@ -175,7 +173,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 		for rType, dnsType := range recordTypes {
 
-			var rdata = dv[rType]
+			rdata := dv[rType]
 
 			if rdata == nil {
 				//log.Printf("No %s records for label %s\n", rType, dk)

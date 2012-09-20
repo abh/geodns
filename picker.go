@@ -9,7 +9,7 @@ func (label *Label) Picker(qtype uint16, max int) Records {
 
 	if qtype == dns.TypeANY {
 		result := make([]Record, 0)
-		for rtype, _ := range label.Records {
+		for rtype := range label.Records {
 
 			rtype_records := label.Picker(rtype, max)
 
