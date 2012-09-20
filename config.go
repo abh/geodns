@@ -19,12 +19,10 @@ import (
 var configLastRead = map[string]time.Time{}
 
 func configReader(dirName string, Zones Zones) {
-	go func() {
-		for {
-			configReadDir(dirName, Zones)
-			time.Sleep(5 * time.Second)
-		}
-	}()
+	for {
+		configReadDir(dirName, Zones)
+		time.Sleep(5 * time.Second)
+	}
 }
 
 func configReadDir(dirName string, Zones Zones) {
