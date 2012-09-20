@@ -29,8 +29,8 @@ type monitorHub struct {
 
 var hub = monitorHub{
 	broadcast:   make(chan string),
-	register:    make(chan *wsConnection),
-	unregister:  make(chan *wsConnection),
+	register:    make(chan *wsConnection, 10),
+	unregister:  make(chan *wsConnection, 10),
 	connections: make(map[*wsConnection]bool),
 }
 
