@@ -90,7 +90,7 @@ func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
 
 			// return the label if it has the right records
 			// TODO(ask) Should this also look for CNAME records?
-			if label.Records[qtype] != nil {
+			if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
 				return label
 			}
 		}
