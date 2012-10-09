@@ -23,8 +23,8 @@ curl -o dns/example.com.json http://tmp.askask.com/2012/08/dns/example.com.json
 
 ## Run it
 
-`go run *.go -run -log -interface 127.1 -port 8053`
+`go run *.go -log -interface 127.1 -port 5053`
 
 To test the responses run
 
-`dig -t a ntppool.org  @127.1 -p 8053`
+`dig -t a ntppool.org  @127.1 -p 5053`
