@@ -34,9 +34,34 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	label := getQuestionName(z, req)
 
+	var ip string
+	var edns *dns.EDNS0_SUBNET
+	var opt_rr *dns.RR_OPT
+
+	for _, extra := range req.Extra {
+		log.Println("Extra", extra)
+		for _, o := range extra.(*dns.RR_OPT).Option {
+			opt_rr = extra.(*dns.RR_OPT)
+			switch e := o.(type) {
+			case *dns.EDNS0_NSID:
+				// do stuff with e.Nsid
+			case *dns.EDNS0_SUBNET:
+				log.Println("========== XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+				log.Println("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
+				if e.Address != nil {
+					log.Println("Setting edns to", e)
+					edns = e
+					ip = e.Address.String()
+				}
+			}
+		}
+	}
+
 	var country string
 	if geoIP != nil {
-		ip, _, _ := net.SplitHostPort(w.RemoteAddr().String())
+		if len(ip) == 0 { // no edns subnet
+			ip, _, _ = net.SplitHostPort(w.RemoteAddr().String())
+		}
 		country = strings.ToLower(geoIP.GetCountry(ip))
 		logPrintln("Country:", ip, country)
 	}
@@ -47,6 +72,14 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		m.SetEdns0(4096, e.Do())
 	}
 	m.Authoritative = true
+
+	// TODO: set scope to 0 if there are no alternate responses
+	log.Println("family", edns.Family)
+	if edns.Family != 0 {
+		log.Println("edns response!")
+		edns.SourceScope = 16
+		m.Extra = append(m.Extra, opt_rr)
+	}
 
 	// TODO(ask) Fix the findLabels API to make this work better
 	if alias := z.findLabels(label, "", dns.TypeMF); alias != nil &&
@@ -72,6 +105,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			m.Answer = []dns.RR{&dns.RR_TXT{Hdr: h,
 				Txt: []string{
 					w.RemoteAddr().String(),
+					ip,
 					string(country),
 					string(countries.CountryContinent[country]),
 				},
