@@ -32,6 +32,10 @@ func (s *ConfigSuite) TestServing(c *C) {
 	serial := soa.Serial
 	c.Check(int(serial), Equals, 3)
 
+	// no AAAA records for 'bar', so check we get a soa record back
+	r = exchange(c, "example.com.", dns.TypeAAAA)
+	soa2 := r.Ns[0].(*dns.RR_SOA)
+	c.Check(soa, DeepEquals, soa2)
 }
 
 func exchange(c *C, name string, dnstype uint16) *dns.Msg {
