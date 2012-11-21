@@ -270,9 +270,9 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						pref = uint16(valueToInt(rec["preference"]))
 					}
 					record.RR = &dns.RR_MX{
-						Hdr:  h,
-						Mx:   mx,
-						Pref: pref}
+						Hdr:        h,
+						Mx:         mx,
+						Preference: pref}
 
 				case dns.TypeCNAME:
 					rec := records[rType][i]
