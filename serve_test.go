@@ -43,7 +43,7 @@ func exchange(c *C, name string, dnstype uint16) *dns.Msg {
 	cli := new(dns.Client)
 
 	msg.SetQuestion(name, dnstype)
-	r, err := cli.Exchange(msg, "127.0.0.1:8853")
+	r, _, err := cli.Exchange(msg, "127.0.0.1:8853")
 	if err != nil {
 		c.Log("err", err)
 		c.Fail()
