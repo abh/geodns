@@ -23,17 +23,17 @@ func (s *ConfigSuite) TestServing(c *C) {
 		c.Fail()
 	}
 
-	r = exchange(c, "bar.example.com.", dns.TypeA)
+	r = exchange(c, "bar.test.example.com.", dns.TypeA)
 	ip := r.Answer[0].(*dns.RR_A).A
 	c.Check(ip.String(), Equals, "192.168.1.2")
 
-	r = exchange(c, "example.com.", dns.TypeSOA)
+	r = exchange(c, "test.example.com.", dns.TypeSOA)
 	soa := r.Answer[0].(*dns.RR_SOA)
 	serial := soa.Serial
 	c.Check(int(serial), Equals, 3)
 
 	// no AAAA records for 'bar', so check we get a soa record back
-	r = exchange(c, "example.com.", dns.TypeAAAA)
+	r = exchange(c, "test.example.com.", dns.TypeAAAA)
 	soa2 := r.Ns[0].(*dns.RR_SOA)
 	c.Check(soa, DeepEquals, soa2)
 }
