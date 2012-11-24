@@ -8,7 +8,7 @@ INTERFACE=""
 if [ -e env/IP ]; then
   IP=`head -1 env/IP`
   if [ ! -z "$IP" ]; then
-    INTERFACE="--interface='$IP'"
+    INTERFACE="--interface=$IP"
   fi
 fi
 
