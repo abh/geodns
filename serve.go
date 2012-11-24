@@ -61,7 +61,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		if label == "_status" && (qtype == dns.TypeANY || qtype == dns.TypeTXT) {
 			m.Answer = statusRR(z)
 			m.Authoritative = true
-			w.Write(m)
+			w.WriteMsg(m)
 			return
 		}
 
@@ -78,7 +78,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			}}
 
 			m.Authoritative = true
-			w.Write(m)
+			w.WriteMsg(m)
 			return
 		}
 
@@ -88,7 +88,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 		m.Ns = []dns.RR{z.SoaRR()}
 
-		w.Write(m)
+		w.WriteMsg(m)
 		return
 	}
 
@@ -117,7 +117,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	logPrintln(m)
 
-	err := w.Write(m)
+	err := w.WriteMsg(m)
 	if err != nil {
 		// if Pack'ing fails the Write fails. Return SERVFAIL.
 		log.Println("Error writing packet", m)
