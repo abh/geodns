@@ -25,7 +25,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	qtype := req.Question[0].Qtype
 
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
-		dns.Rr_str[qtype], req.MsgHdr.Id, w.RemoteAddr())
+		dns.TypeToString[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
 	// is this safe/atomic or does it need to go through a channel?
 	qCounter++
