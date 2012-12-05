@@ -25,7 +25,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	qtype := req.Question[0].Qtype
 
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
-		dns.Rr_str[qtype], req.MsgHdr.Id, w.RemoteAddr())
+		dns.TypeToString[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
 	// is this safe/atomic or does it need to go through a channel?
 	qCounter++
@@ -94,7 +94,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		if label == "_status" && (qtype == dns.TypeANY || qtype == dns.TypeTXT) {
 			m.Answer = statusRR(z)
 			m.Authoritative = true
-			w.Write(m)
+			w.WriteMsg(m)
 			return
 		}
 
@@ -112,7 +112,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			}}
 
 			m.Authoritative = true
-			w.Write(m)
+			w.WriteMsg(m)
 			return
 		}
 
@@ -122,7 +122,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 		m.Ns = []dns.RR{z.SoaRR()}
 
-		w.Write(m)
+		w.WriteMsg(m)
 		return
 	}
 
@@ -141,6 +141,8 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			if _, ok := labels.Records[dns.TypeCNAME]; ok {
 				cname := labels.firstRR(dns.TypeCNAME)
 				m.Answer = append(m.Answer, cname)
+			} else {
+				m.Ns = append(m.Ns, z.SoaRR())
 			}
 		} else {
 			m.Ns = append(m.Ns, z.SoaRR())
@@ -149,7 +151,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	logPrintln(m)
 
-	err := w.Write(m)
+	err := w.WriteMsg(m)
 	if err != nil {
 		// if Pack'ing fails the Write fails. Return SERVFAIL.
 		log.Println("Error writing packet", m)

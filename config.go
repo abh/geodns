@@ -147,6 +147,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		"aaaa":  dns.TypeAAAA,
 		"ns":    dns.TypeNS,
 		"cname": dns.TypeCNAME,
+		"mx":    dns.TypeMX,
 		"alias": dns.TypeMF,
 	}
 
@@ -237,10 +238,8 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						if err != nil {
 							panic("Error converting weight to integer")
 						}
-						label.Weight[dnsType] += record.Weight
 					case float64:
 						record.Weight = int(rec[1].(float64))
-						label.Weight[dnsType] += record.Weight
 					}
 					switch dnsType {
 					case dns.TypeA:
@@ -256,6 +255,24 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						}
 						panic("Bad AAAA record")
 					}
+
+				case dns.TypeMX:
+					rec := records[rType][i].(map[string]interface{})
+					pref := uint16(0)
+					mx := rec["mx"].(string)
+					if !strings.HasSuffix(mx, ".") {
+						mx = mx + "."
+					}
+					if rec["weight"] != nil {
+						record.Weight = valueToInt(rec["weight"])
+					}
+					if rec["preference"] != nil {
+						pref = uint16(valueToInt(rec["preference"]))
+					}
+					record.RR = &dns.RR_MX{
+						Hdr:        h,
+						Mx:         mx,
+						Preference: pref}
 
 				case dns.TypeCNAME:
 					rec := records[rType][i]
@@ -301,6 +318,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					panic("record.RR is nil")
 				}
 
+				label.Weight[dnsType] += record.Weight
 				label.Records[dnsType][i] = *record
 			}
 			if label.Weight[dnsType] > 0 {
