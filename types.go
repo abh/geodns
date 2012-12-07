@@ -9,6 +9,7 @@ type Options struct {
 	Serial   int
 	Ttl      int
 	MaxHosts int
+	Contact  string
 }
 
 type Record struct {
