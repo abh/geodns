@@ -97,6 +97,7 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 	Zone.LenLabels = dns.LenLabels(Zone.Origin)
 	Zone.Options.Ttl = 120
 	Zone.Options.MaxHosts = 2
+        Zone.Options.Contact = "support.bitnames.com"
 
 	if err == nil {
 		var objmap map[string]interface{}
@@ -113,12 +114,14 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 			//log.Printf("k: %s v: %#v, T: %T\n", k, v, v)
 
 			switch k {
-			case "ttl", "serial", "max_hosts":
+			case "ttl", "serial", "max_hosts", "contact":
 				switch option := k; option {
 				case "ttl":
 					Zone.Options.Ttl = valueToInt(v)
 				case "serial":
 					Zone.Options.Serial = valueToInt(v)
+                                case "contact":
+					Zone.Options.Contact = v.(string)
 				case "max_hosts":
 					Zone.Options.MaxHosts = valueToInt(v)
 				}
@@ -342,7 +345,7 @@ func setupSOA(Zone *Zone) {
 	}
 
 	s := Zone.Origin + ". 3600 IN SOA " +
-		primaryNs + " support.bitnames.com. " +
+		primaryNs + " "+Zone.Options.Contact+" " +
 		strconv.Itoa(Zone.Options.Serial) +
 		" 5400 5400 2419200 " +
 		strconv.Itoa(Zone.Options.Ttl)
