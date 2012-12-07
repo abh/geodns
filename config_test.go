@@ -25,5 +25,6 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 	// to make nutty configuration entries
 	c.Check(s.zones["test.example.com"].Origin, Equals, "test.example.com")
 	c.Check(s.zones["test.example.com"].Options.MaxHosts, Equals, 2)
+        c.Check(s.zones["test.example.com"].Options.Contact, Equals, "support.bitnames.com")
 	c.Check(s.zones["test.example.com"].Labels["weight"].MaxHosts, Equals, 1)
 }
