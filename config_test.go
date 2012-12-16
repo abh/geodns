@@ -21,10 +21,12 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 	// Just check that example.com loaded, too.
 	c.Check(s.zones["example.com"].Origin, Equals, "example.com")
 
+	tz := s.zones["test.example.com"]
+
 	// The real tests are in test.example.com so we have a place
 	// to make nutty configuration entries
-	c.Check(s.zones["test.example.com"].Origin, Equals, "test.example.com")
-	c.Check(s.zones["test.example.com"].Options.MaxHosts, Equals, 2)
-	c.Check(s.zones["test.example.com"].Options.Contact, Equals, "support.bitnames.com")
-	c.Check(s.zones["test.example.com"].Labels["weight"].MaxHosts, Equals, 1)
+	c.Check(tz.Origin, Equals, "test.example.com")
+	c.Check(tz.Options.MaxHosts, Equals, 2)
+	c.Check(tz.Options.Contact, Equals, "support.bitnames.com")
+	c.Check(tz.Labels["weight"].MaxHosts, Equals, 1)
 }
