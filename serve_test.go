@@ -36,6 +36,13 @@ func (s *ConfigSuite) TestServing(c *C) {
 	r = exchange(c, "test.example.com.", dns.TypeAAAA)
 	soa2 := r.Ns[0].(*dns.RR_SOA)
 	c.Check(soa, DeepEquals, soa2)
+
+	r = exchange(c, "www.test.example.com.", dns.TypeA)
+	c.Check(r.Answer[0].(*dns.RR_CNAME).Target, Equals, "geo.bitnames.com.")
+
+	// TODO: make the alias and cname respond with the data for the target, too?
+	r = exchange(c, "www-alias.test.example.com.", dns.TypeA)
+	c.Check(r.Answer[0].(*dns.RR_CNAME).Target, Equals, "bar-alias.test.example.com.")
 }
 
 func exchange(c *C, name string, dnstype uint16) *dns.Msg {

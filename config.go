@@ -279,7 +279,11 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				case dns.TypeCNAME:
 					rec := records[rType][i]
-					record.RR = &dns.RR_CNAME{Hdr: h, Target: dns.Fqdn(rec.(string))}
+					target := rec.(string)
+					if !dns.IsFqdn(target) {
+						target = target + "." + Zone.Origin
+					}
+					record.RR = &dns.RR_CNAME{Hdr: h, Target: dns.Fqdn(target)}
 
 				case dns.TypeMF:
 					rec := records[rType][i]
