@@ -33,15 +33,15 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 
 	/* test different cname targets */
 	c.Check(tz.Labels["www"].
-		firstRR(dns.TypeCNAME).(*dns.RR_CNAME).
+		firstRR(dns.TypeCNAME).(*dns.CNAME).
 		Target, Equals, "geo.bitnames.com.")
 
 	c.Check(tz.Labels["www-cname"].
-		firstRR(dns.TypeCNAME).(*dns.RR_CNAME).
+		firstRR(dns.TypeCNAME).(*dns.CNAME).
 		Target, Equals, "bar.test.example.com.")
 
 	c.Check(tz.Labels["www-alias"].
-		firstRR(dns.TypeCNAME).(*dns.RR_CNAME).
+		firstRR(dns.TypeCNAME).(*dns.CNAME).
 		Target, Equals, "bar-alias.test.example.com.")
 
 }
