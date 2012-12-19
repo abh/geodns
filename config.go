@@ -97,6 +97,7 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 	Zone.LenLabels = dns.LenLabels(Zone.Origin)
 	Zone.Options.Ttl = 120
 	Zone.Options.MaxHosts = 2
+	Zone.Options.Contact = "support.bitnames.com"
 
 	if err == nil {
 		var objmap map[string]interface{}
@@ -113,12 +114,14 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 			//log.Printf("k: %s v: %#v, T: %T\n", k, v, v)
 
 			switch k {
-			case "ttl", "serial", "max_hosts":
+			case "ttl", "serial", "max_hosts", "contact":
 				switch option := k; option {
 				case "ttl":
 					Zone.Options.Ttl = valueToInt(v)
 				case "serial":
 					Zone.Options.Serial = valueToInt(v)
+				case "contact":
+					Zone.Options.Contact = v.(string)
 				case "max_hosts":
 					Zone.Options.MaxHosts = valueToInt(v)
 				}
@@ -244,13 +247,13 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					switch dnsType {
 					case dns.TypeA:
 						if x := net.ParseIP(ip); x != nil {
-							record.RR = &dns.RR_A{Hdr: h, A: x}
+							record.RR = &dns.A{Hdr: h, A: x}
 							break
 						}
 						panic("Bad A record")
 					case dns.TypeAAAA:
 						if x := net.ParseIP(ip); x != nil {
-							record.RR = &dns.RR_AAAA{Hdr: h, AAAA: x}
+							record.RR = &dns.AAAA{Hdr: h, AAAA: x}
 							break
 						}
 						panic("Bad AAAA record")
@@ -269,19 +272,23 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					if rec["preference"] != nil {
 						pref = uint16(valueToInt(rec["preference"]))
 					}
-					record.RR = &dns.RR_MX{
+					record.RR = &dns.MX{
 						Hdr:        h,
 						Mx:         mx,
 						Preference: pref}
 
 				case dns.TypeCNAME:
 					rec := records[rType][i]
-					record.RR = &dns.RR_CNAME{Hdr: h, Target: dns.Fqdn(rec.(string))}
+					target := rec.(string)
+					if !dns.IsFqdn(target) {
+						target = target + "." + Zone.Origin
+					}
+					record.RR = &dns.CNAME{Hdr: h, Target: dns.Fqdn(target)}
 
 				case dns.TypeMF:
 					rec := records[rType][i]
 					// MF records (how we store aliases) are not FQDNs
-					record.RR = &dns.RR_MF{Hdr: h, Mf: rec.(string)}
+					record.RR = &dns.MF{Hdr: h, Mf: rec.(string)}
 
 				case dns.TypeNS:
 					rec := records[rType][i]
@@ -305,7 +312,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						panic("Unrecognized NS format/syntax")
 					}
 
-					rr := &dns.RR_NS{Hdr: h, Ns: dns.Fqdn(ns)}
+					rr := &dns.NS{Hdr: h, Ns: dns.Fqdn(ns)}
 
 					record.RR = rr
 
@@ -338,11 +345,11 @@ func setupSOA(Zone *Zone) {
 	primaryNs := "ns"
 
 	if record, ok := label.Records[dns.TypeNS]; ok {
-		primaryNs = record[0].RR.(*dns.RR_NS).Ns
+		primaryNs = record[0].RR.(*dns.NS).Ns
 	}
 
 	s := Zone.Origin + ". 3600 IN SOA " +
-		primaryNs + " support.bitnames.com. " +
+		primaryNs + " " + Zone.Options.Contact + " " +
 		strconv.Itoa(Zone.Options.Serial) +
 		" 5400 5400 2419200 " +
 		strconv.Itoa(Zone.Options.Ttl)

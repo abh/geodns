@@ -85,7 +85,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	if alias := z.findLabels(label, "", dns.TypeMF); alias != nil &&
 		alias.Records[dns.TypeMF] != nil {
 		// We found an alias record, so pretend the question was for that name instead
-		label = alias.firstRR(dns.TypeMF).(*dns.RR_MF).Mf
+		label = alias.firstRR(dns.TypeMF).(*dns.MF).Mf
 	}
 
 	labels := z.findLabels(label, country, qtype)
@@ -102,7 +102,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
 			h.Name = "_country." + z.Origin + "."
 
-			m.Answer = []dns.RR{&dns.RR_TXT{Hdr: h,
+			m.Answer = []dns.RR{&dns.TXT{Hdr: h,
 				Txt: []string{
 					w.RemoteAddr().String(),
 					ip,
@@ -175,7 +175,7 @@ func statusRR(z *Zone) []dns.RR {
 
 	js, err := json.Marshal(status)
 
-	return []dns.RR{&dns.RR_TXT{Hdr: h, Txt: []string{string(js)}}}
+	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
 }
 
 func setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {

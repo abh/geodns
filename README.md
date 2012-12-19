@@ -102,6 +102,11 @@ Same format as A records (except the record type is "aaaa").
 
 ### CNAME
 
+The target will have the current zone name appended if it's not a FQDN (since v2.2.0).
+
+  { "cname": "target.example.com." }
+  { "cname": "www" }
+
 ### NS
 
 ### MX

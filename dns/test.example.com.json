@@ -1,6 +1,7 @@
 { "serial": 3,
   "ttl":    600,
   "max_hosts": 2,
+  "contact": "support.bitnames.com",
   "data" : {
     "":  {
       "ns": { "ns1.example.net.": null, "ns2.example.net.": null },
@@ -36,6 +37,12 @@
     },
     "www": {
       "cname": "geo.bitnames.com."
+    },
+    "www-cname": {
+      "cname": "bar"
+    },
+    "www-alias": {
+      "cname": "bar-alias"
     },
     "cname-long-ttl": {
       "cname": "geo.bitnames.com.",
