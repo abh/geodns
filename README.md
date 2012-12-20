@@ -1,8 +1,7 @@
 # GeoDNS in Go
 
-This is a (so far) experimental Golang implementation of the
-[pgeodns](http://github.com/abh/pgeodns) server powering the [NTP
-Pool](http://www.pool.ntp.org/) system.
+This is the DNS server powering the [NTP Pool](http://www.pool.ntp.org/) system and other
+similar services. It supersedes the [pgeodns](http://github.com/abh/pgeodns) server. 
 [![Build Status](https://secure.travis-ci.org/abh/geodns.png)](http://travis-ci.org/abh/geodns)
 
 ## Installation
