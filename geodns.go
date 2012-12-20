@@ -19,11 +19,12 @@ var timeStarted = time.Now()
 var qCounter uint64 = 0
 
 var (
-	flagconfig = flag.String("config", "./dns/", "directory of zone files")
-	flaginter  = flag.String("interface", "*", "set the listener address")
-	flagport   = flag.String("port", "53", "default port number")
-	flaghttp   = flag.String("http", ":8053", "http listen address (:8053)")
-	flaglog    = flag.Bool("log", false, "be more verbose")
+	flagconfig      = flag.String("config", "./dns/", "directory of zone files")
+	flagcheckconfig = flag.Bool("checkconfig", false, "check configuration and exit")
+	flaginter       = flag.String("interface", "*", "set the listener address")
+	flagport        = flag.String("port", "53", "default port number")
+	flaghttp        = flag.String("http", ":8053", "http listen address (:8053)")
+	flaglog         = flag.Bool("log", false, "be more verbose")
 
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile = flag.String("memprofile", "", "write memory profile to this file")
@@ -40,6 +41,18 @@ func init() {
 
 func main() {
 	flag.Parse()
+
+	if *flagcheckconfig {
+		dirName := *flagconfig
+		Zones := make(Zones)
+		setupPgeodnsZone(Zones)
+		err := configReadDir(dirName, Zones)
+		if err != nil {
+			log.Println("Errors reading config")
+			os.Exit(2)
+		}
+		return
+	}
 
 	log.Printf("Starting geodns %s\n", VERSION)
 

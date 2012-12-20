@@ -27,13 +27,16 @@ func configReader(dirName string, Zones Zones) {
 	}
 }
 
-func configReadDir(dirName string, Zones Zones) {
+func configReadDir(dirName string, Zones Zones) error {
 	dir, err := ioutil.ReadDir(dirName)
 	if err != nil {
-		panic(err)
+		log.Println("Could not read", dirName, ":", err)
+		return err
 	}
 
 	seenFiles := map[string]bool{}
+
+	var parse_err error
 
 	for _, file := range dir {
 		fileName := file.Name()
@@ -44,24 +47,27 @@ func configReadDir(dirName string, Zones Zones) {
 		seenFiles[fileName] = true
 
 		if lastRead, ok := configLastRead[fileName]; !ok || file.ModTime().After(lastRead) {
-			log.Println("Updated file, going to read", fileName)
+			logPrintln("Updated file, going to read", fileName)
 			configLastRead[fileName] = file.ModTime()
 			zoneName := fileName[0:strings.LastIndex(fileName, ".")]
 			//log.Println("FILE:", i, file, zoneName)
 			runtime.GC()
 			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
 			if config == nil || err != nil {
-				log.Println("error reading file: ", err)
+				log.Println(err)
+				parse_err = err
+				continue
 			}
-			if config != nil && err == nil {
-				Zones[zoneName] = config
-				dns.HandleFunc(zoneName, setupServerFunc(config))
-				runtime.GC()
-			}
+
+			Zones[zoneName] = config
+			dns.HandleFunc(zoneName, setupServerFunc(config))
+			runtime.GC()
 		}
 
 		// TODO(ask) Disable zones not seen in two subsequent runs
 	}
+
+	return parse_err
 }
 
 func setupPgeodnsZone(Zones Zones) {
@@ -370,7 +376,7 @@ func setupSOA(Zone *Zone) {
 		" 5400 5400 2419200 " +
 		strconv.Itoa(Zone.Options.Ttl)
 
-	log.Println("SOA: ", s)
+	// log.Println("SOA: ", s)
 
 	rr, err := dns.NewRR(s)
 
