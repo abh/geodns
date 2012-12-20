@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/abh/geodns/countries"
 	"github.com/miekg/dns"
+	"strings"
 )
 
 type Options struct {
@@ -47,6 +48,20 @@ type Zone struct {
 
 func (l *Label) firstRR(dnsType uint16) dns.RR {
 	return l.Records[dnsType][0].RR
+}
+
+func (z *Zone) AddLabel(k string) *Label {
+	k = strings.ToLower(k)
+	z.Labels[k] = new(Label)
+	label := z.Labels[k]
+	label.Label = k
+	label.Ttl = z.Options.Ttl
+	label.MaxHosts = z.Options.MaxHosts
+
+	label.Records = make(map[uint16]Records)
+	label.Weight = make(map[uint16]int)
+
+	return label
 }
 
 func (z *Zone) SoaRR() dns.RR {

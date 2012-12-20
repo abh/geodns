@@ -160,12 +160,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 		//log.Printf("K %s V %s TYPE-V %T\n", dk, dv, dv)
 
-		dk = strings.ToLower(dk)
-		Zone.Labels[dk] = new(Label)
-		label := Zone.Labels[dk]
-		label.Label = dk
-		label.Ttl = Zone.Options.Ttl
-		label.MaxHosts = Zone.Options.MaxHosts
+		label := Zone.AddLabel(dk)
 
 		if ttl, ok := dv["ttl"]; ok {
 			label.Ttl = valueToInt(ttl)
@@ -209,11 +204,6 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 			}
 
 			//log.Printf("RECORDS %s TYPE-REC %T\n", Records, Records)
-
-			if label.Records == nil {
-				label.Records = make(map[uint16]Records)
-				label.Weight = make(map[uint16]int)
-			}
 
 			label.Records[dnsType] = make(Records, len(records[rType]))
 
@@ -346,6 +336,14 @@ func setupSOA(Zone *Zone) {
 	label := Zone.Labels[""]
 
 	primaryNs := "ns"
+
+	// log.Println("LABEL", label)
+
+	if label == nil {
+		log.Println(Zone.Origin, "doesn't have any 'root' records,",
+			"you should probably add some NS records")
+		label = Zone.AddLabel("")
+	}
 
 	if record, ok := label.Records[dns.TypeNS]; ok {
 		primaryNs = record[0].RR.(*dns.NS).Ns
