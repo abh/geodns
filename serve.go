@@ -36,12 +36,12 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	var ip string
 	var edns *dns.EDNS0_SUBNET
-	var opt_rr *dns.RR_OPT
+	var opt_rr *dns.OPT
 
 	for _, extra := range req.Extra {
 		log.Println("Extra", extra)
-		for _, o := range extra.(*dns.RR_OPT).Option {
-			opt_rr = extra.(*dns.RR_OPT)
+		for _, o := range extra.(*dns.OPT).Option {
+			opt_rr = extra.(*dns.OPT)
 			switch e := o.(type) {
 			case *dns.EDNS0_NSID:
 				// do stuff with e.Nsid
@@ -74,11 +74,13 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	m.Authoritative = true
 
 	// TODO: set scope to 0 if there are no alternate responses
-	log.Println("family", edns.Family)
-	if edns.Family != 0 {
-		log.Println("edns response!")
-		edns.SourceScope = 16
-		m.Extra = append(m.Extra, opt_rr)
+	if edns != nil {
+		log.Println("family", edns.Family)
+		if edns.Family != 0 {
+			log.Println("edns response!")
+			edns.SourceScope = 16
+			m.Extra = append(m.Extra, opt_rr)
+		}
 	}
 
 	// TODO(ask) Fix the findLabels API to make this work better
