@@ -1,7 +1,9 @@
 package main
 
 import (
+	"camlistore.org/pkg/errorutil"
 	"encoding/json"
+	"fmt"
 	"github.com/miekg/dns"
 	"io/ioutil"
 	"log"
@@ -102,7 +104,20 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 	if err == nil {
 		var objmap map[string]interface{}
 		decoder := json.NewDecoder(fh)
-		err := decoder.Decode(&objmap)
+		if err = decoder.Decode(&objmap); err != nil {
+			extra := ""
+			if serr, ok := err.(*json.SyntaxError); ok {
+				if _, serr := fh.Seek(0, os.SEEK_SET); serr != nil {
+					log.Fatalf("seek error: %v", serr)
+				}
+				line, col, highlight := errorutil.HighlightBytePosition(fh, serr.Offset)
+				extra = fmt.Sprintf(":\nError at line %d, column %d (file offset %d):\n%s",
+					line, col, serr.Offset, highlight)
+			}
+			return nil, fmt.Errorf("error parsing JSON object in config file %s%s\n%v",
+				fh.Name(), extra, err)
+		}
+
 		if err != nil {
 			panic(err)
 		}
