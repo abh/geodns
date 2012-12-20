@@ -38,6 +38,12 @@
     "www": {
       "cname": "geo.bitnames.com."
     },
+    "www-cname": {
+      "cname": "bar"
+    },
+    "www-alias": {
+      "cname": "bar-alias"
+    },
     "cname-long-ttl": {
       "cname": "geo.bitnames.com.",
       "ttl": 86400

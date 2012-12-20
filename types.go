@@ -81,7 +81,7 @@ func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
 
 			// look for aliases
 			if label.Records[dns.TypeMF] != nil {
-				name = label.firstRR(dns.TypeMF).(*dns.RR_MF).Mf
+				name = label.firstRR(dns.TypeMF).(*dns.MF).Mf
 				// BUG(ask) - restructure this so it supports chains of aliases
 				label, ok = z.Labels[name]
 				if label == nil {
