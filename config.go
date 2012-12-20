@@ -235,14 +235,17 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					rec := records[rType][i].([]interface{})
 					ip := rec[0].(string)
 					var err error
-					switch rec[1].(type) {
-					case string:
-						record.Weight, err = strconv.Atoi(rec[1].(string))
-						if err != nil {
-							panic("Error converting weight to integer")
+
+					if len(rec) > 1 {
+						switch rec[1].(type) {
+						case string:
+							record.Weight, err = strconv.Atoi(rec[1].(string))
+							if err != nil {
+								panic("Error converting weight to integer")
+							}
+						case float64:
+							record.Weight = int(rec[1].(float64))
 						}
-					case float64:
-						record.Weight = int(rec[1].(float64))
 					}
 					switch dnsType {
 					case dns.TypeA:
