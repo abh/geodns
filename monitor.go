@@ -3,6 +3,7 @@ package main
 import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
+	"expvar"
 	"io"
 	"log"
 	"net/http"
@@ -117,11 +118,12 @@ func initialStatus() string {
 
 func logStatus() {
 	log.Println(initialStatus())
-	lastQueryCount := qCounter
+	// Does not impact performance to much
+	lastQueryCount := expVarToInt64(qCounter)
 
 	for {
-		newQueries := qCounter - lastQueryCount
-		lastQueryCount = qCounter
+		newQueries := expVarToInt64(qCounter) - lastQueryCount
+		lastQueryCount = expVarToInt64(qCounter)
 		log.Println("goroutines", runtime.NumGoroutine(), "queries", newQueries)
 
 		time.Sleep(60 * time.Second)
@@ -137,15 +139,15 @@ func monitor() {
 	go hub.run()
 	go httpHandler()
 
-	lastQueryCount := qCounter
+	lastQueryCount := expVarToInt64(qCounter)
 	for {
-		newQueries := qCounter - lastQueryCount
-		lastQueryCount = qCounter
+		newQueries := expVarToInt64(qCounter) - lastQueryCount
+		lastQueryCount = expVarToInt64(qCounter)
 
 		status := map[string]string{}
 		status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
-		status["qs"] = strconv.FormatUint(qCounter, 10)
-		status["qps"] = strconv.FormatUint(newQueries, 10)
+		status["qs"] = qCounter.String()
+		status["qps"] = strconv.FormatInt(newQueries, 10)
 
 		message, err := json.Marshal(status)
 
@@ -172,4 +174,9 @@ func httpHandler() {
 	http.HandleFunc("/", MainServer)
 
 	log.Fatal(http.ListenAndServe(*flaghttp, nil))
+}
+
+func expVarToInt64(i *expvar.Int) (j int64) {
+	j, _ = strconv.ParseInt(i.String(), 10, 64)
+	return 
 }

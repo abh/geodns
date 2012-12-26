@@ -1,6 +1,7 @@
 package main
 
 import (
+	"expvar"
 	"flag"
 	"log"
 	"net"
@@ -16,7 +17,7 @@ var gitVersion string
 var serverId string
 
 var timeStarted = time.Now()
-var qCounter uint64 = 0
+var qCounter = expvar.NewInt("qCounter")
 
 var (
 	flagconfig      = flag.String("config", "./dns/", "directory of zone files")
