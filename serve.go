@@ -27,9 +27,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
 		dns.TypeToString[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
-	// is this safe/atomic or does it need to go through a channel?
-	qCounter++
-
+	qCounter.Add(1)
 	logPrintln("Got request", req)
 
 	label := getQuestionName(z, req)
@@ -173,7 +171,7 @@ func statusRR(z *Zone) []dns.RR {
 		status["h"] = hostname
 	}
 	status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
-	status["qs"] = strconv.FormatUint(qCounter, 10)
+	status["qs"] = qCounter.String()
 
 	js, err := json.Marshal(status)
 
