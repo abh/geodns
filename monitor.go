@@ -118,12 +118,14 @@ func initialStatus() string {
 
 func logStatus() {
 	log.Println(initialStatus())
-	// Does not impact performance to much
+	// Does not impact performance too much
 	lastQueryCount := expVarToInt64(qCounter)
 
 	for {
-		newQueries := expVarToInt64(qCounter) - lastQueryCount
-		lastQueryCount = expVarToInt64(qCounter)
+		current := expVarToInt64(qCounter)
+		newQueries := current - lastQueryCount
+		lastQueryCount = current
+
 		log.Println("goroutines", runtime.NumGoroutine(), "queries", newQueries)
 
 		time.Sleep(60 * time.Second)
@@ -140,9 +142,11 @@ func monitor() {
 	go httpHandler()
 
 	lastQueryCount := expVarToInt64(qCounter)
+
 	for {
-		newQueries := expVarToInt64(qCounter) - lastQueryCount
-		lastQueryCount = expVarToInt64(qCounter)
+		current := expVarToInt64(qCounter)
+		newQueries := current - lastQueryCount
+		lastQueryCount = current
 
 		status := map[string]string{}
 		status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
@@ -178,5 +182,5 @@ func httpHandler() {
 
 func expVarToInt64(i *expvar.Int) (j int64) {
 	j, _ = strconv.ParseInt(i.String(), 10, 64)
-	return 
+	return
 }
