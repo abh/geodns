@@ -28,6 +28,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		dns.TypeToString[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
 	qCounter.Add(1)
+
 	logPrintln("Got request", req)
 
 	label := getQuestionName(z, req)
@@ -44,7 +45,6 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			case *dns.EDNS0_NSID:
 				// do stuff with e.Nsid
 			case *dns.EDNS0_SUBNET:
-				log.Println("========== XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
 				log.Println("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
 				if e.Address != nil {
 					log.Println("Setting edns to", e)
