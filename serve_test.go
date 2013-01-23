@@ -59,10 +59,18 @@ func (s *ConfigSuite) TestServing(c *C) {
 }
 
 func (s *ConfigSuite) TestServingEDNS(c *C) {
-	msg := new(dns.Msg)
-	cli := new(dns.Client)
+	// MX test
+	r := exchangeSubnet(c, "test.example.com.", dns.TypeMX, "194.239.134.1")
+	c.Check(r.Answer, HasLen, 1)
+	if len(r.Answer) > 0 {
+		c.Check(r.Answer[0].(*dns.MX).Mx, Equals, "mx-eu.example.net.")
+	}
+}
 
-	msg.SetQuestion("example.com.", dns.TypeMX)
+func exchangeSubnet(c *C, name string, dnstype uint16, ip string) *dns.Msg {
+	msg := new(dns.Msg)
+
+	msg.SetQuestion(name, dnstype)
 
 	o := new(dns.OPT)
 	o.Hdr.Name = "."
@@ -70,27 +78,26 @@ func (s *ConfigSuite) TestServingEDNS(c *C) {
 	e := new(dns.EDNS0_SUBNET)
 	e.Code = dns.EDNS0SUBNET
 	e.SourceScope = 0
-	e.Address = net.ParseIP("194.239.134.1")
+	e.Address = net.ParseIP(ip)
 	e.Family = 1 // IP4
 	e.SourceNetmask = net.IPv4len * 8
 	o.Option = append(o.Option, e)
 	msg.Extra = append(msg.Extra, o)
 
-	r, _, err := cli.Exchange(msg, "127.0.0.1"+PORT)
-	if err != nil {
-		c.Log("err", err)
-		c.Fail()
-	}
+	c.Log("msg", msg)
 
-	c.Check(r.Answer[0].(*dns.MX).Mx, Equals, "mx-eu.example.net.")
-
+	return dorequest(c, msg)
 }
 
 func exchange(c *C, name string, dnstype uint16) *dns.Msg {
 	msg := new(dns.Msg)
-	cli := new(dns.Client)
 
 	msg.SetQuestion(name, dnstype)
+	return dorequest(c, msg)
+}
+
+func dorequest(c *C, msg *dns.Msg) *dns.Msg {
+	cli := new(dns.Client)
 	r, _, err := cli.Exchange(msg, "127.0.0.1"+PORT)
 	if err != nil {
 		c.Log("err", err)
