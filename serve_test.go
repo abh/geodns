@@ -12,14 +12,25 @@ const (
 	PORT = ":8853"
 )
 
-func (s *ConfigSuite) TestServing(c *C) {
+type ServeSuite struct {
+}
+
+var _ = Suite(&ServeSuite{})
+
+func (s *ServeSuite) SetUpSuite(c *C) {
+
+	c.Log("Setting up test suite")
 
 	Zones := make(Zones)
 	setupPgeodnsZone(Zones)
-	go configReader("dns", Zones)
+	configReadDir("dns", Zones)
+
 	go listenAndServe(PORT, &Zones)
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
+}
+
+func (s *ServeSuite) TestServing(c *C) {
 
 	r := exchange(c, "_status.pgeodns.", dns.TypeTXT)
 	txt := r.Answer[0].(*dns.TXT).Txt[0]
@@ -58,7 +69,7 @@ func (s *ConfigSuite) TestServing(c *C) {
 
 }
 
-func (s *ConfigSuite) TestServingEDNS(c *C) {
+func (s *ServeSuite) TestServingEDNS(c *C) {
 	// MX test
 	r := exchangeSubnet(c, "test.example.com.", dns.TypeMX, "194.239.134.1")
 	c.Check(r.Answer, HasLen, 1)
