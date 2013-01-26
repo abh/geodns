@@ -42,7 +42,7 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 		Target, Equals, "bar.test.example.com.")
 
 	c.Check(tz.Labels["www-alias"].
-		firstRR(dns.TypeCNAME).(*dns.CNAME).
-		Target, Equals, "bar-alias.test.example.com.")
+		firstRR(dns.TypeMF).(*dns.MF).
+		Mf, Equals, "www")
 
 }

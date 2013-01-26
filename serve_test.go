@@ -48,7 +48,7 @@ func (s *ConfigSuite) TestServing(c *C) {
 
 	// TODO: make the alias and cname respond with the data for the target, too?
 	r = exchange(c, "www-alias.test.example.com.", dns.TypeA)
-	c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "bar-alias.test.example.com.")
+	c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo.bitnames.com.")
 
 	/* MX */
 	r = exchange(c, "test.example.com.", dns.TypeMX)
