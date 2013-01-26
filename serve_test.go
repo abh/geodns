@@ -53,20 +53,35 @@ func (s *ServeSuite) TestServing(c *C) {
 	soa2 := r.Ns[0].(*dns.SOA)
 	c.Check(soa, DeepEquals, soa2)
 
-	/* CNAMEs */
+	// CNAMEs
 	r = exchange(c, "www.test.example.com.", dns.TypeA)
 	c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo.bitnames.com.")
 
-	// TODO: make the alias and cname respond with the data for the target, too?
-	r = exchange(c, "www-alias.test.example.com.", dns.TypeA)
-	c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo.bitnames.com.")
-
-	/* MX */
+	// MX
 	r = exchange(c, "test.example.com.", dns.TypeMX)
 	c.Check(r.Answer[0].(*dns.MX).Mx, Equals, "mx.example.net.")
 	c.Check(r.Answer[1].(*dns.MX).Mx, Equals, "mx2.example.net.")
 	c.Check(r.Answer[1].(*dns.MX).Preference, Equals, uint16(20))
+}
 
+func (s *ServeSuite) TestServingAliases(c *C) {
+	// Alias, no geo matches
+	r := exchange(c, "bar-alias.test.example.com.", dns.TypeA)
+	ip := r.Answer[0].(*dns.A).A
+	c.Check(ip.String(), Equals, "192.168.1.2")
+
+	// Alias to a cname record
+	r = exchange(c, "www-alias.test.example.com.", dns.TypeA)
+	c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo.bitnames.com.")
+
+	/*
+		// Alias returning a cname, with geo overrides
+		r = exchangeSubnet(c, "www-alias.test.example.com.", dns.TypeA, "194.239.134.1")
+		c.Check(r.Answer, HasLen, 1)
+		if len(r.Answer) > 0 {
+			c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo-europe.bitnames.com.")
+		}
+	*/
 }
 
 func (s *ServeSuite) TestServingEDNS(c *C) {
@@ -76,6 +91,16 @@ func (s *ServeSuite) TestServingEDNS(c *C) {
 	if len(r.Answer) > 0 {
 		c.Check(r.Answer[0].(*dns.MX).Mx, Equals, "mx-eu.example.net.")
 	}
+
+	/*
+		c.Log("Testing www.test.example.com from .dk, should match www.europe (a cname)")
+
+		r = exchangeSubnet(c, "www.test.example.com.", dns.TypeA, "194.239.134.1")
+		c.Check(r.Answer, HasLen, 1)
+		if len(r.Answer) > 0 {
+			c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo-europe.bitnames.com.")
+		}
+	*/
 }
 
 func exchangeSubnet(c *C, name string, dnstype uint16, ip string) *dns.Msg {
