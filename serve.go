@@ -81,14 +81,11 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		}
 	}
 
-	// TODO(ask) Fix the findLabels API to make this work better
-	if alias := z.findLabels(label, "", dns.TypeMF); alias != nil &&
-		alias.Records[dns.TypeMF] != nil {
-		// We found an alias record, so pretend the question was for that name instead
-		label = alias.firstRR(dns.TypeMF).(*dns.MF).Mf
+	labels, labelQtype := z.findLabels(label, country, qTypes{dns.TypeMF, dns.TypeCNAME, qtype})
+	if labelQtype == 0 {
+		labelQtype = qtype
 	}
 
-	labels := z.findLabels(label, country, qtype)
 	if labels == nil {
 
 		if label == "_status" && (qtype == dns.TypeANY || qtype == dns.TypeTXT) {
@@ -126,7 +123,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		return
 	}
 
-	if servers := labels.Picker(qtype, labels.MaxHosts); servers != nil {
+	if servers := labels.Picker(labelQtype, labels.MaxHosts); servers != nil {
 		var rrs []dns.RR
 		for _, record := range servers {
 			rr := record.RR
@@ -137,16 +134,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 
 	if len(m.Answer) == 0 {
-		if labels := z.Labels[label]; labels != nil {
-			if _, ok := labels.Records[dns.TypeCNAME]; ok {
-				cname := labels.firstRR(dns.TypeCNAME)
-				m.Answer = append(m.Answer, cname)
-			} else {
-				m.Ns = append(m.Ns, z.SoaRR())
-			}
-		} else {
-			m.Ns = append(m.Ns, z.SoaRR())
-		}
+		m.Ns = append(m.Ns, z.SoaRR())
 	}
 
 	logPrintln(m)

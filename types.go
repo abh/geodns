@@ -46,6 +46,8 @@ type Zone struct {
 	Options   Options
 }
 
+type qTypes []uint16
+
 func (l *Label) firstRR(dnsType uint16) dns.RR {
 	return l.Records[dnsType][0].RR
 }
@@ -68,48 +70,52 @@ func (z *Zone) SoaRR() dns.RR {
 	return z.Labels[""].firstRR(dns.TypeSOA)
 }
 
-func (z *Zone) findLabels(s, cc string, qtype uint16) *Label {
-
-	if qtype == dns.TypeANY {
-		// short-circuit mostly to avoid subtle bugs later
-		// to be correct we should run through all the selectors and
-		// pick types not already picked
-		return z.Labels[s]
-	}
+func (z *Zone) findLabels(s, cc string, qts qTypes) (*Label, uint16) {
 
 	selectors := []string{}
 
 	if len(cc) > 0 {
 		continent := countries.CountryContinent[cc]
+		var s_cc string
 		if len(s) > 0 {
-			cc = s + "." + cc
+			s_cc = s + "." + cc
 			if len(continent) > 0 {
 				continent = s + "." + continent
 			}
+		} else {
+			s_cc = cc
 		}
-		selectors = append(selectors, cc, continent)
+		selectors = append(selectors, s_cc, continent)
 	}
 	selectors = append(selectors, s)
 
 	for _, name := range selectors {
+
 		if label, ok := z.Labels[name]; ok {
 
-			// look for aliases
-			if label.Records[dns.TypeMF] != nil {
-				name = label.firstRR(dns.TypeMF).(*dns.MF).Mf
-				// BUG(ask) - restructure this so it supports chains of aliases
-				label, ok = z.Labels[name]
-				if label == nil {
-					continue
-				}
-			}
+			for _, qtype := range qts {
 
-			// return the label if it has the right records
-			// TODO(ask) Should this also look for CNAME records?
-			if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
-				return label
+				switch qtype {
+				case dns.TypeANY:
+					// short-circuit mostly to avoid subtle bugs later
+					// to be correct we should run through all the selectors and
+					// pick types not already picked
+					return z.Labels[s], qtype
+				case dns.TypeMF:
+					if label.Records[dns.TypeMF] != nil {
+						name = label.firstRR(dns.TypeMF).(*dns.MF).Mf
+						// TODO: need to avoid loops here somehow
+						return z.findLabels(name, cc, qts)
+					}
+				default:
+					// return the label if it has the right record
+					if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
+						return label, qtype
+					}
+				}
 			}
 		}
 	}
-	return z.Labels[s]
+
+	return z.Labels[s], 0
 }

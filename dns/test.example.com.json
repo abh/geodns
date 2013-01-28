@@ -38,6 +38,9 @@
     "www": {
       "cname": "geo.bitnames.com."
     },
+    "www.europe": {
+      "cname": "geo-europe.bitnames.com."
+    },
     "www-cname": {
       "cname": "bar"
     },
