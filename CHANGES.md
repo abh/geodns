@@ -1,6 +1,16 @@
 # GeoDNS Changelog
 
-## 2.2.0
+## 2.2.1, February 2013
+
+* Beta EDNS-SUBNET support.
+* Allow A/AAAA records without a weight
+* Don't crash if a zone doesn't have any apex records
+* Show line with syntax error when parsing JSON files
+* Add --checkconfig parameter
+* More tests
+
+
+## 2.2.0, December 2012
 
 * Initial EDNS-SUBNET support.
 * Better error messages when parsing invalid JSON.
