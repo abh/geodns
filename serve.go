@@ -38,16 +38,20 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	var opt_rr *dns.OPT
 
 	for _, extra := range req.Extra {
-		for _, o := range extra.(*dns.OPT).Option {
-			opt_rr = extra.(*dns.OPT)
-			switch e := o.(type) {
-			case *dns.EDNS0_NSID:
-				// do stuff with e.Nsid
-			case *dns.EDNS0_SUBNET:
-				logPrintln("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
-				if e.Address != nil {
-					edns = e
-					ip = e.Address.String()
+
+		switch extra.(type) {
+		case *dns.OPT:
+			for _, o := range extra.(*dns.OPT).Option {
+				opt_rr = extra.(*dns.OPT)
+				switch e := o.(type) {
+				case *dns.EDNS0_NSID:
+					// do stuff with e.Nsid
+				case *dns.EDNS0_SUBNET:
+					logPrintln("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
+					if e.Address != nil {
+						edns = e
+						ip = e.Address.String()
+					}
 				}
 			}
 		}

@@ -1,5 +1,9 @@
 # GeoDNS Changelog
 
+## 2.2.2, February 2013
+
+* Fix crash when getting unknown RRs in Extra request section
+
 ## 2.2.1, February 2013
 
 * Beta EDNS-SUBNET support.

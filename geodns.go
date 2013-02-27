@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var VERSION string = "2.2.1"
+var VERSION string = "2.2.2"
 var gitVersion string
 var serverId string
 
