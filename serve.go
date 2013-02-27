@@ -38,16 +38,14 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	var opt_rr *dns.OPT
 
 	for _, extra := range req.Extra {
-		log.Println("Extra", extra)
 		for _, o := range extra.(*dns.OPT).Option {
 			opt_rr = extra.(*dns.OPT)
 			switch e := o.(type) {
 			case *dns.EDNS0_NSID:
 				// do stuff with e.Nsid
 			case *dns.EDNS0_SUBNET:
-				log.Println("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
+				logPrintln("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
 				if e.Address != nil {
-					log.Println("Setting edns to", e)
 					edns = e
 					ip = e.Address.String()
 				}
@@ -73,9 +71,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	// TODO: set scope to 0 if there are no alternate responses
 	if edns != nil {
-		log.Println("family", edns.Family)
 		if edns.Family != 0 {
-			log.Println("edns response!")
 			edns.SourceScope = 16
 			m.Extra = append(m.Extra, opt_rr)
 		}
