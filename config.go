@@ -55,7 +55,6 @@ func configReadDir(dirName string, Zones Zones) error {
 			configLastRead[fileName] = file.ModTime()
 			zoneName := fileName[0:strings.LastIndex(fileName, ".")]
 			//log.Println("FILE:", i, file, zoneName)
-			runtime.GC()
 			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
 			if config == nil || err != nil {
 				log.Println(err)
