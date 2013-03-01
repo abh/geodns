@@ -20,14 +20,19 @@ import (
 
 var configLastRead = map[string]time.Time{}
 
-func configReader(dirName string, Zones Zones) {
+func configReader(dirName string, zones Zones) {
 	for {
-		configReadDir(dirName, Zones)
+		configReadDir(dirName, zones)
 		time.Sleep(5 * time.Second)
 	}
 }
 
-func configReadDir(dirName string, Zones Zones) error {
+func addHandler(zones Zones, name string, config *Zone) {
+	zones[name] = config
+	dns.HandleFunc(name, setupServerFunc(config))
+}
+
+func configReadDir(dirName string, zones Zones) error {
 	dir, err := ioutil.ReadDir(dirName)
 	if err != nil {
 		log.Println("Could not read", dirName, ":", err)
@@ -62,8 +67,7 @@ func configReadDir(dirName string, Zones Zones) error {
 				continue
 			}
 
-			Zones[zoneName] = config
-			dns.HandleFunc(zoneName, setupServerFunc(config))
+			addHandler(zones, zoneName, config)
 			runtime.GC()
 		}
 
@@ -73,7 +77,7 @@ func configReadDir(dirName string, Zones Zones) error {
 	return parse_err
 }
 
-func setupPgeodnsZone(Zones Zones) {
+func setupPgeodnsZone(zones Zones) {
 	zoneName := "pgeodns"
 	Zone := new(Zone)
 	Zone.Labels = make(labels)
@@ -84,8 +88,7 @@ func setupPgeodnsZone(Zones Zones) {
 	label.Weight = make(map[uint16]int)
 	Zone.Labels[""] = label
 	setupSOA(Zone)
-	Zones[zoneName] = Zone
-	dns.HandleFunc(zoneName, setupServerFunc(Zone))
+	addHandler(zones, zoneName, Zone)
 }
 
 func readZoneFile(zoneName, fileName string) (*Zone, error) {
