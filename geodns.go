@@ -103,7 +103,7 @@ func main() {
 	go configReader(dirName, Zones)
 
 	for _, host := range inter {
-		go listenAndServe(host, &Zones)
+		go listenAndServe(host)
 	}
 
 	terminate := make(chan os.Signal)

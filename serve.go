@@ -172,7 +172,7 @@ func setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {
 	}
 }
 
-func listenAndServe(ip string, Zones *Zones) {
+func listenAndServe(ip string) {
 
 	prots := []string{"udp", "tcp"}
 

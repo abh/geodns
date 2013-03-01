@@ -25,7 +25,7 @@ func (s *ServeSuite) SetUpSuite(c *C) {
 	setupPgeodnsZone(Zones)
 	configReadDir("dns", Zones)
 
-	go listenAndServe(PORT, &Zones)
+	go listenAndServe(PORT)
 
 	time.Sleep(200 * time.Millisecond)
 }
