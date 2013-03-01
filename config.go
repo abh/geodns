@@ -47,7 +47,11 @@ func configReadDir(dirName string, Zones Zones) error {
 		seenFiles[fileName] = true
 
 		if lastRead, ok := configLastRead[fileName]; !ok || file.ModTime().After(lastRead) {
-			logPrintln("Updated file, going to read", fileName)
+			if ok {
+				log.Printf("Reloading %s\n", fileName)
+			} else {
+				logPrintf("Reading new file %s\n", fileName)
+			}
 			configLastRead[fileName] = file.ModTime()
 			zoneName := fileName[0:strings.LastIndex(fileName, ".")]
 			//log.Println("FILE:", i, file, zoneName)
