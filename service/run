@@ -17,4 +17,6 @@ if [ -e env/CONFIG ]; then
   CONFIG=`head -1 env/CONFIG`
 fi
 
+ulimit -n 64000
+
 exec softlimit -d500000000 ./geodns $INTERFACE --config="$CONFIG"
