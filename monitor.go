@@ -111,6 +111,8 @@ func initialStatus() string {
 	hostname, err := os.Hostname()
 	if err == nil {
 		status["h"] = hostname
+		status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
+		status["started"] = strconv.Itoa(int(timeStarted.Unix()))
 	}
 	message, err := json.Marshal(status)
 	return string(message)
