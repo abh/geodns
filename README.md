@@ -1,7 +1,7 @@
 # GeoDNS in Go
 
 This is the DNS server powering the [NTP Pool](http://www.pool.ntp.org/) system and other
-similar services. It supersedes the [pgeodns](http://github.com/abh/pgeodns) server. 
+similar services. It supersedes the [pgeodns](http://github.com/abh/pgeodns) server.
 [![Build Status](https://secure.travis-ci.org/abh/geodns.png)](http://travis-ci.org/abh/geodns)
 
 ## Installation
@@ -117,3 +117,9 @@ The target will have the current zone name appended if it's not a FQDN (since v2
 Internally resolved cname, of sorts. Only works internally in a zone.
 
    { "alias": "foo" }
+
+
+## License and Copyright
+
+This software is Copyright 2012-2013 Ask Bjørn Hansen. For licensing information
+please see the file called LICENSE.
