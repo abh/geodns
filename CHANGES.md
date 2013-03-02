@@ -1,6 +1,14 @@
 # GeoDNS Changelog
 
-## 2.2.2, February 2013
+## 2.2.3, March 1st 2013
+
+* Always log when zones are re-read
+* Remove one of the runtime.GC() calls when configs are loaded
+* Set ulimit -n 64000 in run script
+* Cleanup unused Zones variable in a few places
+* Log when server was started to websocket /monitor interface
+
+## 2.2.2, February 27th 2013
 
 * Fix crash when getting unknown RRs in Extra request section
 
