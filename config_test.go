@@ -17,7 +17,7 @@ var _ = Suite(&ConfigSuite{})
 
 func (s *ConfigSuite) TestReadConfigs(c *C) {
 	s.zones = make(Zones)
-	configReadDir("dns", s.zones)
+	zonesReadDir("dns", s.zones)
 
 	// Just check that example.com and test.example.org loaded, too.
 	c.Check(s.zones["example.com"].Origin, Equals, "example.com")

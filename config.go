@@ -18,11 +18,11 @@ import (
 	"time"
 )
 
-var configLastRead = map[string]time.Time{}
+var zonesLastRead = map[string]time.Time{}
 
-func configReader(dirName string, zones Zones) {
+func zonesReader(dirName string, zones Zones) {
 	for {
-		configReadDir(dirName, zones)
+		zonesReadDir(dirName, zones)
 		time.Sleep(5 * time.Second)
 	}
 }
@@ -32,7 +32,7 @@ func addHandler(zones Zones, name string, config *Zone) {
 	dns.HandleFunc(name, setupServerFunc(config))
 }
 
-func configReadDir(dirName string, zones Zones) error {
+func zonesReadDir(dirName string, zones Zones) error {
 	dir, err := ioutil.ReadDir(dirName)
 	if err != nil {
 		log.Println("Could not read", dirName, ":", err)
@@ -51,14 +51,15 @@ func configReadDir(dirName string, zones Zones) error {
 
 		seenFiles[fileName] = true
 
-		if lastRead, ok := configLastRead[fileName]; !ok || file.ModTime().After(lastRead) {
+		if lastRead, ok := zonesLastRead[fileName]; !ok || file.ModTime().After(lastRead) {
 			if ok {
 				log.Printf("Reloading %s\n", fileName)
 			} else {
 				logPrintf("Reading new file %s\n", fileName)
 			}
-			configLastRead[fileName] = file.ModTime()
-			zoneName := fileName[0:strings.LastIndex(fileName, ".")]
+			zonesLastRead[fileName] = file.ModTime()
+
+			zoneName := zoneNameFromFile(fileName)
 			//log.Println("FILE:", i, file, zoneName)
 			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
 			if config == nil || err != nil {
@@ -413,4 +414,8 @@ func valueToInt(v interface{}) (rv int) {
 		panic("Can't convert value")
 	}
 	return rv
+}
+
+func zoneNameFromFile(fileName string) string {
+	return fileName[0:strings.LastIndex(fileName, ".")]
 }

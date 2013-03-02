@@ -23,7 +23,7 @@ func (s *ServeSuite) SetUpSuite(c *C) {
 
 	Zones := make(Zones)
 	setupPgeodnsZone(Zones)
-	configReadDir("dns", Zones)
+	zonesReadDir("dns", Zones)
 
 	go listenAndServe(PORT)
 

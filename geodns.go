@@ -47,7 +47,7 @@ func main() {
 		dirName := *flagconfig
 		Zones := make(Zones)
 		setupPgeodnsZone(Zones)
-		err := configReadDir(dirName, Zones)
+		err := zonesReadDir(dirName, Zones)
 		if err != nil {
 			log.Println("Errors reading config")
 			os.Exit(2)
@@ -100,7 +100,7 @@ func main() {
 
 	setupPgeodnsZone(Zones)
 
-	go configReader(dirName, Zones)
+	go zonesReader(dirName, Zones)
 
 	for _, host := range inter {
 		go listenAndServe(host)
