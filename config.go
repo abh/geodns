@@ -18,8 +18,6 @@ import (
 	"time"
 )
 
-var zonesLastRead = map[string]time.Time{}
-
 func zonesReader(dirName string, zones Zones) {
 	for {
 		zonesReadDir(dirName, zones)
@@ -39,7 +37,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 		return err
 	}
 
-	seenFiles := map[string]bool{}
+	seenZones := map[string]bool{}
 
 	var parse_err error
 
@@ -49,30 +47,42 @@ func zonesReadDir(dirName string, zones Zones) error {
 			continue
 		}
 
-		seenFiles[fileName] = true
+		zoneName := zoneNameFromFile(fileName)
 
-		if lastRead, ok := zonesLastRead[fileName]; !ok || file.ModTime().After(lastRead) {
+		seenZones[zoneName] = true
+
+		if zone, ok := zones[zoneName]; !ok || file.ModTime().After(zone.LastRead) {
 			if ok {
 				log.Printf("Reloading %s\n", fileName)
 			} else {
 				logPrintf("Reading new file %s\n", fileName)
 			}
-			zonesLastRead[fileName] = file.ModTime()
 
-			zoneName := zoneNameFromFile(fileName)
 			//log.Println("FILE:", i, file, zoneName)
 			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
 			if config == nil || err != nil {
+				config.LastRead = file.ModTime()
 				log.Println(err)
 				parse_err = err
 				continue
 			}
+			config.LastRead = file.ModTime()
 
 			addHandler(zones, zoneName, config)
 			runtime.GC()
 		}
+	}
 
-		// TODO(ask) Disable zones not seen in two subsequent runs
+	for zoneName, zone := range zones {
+		if zoneName == "pgeodns" {
+			continue
+		}
+		if ok, _ := seenZones[zoneName]; ok {
+			continue
+		}
+		log.Println("Removing zone", zone.Origin)
+		dns.HandleRemove(zoneName)
+		delete(zones, zoneName)
 	}
 
 	return parse_err

@@ -4,6 +4,7 @@ import (
 	"github.com/abh/geodns/countries"
 	"github.com/miekg/dns"
 	"strings"
+	"time"
 )
 
 type Options struct {
@@ -44,6 +45,7 @@ type Zone struct {
 	Labels    labels
 	LenLabels int
 	Options   Options
+	LastRead  time.Time
 }
 
 type qTypes []uint16

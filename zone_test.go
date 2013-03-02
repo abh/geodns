@@ -6,7 +6,6 @@ import (
 )
 
 func (s *ConfigSuite) TestZone(c *C) {
-
 	ex := s.zones["test.example.com"]
 	c.Check(ex.Labels["weight"].MaxHosts, Equals, 1)
 

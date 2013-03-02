@@ -1,5 +1,7 @@
 # GeoDNS Changelog
 
+* De-configure zones when the .json file is removed
+
 ## 2.2.3, March 1st 2013
 
 * Always log when zones are re-read
