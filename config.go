@@ -18,7 +18,11 @@ type AppConfig struct {
 	}
 }
 
+var Config = new(AppConfig)
+
 func configWatcher(fileName string) {
+
+	configReader(fileName)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {

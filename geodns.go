@@ -36,8 +36,6 @@ var serverId string
 var timeStarted = time.Now()
 var qCounter = expvar.NewInt("qCounter")
 
-var Config = new(AppConfig)
-
 var (
 	flagconfig      = flag.String("config", "./dns/", "directory of zone files")
 	flagcheckconfig = flag.Bool("checkconfig", false, "check configuration and exit")
