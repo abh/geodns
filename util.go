@@ -43,6 +43,9 @@ func getInterfaces() []string {
 		if len(serverId) == 0 {
 			serverId = ip
 		}
+		if len(serverIP) == 0 {
+			serverIP = ip
+		}
 		inter = append(inter, host)
 
 	}

@@ -32,6 +32,7 @@ import (
 var VERSION string = "2.2.3"
 var gitVersion string
 var serverId string
+var serverIP string
 
 var timeStarted = time.Now()
 var qCounter = expvar.NewInt("qCounter")
@@ -39,6 +40,7 @@ var qCounter = expvar.NewInt("qCounter")
 var (
 	flagconfig      = flag.String("config", "./dns/", "directory of zone files")
 	flagcheckconfig = flag.Bool("checkconfig", false, "check configuration and exit")
+	flagidentifier  = flag.String("identifier", "", "identifier (hostname, pop name or similar)")
 	flaginter       = flag.String("interface", "*", "set the listener address")
 	flagport        = flag.String("port", "53", "default port number")
 	flaghttp        = flag.String("http", ":8053", "http listen address (:8053)")
@@ -59,6 +61,10 @@ func init() {
 
 func main() {
 	flag.Parse()
+
+	if len(*flagidentifier) > 0 {
+		serverId = *flagidentifier
+	}
 
 	configFileName := filepath.Clean(*flagconfig + "/geodns.conf")
 
