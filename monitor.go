@@ -73,7 +73,11 @@ func (c *wsConnection) reader() {
 		var message string
 		err := websocket.Message.Receive(c.ws, &message)
 		if err != nil {
-			log.Println("WS read error:", err)
+			if err == io.EOF {
+				log.Println("WS connection closed")
+			} else {
+				log.Println("WS read error:", err)
+			}
 			break
 		}
 		log.Println("WS message", message)
