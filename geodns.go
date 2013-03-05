@@ -23,6 +23,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/pprof"
 	"strings"
 	"time"
@@ -34,6 +35,8 @@ var serverId string
 
 var timeStarted = time.Now()
 var qCounter = expvar.NewInt("qCounter")
+
+var Config = new(AppConfig)
 
 var (
 	flagconfig      = flag.String("config", "./dns/", "directory of zone files")
@@ -59,13 +62,22 @@ func init() {
 func main() {
 	flag.Parse()
 
+	configFileName := filepath.Clean(*flagconfig + "/geodns.conf")
+
 	if *flagcheckconfig {
 		dirName := *flagconfig
+
+		err := configReader(configFileName)
+		if err != nil {
+			log.Println("Errors reading config", err)
+			os.Exit(2)
+		}
+
 		Zones := make(Zones)
 		setupPgeodnsZone(Zones)
-		err := zonesReadDir(dirName, Zones)
+		err = zonesReadDir(dirName, Zones)
 		if err != nil {
-			log.Println("Errors reading config")
+			log.Println("Errors reading zones", err)
 			os.Exit(2)
 		}
 		return
@@ -89,6 +101,8 @@ func main() {
 			pprof.StopCPUProfile()
 		}()
 	}
+
+	go configWatcher(configFileName)
 
 	if *flaginter == "*" {
 		addrs, _ := net.InterfaceAddrs()
