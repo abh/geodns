@@ -33,6 +33,7 @@ var VERSION string = "2.2.3"
 var gitVersion string
 var serverId string
 var serverIP string
+var serverGroups []string
 
 var timeStarted = time.Now()
 var qCounter = expvar.NewInt("qCounter")
@@ -63,7 +64,11 @@ func main() {
 	flag.Parse()
 
 	if len(*flagidentifier) > 0 {
-		serverId = *flagidentifier
+		ids := strings.Split(*flagidentifier, ",")
+		serverId = ids[0]
+		if len(ids) > 1 {
+			serverGroups = ids[1:]
+		}
 	}
 
 	configFileName := filepath.Clean(*flagconfig + "/geodns.conf")
