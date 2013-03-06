@@ -47,6 +47,43 @@ To test the responses run
 
 `dig -t a test.example.com @127.1 -p 5053`
 
+### Command options
+
+Notable command line parameters (and their defaults)
+
+* -config="./dns/"
+
+Directory of zone files (and configuration named `geodns.conf`).
+
+* -checkconfig=false
+
+Check configuration file, parse zone files and exit
+
+* -interface="*"
+
+Comma separated IPs to listen on for DNS requests.
+
+* -port="53"
+
+Port number for DNS requests (UDP and TCP)
+
+* -http=":8053"
+
+Listen address for HTTP interface. Specify as `127.0.0.1:8053` to only listen on
+localhost.
+
+* -identifier=""
+
+Identifier for this instance (hostname, pop name or similar).
+
+It can also be a comma separated list of identifiers where the first is the "server id"
+and subsequent ones are "group names", for example region of the server, name of anycast
+cluster the server is part of, etc. This is used in (future) reporting/statistics features.
+
+* -log=false
+
+Enable to get lots of extra logging, only useful for testing and debugging.
+
 ## WebSocket interface
 
 geodns runs a WebSocket server on port 8053 that outputs various performance
