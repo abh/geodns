@@ -1,6 +1,12 @@
 # GeoDNS Changelog
 
+## 2.2.4, March 5th 2013
+
+* Add licensing information
 * De-configure zones when the .json file is removed
+* Start adding support for a proper configuration file
+* Add -identifier command line option
+* Various tweaks
 
 ## 2.2.3, March 1st 2013
 
