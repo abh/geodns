@@ -12,6 +12,15 @@ if [ -e env/IP ]; then
   fi
 fi
 
+ID=""
+if [ -e env/ID ]; then
+  ID=`head -1 env/ID`
+  if [ ! -z "$ID" ]; then
+      ID="--identifier=$ID"
+  fi
+fi
+
+
 CONFIG=dns
 if [ -e env/CONFIG ]; then
   CONFIG=`head -1 env/CONFIG`
@@ -19,4 +28,4 @@ fi
 
 ulimit -n 64000
 
-exec softlimit -d500000000 ./geodns $INTERFACE --config="$CONFIG"
+exec softlimit -d500000000 ./geodns $INTERFACE $ID --config="$CONFIG"
