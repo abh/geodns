@@ -111,7 +111,13 @@ func wsHandler(ws *websocket.Conn) {
 }
 
 func initialStatus() string {
-	status := map[string]string{"v": VERSION, "id": serverId, "ip": serverIP}
+	status := make(map[string]interface{})
+	status["v"] = VERSION
+	status["id"] = serverId
+	status["ip"] = serverIP
+	if len(serverGroups) > 0 {
+		status["groups"] = serverGroups
+	}
 	hostname, err := os.Hostname()
 	if err == nil {
 		status["h"] = hostname
