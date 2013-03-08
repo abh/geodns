@@ -79,9 +79,10 @@ func configReader(fileName string) error {
 
 	cfg.Flags.HasStatHat = len(cfg.StatHat.ApiKey) > 0
 
-	fmt.Println("STATHAT APIKEY:", cfg.StatHat.ApiKey)
-	fmt.Println("STATHAT FLAG  :", cfg.Flags.HasStatHat)
+	// log.Println("STATHAT APIKEY:", cfg.StatHat.ApiKey)
+	// log.Println("STATHAT FLAG  :", cfg.Flags.HasStatHat)
 
 	Config = cfg
+
 	return nil
 }
