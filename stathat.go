@@ -29,7 +29,7 @@ func statHatPoster() {
 		newQueries := current - lastQueryCount
 		lastQueryCount = current
 
-		stathat.PostEZCount("queries:"+suffix, Config.StatHat.ApiKey, int(newQueries))
+		stathat.PostEZCount("queries~"+suffix, Config.StatHat.ApiKey, int(newQueries))
 		stathat.PostEZValue("goroutines "+serverId, Config.StatHat.ApiKey, float64(runtime.NumGoroutine()))
 
 	}
