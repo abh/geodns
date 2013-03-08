@@ -12,10 +12,19 @@ import (
 	"time"
 )
 
+// Walk the name backwards, if we have seen z.LenLabels dots we return
+// what is left. Don't lowercase it. Currently breaks for \. dots.
 func getQuestionName(z *Zone, req *dns.Msg) string {
-	lx := dns.SplitLabels(req.Question[0].Name)
-	ql := lx[0 : len(lx)-z.LenLabels]
-	return strings.ToLower(strings.Join(ql, "."))
+	dots := 0
+	for i := len(req.Question[0].Name) - 1; i >= 0; i-- {
+		if req.Question[0].Name[i] == '.' {
+			dots++
+		}
+		if dots > z.LenLabels {
+			return strings.ToLower(req.Question[0].Name[:i])
+		}
+	}
+	return ""
 }
 
 var geoIP = setupGeoIP()
