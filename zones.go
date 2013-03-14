@@ -61,10 +61,12 @@ func zonesReadDir(dirName string, zones Zones) error {
 			//log.Println("FILE:", i, file, zoneName)
 			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
 			if config == nil || err != nil {
-				log.Println("Caught an error")
+				log.Println("Caught an error", err)
+				if config == nil {
+					config = new(Zone)
+				}
 				config.LastRead = file.ModTime()
 				zones[zoneName] = config
-				log.Println(err)
 				parse_err = err
 				continue
 			}
@@ -82,7 +84,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 		if ok, _ := seenZones[zoneName]; ok {
 			continue
 		}
-		log.Println("Removing zone", zone.Origin)
+		log.Println("Removing zone", zoneName, zone.Origin)
 		dns.HandleRemove(zoneName)
 		delete(zones, zoneName)
 	}
