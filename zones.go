@@ -61,7 +61,9 @@ func zonesReadDir(dirName string, zones Zones) error {
 			//log.Println("FILE:", i, file, zoneName)
 			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
 			if config == nil || err != nil {
+				log.Println("Caught an error")
 				config.LastRead = file.ModTime()
+				zones[zoneName] = config
 				log.Println(err)
 				parse_err = err
 				continue
@@ -102,11 +104,12 @@ func setupPgeodnsZone(zones Zones) {
 	addHandler(zones, zoneName, Zone)
 }
 
-func readZoneFile(zoneName, fileName string) (*Zone, error) {
+func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 	defer func() {
-		if err := recover(); err != nil {
-			log.Printf("reading %s failed: %s", zoneName, err)
+		if r := recover(); r != nil {
+			log.Printf("reading %s failed: %s", zoneName, r)
 			debug.PrintStack()
+			zerr = fmt.Errorf("reading %s failed: %s", zoneName, r)
 		}
 	}()
 
@@ -116,13 +119,13 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 		panic(err)
 	}
 
-	Zone := new(Zone)
-	Zone.Labels = make(labels)
-	Zone.Origin = zoneName
-	Zone.LenLabels = dns.LenLabels(Zone.Origin)
-	Zone.Options.Ttl = 120
-	Zone.Options.MaxHosts = 2
-	Zone.Options.Contact = "support.bitnames.com"
+	zone = new(Zone)
+	zone.Labels = make(labels)
+	zone.Origin = zoneName
+	zone.LenLabels = dns.LenLabels(zone.Origin)
+	zone.Options.Ttl = 120
+	zone.Options.MaxHosts = 2
+	zone.Options.Contact = "support.bitnames.com"
 
 	if err == nil {
 		var objmap map[string]interface{}
@@ -155,13 +158,13 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 			case "ttl", "serial", "max_hosts", "contact":
 				switch option := k; option {
 				case "ttl":
-					Zone.Options.Ttl = valueToInt(v)
+					zone.Options.Ttl = valueToInt(v)
 				case "serial":
-					Zone.Options.Serial = valueToInt(v)
+					zone.Options.Serial = valueToInt(v)
 				case "contact":
-					Zone.Options.Contact = v.(string)
+					zone.Options.Contact = v.(string)
 				case "max_hosts":
-					Zone.Options.MaxHosts = valueToInt(v)
+					zone.Options.MaxHosts = valueToInt(v)
 				}
 				continue
 
@@ -170,7 +173,7 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 			}
 		}
 
-		setupZoneData(data, Zone)
+		setupZoneData(data, zone)
 
 	}
 
@@ -178,7 +181,7 @@ func readZoneFile(zoneName, fileName string) (*Zone, error) {
 
 	//log.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
 
-	return Zone, nil
+	return zone, nil
 }
 
 func setupZoneData(data map[string]interface{}, Zone *Zone) {
@@ -281,13 +284,13 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 							record.RR = &dns.A{Hdr: h, A: x}
 							break
 						}
-						panic("Bad A record")
+						panic(fmt.Errorf("Bad A record %s for %s", ip, dk))
 					case dns.TypeAAAA:
 						if x := net.ParseIP(ip); x != nil {
 							record.RR = &dns.AAAA{Hdr: h, AAAA: x}
 							break
 						}
-						panic("Bad AAAA record")
+						panic(fmt.Errorf("Bad AAAA record %s for %s", ip, dk))
 					}
 
 				case dns.TypeMX:
