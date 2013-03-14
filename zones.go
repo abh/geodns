@@ -10,7 +10,6 @@ import (
 	"net"
 	"os"
 	"path"
-	"runtime"
 	"runtime/debug"
 	"sort"
 	"strconv"
@@ -73,7 +72,6 @@ func zonesReadDir(dirName string, zones Zones) error {
 			config.LastRead = file.ModTime()
 
 			addHandler(zones, zoneName, config)
-			runtime.GC()
 		}
 	}
 
