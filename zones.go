@@ -127,55 +127,52 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 	zone.Options.MaxHosts = 2
 	zone.Options.Contact = "support.bitnames.com"
 
-	if err == nil {
-		var objmap map[string]interface{}
-		decoder := json.NewDecoder(fh)
-		if err = decoder.Decode(&objmap); err != nil {
-			extra := ""
-			if serr, ok := err.(*json.SyntaxError); ok {
-				if _, serr := fh.Seek(0, os.SEEK_SET); serr != nil {
-					log.Fatalf("seek error: %v", serr)
-				}
-				line, col, highlight := errorutil.HighlightBytePosition(fh, serr.Offset)
-				extra = fmt.Sprintf(":\nError at line %d, column %d (file offset %d):\n%s",
-					line, col, serr.Offset, highlight)
+	var objmap map[string]interface{}
+	decoder := json.NewDecoder(fh)
+	if err = decoder.Decode(&objmap); err != nil {
+		extra := ""
+		if serr, ok := err.(*json.SyntaxError); ok {
+			if _, serr := fh.Seek(0, os.SEEK_SET); serr != nil {
+				log.Fatalf("seek error: %v", serr)
 			}
-			return nil, fmt.Errorf("error parsing JSON object in config file %s%s\n%v",
-				fh.Name(), extra, err)
+			line, col, highlight := errorutil.HighlightBytePosition(fh, serr.Offset)
+			extra = fmt.Sprintf(":\nError at line %d, column %d (file offset %d):\n%s",
+				line, col, serr.Offset, highlight)
 		}
-
-		if err != nil {
-			panic(err)
-		}
-		//log.Println(objmap)
-
-		var data map[string]interface{}
-
-		for k, v := range objmap {
-			//log.Printf("k: %s v: %#v, T: %T\n", k, v, v)
-
-			switch k {
-			case "ttl", "serial", "max_hosts", "contact":
-				switch option := k; option {
-				case "ttl":
-					zone.Options.Ttl = valueToInt(v)
-				case "serial":
-					zone.Options.Serial = valueToInt(v)
-				case "contact":
-					zone.Options.Contact = v.(string)
-				case "max_hosts":
-					zone.Options.MaxHosts = valueToInt(v)
-				}
-				continue
-
-			case "data":
-				data = v.(map[string]interface{})
-			}
-		}
-
-		setupZoneData(data, zone)
-
+		return nil, fmt.Errorf("error parsing JSON object in config file %s%s\n%v",
+			fh.Name(), extra, err)
 	}
+
+	if err != nil {
+		panic(err)
+	}
+	//log.Println(objmap)
+
+	var data map[string]interface{}
+
+	for k, v := range objmap {
+		//log.Printf("k: %s v: %#v, T: %T\n", k, v, v)
+
+		switch k {
+		case "ttl", "serial", "max_hosts", "contact":
+			switch option := k; option {
+			case "ttl":
+				zone.Options.Ttl = valueToInt(v)
+			case "serial":
+				zone.Options.Serial = valueToInt(v)
+			case "contact":
+				zone.Options.Contact = v.(string)
+			case "max_hosts":
+				zone.Options.MaxHosts = valueToInt(v)
+			}
+			continue
+
+		case "data":
+			data = v.(map[string]interface{})
+		}
+	}
+
+	setupZoneData(data, zone)
 
 	//log.Printf("ZO T: %T %s\n", Zones["0.us"], Zones["0.us"])
 
