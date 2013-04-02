@@ -387,7 +387,15 @@ func setupSOA(Zone *Zone) {
 		primaryNs = record[0].RR.(*dns.NS).Ns
 	}
 
-	s := Zone.Origin + ". 3600 IN SOA " +
+	ttl := Zone.Options.Ttl * 10
+	if ttl > 3600 {
+		ttl = 3600
+	}
+	if ttl == 0 {
+		ttl = 600
+	}
+
+	s := Zone.Origin + ". " + strconv.Itoa(ttl) + " IN SOA " +
 		primaryNs + " " + Zone.Options.Contact + " " +
 		strconv.Itoa(Zone.Options.Serial) +
 		" 5400 5400 2419200 " +
