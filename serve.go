@@ -58,11 +58,13 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 
 	var country string
+	var netmask int
 	if geoIP != nil {
 		if len(ip) == 0 { // no edns subnet
 			ip, _, _ = net.SplitHostPort(w.RemoteAddr().String())
 		}
-		country = strings.ToLower(geoIP.GetCountry(ip))
+		country, netmask = geoIP.GetCountry(ip)
+		country = strings.ToLower(country)
 		logPrintln("Country:", ip, country)
 	}
 
@@ -76,7 +78,10 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	// TODO: set scope to 0 if there are no alternate responses
 	if edns != nil {
 		if edns.Family != 0 {
-			edns.SourceScope = 16
+			if netmask < 16 {
+				netmask = 16
+			}
+			edns.SourceScope = uint8(netmask)
 			m.Extra = append(m.Extra, opt_rr)
 		}
 	}

@@ -7,9 +7,10 @@ import (
 
 func setupGeoIP() *geoip.GeoIP {
 
-	gi := geoip.Open()
-	if gi == nil {
-		log.Printf("Could not open GeoIP database\n")
+	gi, err := geoip.Open()
+	if gi == nil || err != nil {
+		log.Printf("Could not open GeoIP database: %s\n", err)
+		return nil
 	}
 	return gi
 }
