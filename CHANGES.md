@@ -1,5 +1,14 @@
 # GeoDNS Changelog
 
+## 2.2.5, April 7th 2013
+
+* Add StatHat feature
+* Improve error handling for bad zone files
+* Don't call runtime.GC() after loading each zone
+* Set the minimum TTL to 10x regular TTL (up to an hour)
+* service script: Load identifier from env/ID if it exists
+* Work with latest geoip; use netmask from GeoIP in EDNS-SUBNET replies
+
 ## 2.2.4, March 5th 2013
 
 * Add licensing information
