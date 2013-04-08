@@ -398,8 +398,9 @@ func setupSOA(Zone *Zone) {
 	s := Zone.Origin + ". " + strconv.Itoa(ttl) + " IN SOA " +
 		primaryNs + " " + Zone.Options.Contact + " " +
 		strconv.Itoa(Zone.Options.Serial) +
-		" 5400 5400 2419200 " +
-		strconv.Itoa(Zone.Options.Ttl)
+		// refresh, retry, expire, minimum are all
+		// meaningless with this implementation
+		" 5400 5400 1209600 3600"
 
 	// log.Println("SOA: ", s)
 
