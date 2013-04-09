@@ -4,6 +4,7 @@ import (
 	"camlistore.org/pkg/errorutil"
 	"encoding/json"
 	"fmt"
+	"github.com/abh/go-metrics"
 	"github.com/miekg/dns"
 	"io/ioutil"
 	"log"
@@ -25,6 +26,14 @@ func zonesReader(dirName string, zones Zones) {
 }
 
 func addHandler(zones Zones, name string, config *Zone) {
+	oldZone, ok := zones[name]
+	if ok {
+		config.Metrics = oldZone.Metrics
+	} else {
+		config.Metrics = metrics.NewMeter()
+		metrics.Register(config.Origin+" queries", config.Metrics)
+	}
+
 	zones[name] = config
 	dns.HandleFunc(name, setupServerFunc(config))
 }

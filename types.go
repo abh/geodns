@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/abh/geodns/countries"
+	"github.com/abh/go-metrics"
 	"github.com/miekg/dns"
 	"strings"
 	"time"
@@ -46,6 +47,7 @@ type Zone struct {
 	LenLabels int
 	Options   Options
 	LastRead  time.Time
+	Metrics   *metrics.StandardMeter
 }
 
 type qTypes []uint16

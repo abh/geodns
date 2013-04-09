@@ -4,11 +4,14 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"expvar"
+	"fmt"
+	"github.com/abh/go-metrics"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"runtime"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -187,9 +190,73 @@ func MainServer(w http.ResponseWriter, req *http.Request) {
 		`</body></html>`)
 }
 
+type rate struct {
+	Name  string
+	Count int64
+	str   string
+}
+type Rates []*rate
+
+func (s Rates) Len() int      { return len(s) }
+func (s Rates) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+type RatesByCount struct{ Rates }
+
+func (s RatesByCount) Less(i, j int) bool {
+	ic := s.Rates[i].Count
+	jc := s.Rates[j].Count
+	if ic == jc {
+		return s.Rates[i].Name < s.Rates[j].Name
+	}
+	return ic > jc
+}
+
+func StatusServer(w http.ResponseWriter, req *http.Request) {
+
+	io.WriteString(w, `<html><head><title>GeoDNS `+
+		VERSION+`</title><body>`+
+		initialStatus())
+
+	rates := make(Rates, 0)
+
+	// https://github.com/rcrowley/go-metrics/blob/master/log.go
+	metrics.Each(func(name string, i interface{}) {
+
+		switch m := i.(type) {
+		case metrics.Meter:
+			str := fmt.Sprintf(
+				"<h3>meter %s</h3>\n"+
+					"count: %9d<br>"+
+					"  1-min rate:  %12.2f\n"+
+					"  5-min rate:  %12.2f\n"+
+					"15-min rate: %12.2f\n"+
+					"  mean rate:   %12.2f\n",
+				name,
+				m.Count(),
+				m.Rate1(),
+				m.Rate5(),
+				m.Rate15(),
+				m.RateMean(),
+			)
+			rates = append(rates, &rate{Name: name, Count: m.Count(), str: str})
+		}
+	})
+
+	sort.Sort(RatesByCount{rates})
+
+	for _, rate := range rates {
+		io.WriteString(w, rate.str)
+	}
+
+	io.WriteString(w, `</body></html>`)
+}
+
 func httpHandler() {
 	http.Handle("/monitor", websocket.Handler(wsHandler))
+	http.HandleFunc("/status", StatusServer)
 	http.HandleFunc("/", MainServer)
+
+	log.Println("Starting HTTP interface on", *flaghttp)
 
 	log.Fatal(http.ListenAndServe(*flaghttp, nil))
 }

@@ -113,6 +113,7 @@ func main() {
 
 	go configWatcher(configFileName)
 	go statHatPoster()
+	go metricsPoster()
 
 	if *flaginter == "*" {
 		addrs, _ := net.InterfaceAddrs()
