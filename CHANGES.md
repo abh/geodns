@@ -1,5 +1,10 @@
 # GeoDNS Changelog
 
+## 2.2.6, April 9th 2013
+
+* Begin more detailed /status page
+* Make SOA record look more "normal" (cosmetic change only)
+
 ## 2.2.5, April 7th 2013
 
 * Add StatHat feature
