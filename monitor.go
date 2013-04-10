@@ -149,14 +149,14 @@ func logStatus() {
 	}
 }
 
-func monitor() {
+func monitor(zones Zones) {
 	go logStatus()
 
 	if len(*flaghttp) == 0 {
 		return
 	}
 	go hub.run()
-	go httpHandler()
+	go httpHandler(zones)
 
 	lastQueryCount := expVarToInt64(qCounter)
 
@@ -251,7 +251,7 @@ func StatusServer(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(w, `</body></html>`)
 }
 
-func httpHandler() {
+func httpHandler(zones Zones) {
 	http.Handle("/monitor", websocket.Handler(wsHandler))
 	http.HandleFunc("/status", StatusServer)
 	http.HandleFunc("/", MainServer)

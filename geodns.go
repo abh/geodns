@@ -133,14 +133,13 @@ func main() {
 
 	inter := getInterfaces()
 
-	go monitor()
-
-	dirName := *flagconfig
-
 	Zones := make(Zones)
+
+	go monitor(Zones)
 
 	setupPgeodnsZone(Zones)
 
+	dirName := *flagconfig
 	go zonesReader(dirName, Zones)
 
 	for _, host := range inter {
