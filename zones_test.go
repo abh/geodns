@@ -28,13 +28,16 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 	c.Check(s.zones["example.com"].Origin, Equals, "example.com")
 	c.Check(s.zones["test.example.org"].Origin, Equals, "test.example.org")
 
-	tz := s.zones["test.example.com"]
-
 	// The real tests are in test.example.com so we have a place
 	// to make nutty configuration entries
+	tz := s.zones["test.example.com"]
+
+	// test.example.com was loaded
 	c.Check(tz.Origin, Equals, "test.example.com")
+
 	c.Check(tz.Options.MaxHosts, Equals, 2)
 	c.Check(tz.Options.Contact, Equals, "support.bitnames.com")
+
 	c.Check(tz.Labels["weight"].MaxHosts, Equals, 1)
 
 	/* test different cname targets */

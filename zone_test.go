@@ -7,6 +7,10 @@ import (
 
 func (s *ConfigSuite) TestZone(c *C) {
 	ex := s.zones["test.example.com"]
+
+	// test.example.com was loaded
+	c.Assert(ex.Labels, NotNil)
+
 	c.Check(ex.Labels["weight"].MaxHosts, Equals, 1)
 
 	// Make sure that the empty "no.bar" zone gets skipped and "bar" is used
