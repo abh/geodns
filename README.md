@@ -40,13 +40,15 @@ curl -o dns/test.ntppool.org.json http://tmp.askask.com/2012/08/dns/ntppool.org.
 
 ## Run it
 
-`go run *.go -log -interface 127.1 -port 5053`
+After building the server you can run it with:
 
-or if you already built geodns, then `./geodns ...`.
+`./geodns -log -interface 127.1 -port 5053`
 
 To test the responses run
 
 `dig -t a test.example.com @127.1 -p 5053`
+
+The binary can be moved to /usr/local/bin, /opt/geodns/ or wherever you find appropriate.
 
 ### Command options
 
