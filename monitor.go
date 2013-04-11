@@ -6,8 +6,10 @@ import (
 	"expvar"
 	"fmt"
 	"github.com/abh/go-metrics"
+	"html/template"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"runtime"
@@ -191,9 +193,9 @@ func MainServer(w http.ResponseWriter, req *http.Request) {
 }
 
 type rate struct {
-	Name  string
-	Count int64
-	str   string
+	Name    string
+	Count   int64
+	Metrics ZoneMetrics
 }
 type Rates []*rate
 
@@ -211,49 +213,87 @@ func (s RatesByCount) Less(i, j int) bool {
 	return ic > jc
 }
 
-func StatusServer(w http.ResponseWriter, req *http.Request) {
-
-	io.WriteString(w, `<html><head><title>GeoDNS `+
-		VERSION+`</title><body>`+
-		initialStatus())
-
-	rates := make(Rates, 0)
-
+func metricHTML(name string, i interface{}) (string, int64) {
 	// https://github.com/rcrowley/go-metrics/blob/master/log.go
-	metrics.Each(func(name string, i interface{}) {
+	switch m := i.(type) {
+	case metrics.Meter:
+		str := fmt.Sprintf(
+			"<h4>meter %s</h4>\n"+
+				"count: %9d<br>"+
+				"  1-min rate:  %12.2f\n"+
+				"  5-min rate:  %12.2f\n"+
+				"15-min rate: %12.2f\n"+
+				"  mean rate:   %12.2f\n",
+			name,
+			m.Count(),
+			m.Rate1(),
+			m.Rate5(),
+			m.Rate15(),
+			m.RateMean(),
+		)
+		return str, m.Count()
+	}
+	return "", 0
+}
 
-		switch m := i.(type) {
-		case metrics.Meter:
-			str := fmt.Sprintf(
-				"<h3>meter %s</h3>\n"+
-					"count: %9d<br>"+
-					"  1-min rate:  %12.2f\n"+
-					"  5-min rate:  %12.2f\n"+
-					"15-min rate: %12.2f\n"+
-					"  mean rate:   %12.2f\n",
-				name,
-				m.Count(),
-				m.Rate1(),
-				m.Rate5(),
-				m.Rate15(),
-				m.RateMean(),
-			)
-			rates = append(rates, &rate{Name: name, Count: m.Count(), str: str})
-		}
-	})
+func round(val float64, prec int) float64 {
 
-	sort.Sort(RatesByCount{rates})
+	var rounder float64
+	intermed := val * math.Pow(10, float64(prec))
 
-	for _, rate := range rates {
-		io.WriteString(w, rate.str)
+	if val >= 0.5 {
+		rounder = math.Ceil(intermed)
+	} else {
+		rounder = math.Floor(intermed)
 	}
 
-	io.WriteString(w, `</body></html>`)
+	return rounder / math.Pow(10, float64(prec))
+
+}
+
+func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
+
+	return func(w http.ResponseWriter, req *http.Request) {
+
+		tmpl := template.New("status_html")
+		tmpl, err := tmpl.Parse(string(status_html()))
+
+		if err != nil {
+			str := fmt.Sprintf("Could not parse template: %s", err)
+			io.WriteString(w, str)
+			return
+		}
+
+		tmpl.Funcs(map[string]interface{}{
+			"round": round,
+		})
+
+		rates := make(Rates, 0)
+
+		for name, zone := range zones {
+			count := zone.Metrics.Queries.Count()
+			rates = append(rates, &rate{Name: name, Count: count, Metrics: zone.Metrics})
+		}
+
+		sort.Sort(RatesByCount{rates})
+
+		type statusData struct {
+			Version string
+			Zones   Rates
+		}
+
+		status := statusData{
+			Version: VERSION,
+			Zones:   rates,
+		}
+
+		tmpl.Execute(w, status)
+	}
 }
 
 func httpHandler(zones Zones) {
 	http.Handle("/monitor", websocket.Handler(wsHandler))
-	http.HandleFunc("/status", StatusServer)
+	http.HandleFunc("/status", StatusServer(zones))
 	http.HandleFunc("/", MainServer)
 
 	log.Println("Starting HTTP interface on", *flaghttp)

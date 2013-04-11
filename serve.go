@@ -28,7 +28,8 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		dns.TypeToString[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
 	qCounter.Add(1)
-	z.Metrics.Mark(1)
+
+	z.Metrics.Queries.Mark(1)
 
 	logPrintln("Got request", req)
 
@@ -48,6 +49,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 				case *dns.EDNS0_NSID:
 					// do stuff with e.Nsid
 				case *dns.EDNS0_SUBNET:
+					z.Metrics.EdnsQueries.Mark(1)
 					logPrintln("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
 					if e.Address != nil {
 						edns = e

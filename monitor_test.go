@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	. "launchpad.net/gocheck"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -31,5 +32,14 @@ func (s *MonitorSuite) TestMonitorVersion(c *C) {
 	c.Assert(err, IsNil)
 	page, _ := ioutil.ReadAll(res.Body)
 	c.Check(string(page), Matches, ".*<title>GeoDNS [0-9].*")
+
+	res, err = http.Get("http://localhost:8053/status")
+	c.Assert(err, IsNil)
+	page, _ = ioutil.ReadAll(res.Body)
+	// just check that template basically works
+
+	isOk := strings.Contains(string(page), "<html>")
+	// page has <html>
+	c.Check(isOk, Equals, true)
 
 }

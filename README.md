@@ -22,6 +22,7 @@ go get github.com/abh/geodns
 cd ~/go/src/github.com/abh/geodns
 go test
 go build
+./geodns -h
 ```
 
 ## Sample configuration

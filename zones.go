@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+type Zones map[string]*Zone
+
 func zonesReader(dirName string, zones Zones) {
 	for {
 		zonesReadDir(dirName, zones)
@@ -30,8 +32,10 @@ func addHandler(zones Zones, name string, config *Zone) {
 	if ok {
 		config.Metrics = oldZone.Metrics
 	} else {
-		config.Metrics = metrics.NewMeter()
-		metrics.Register(config.Origin+" queries", config.Metrics)
+		config.Metrics.Queries = metrics.NewMeter()
+		config.Metrics.EdnsQueries = metrics.NewMeter()
+		metrics.Register(config.Origin+" queries", config.Metrics.Queries)
+		metrics.Register(config.Origin+" EDNS queries", config.Metrics.EdnsQueries)
 	}
 
 	zones[name] = config

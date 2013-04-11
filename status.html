@@ -1,0 +1,51 @@
+<html><head><title>GeoDNS {{ .Version }}</title>
+<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" rel="stylesheet">
+<link href="//netdna.bootstrapcdn.com/bootswatch/2.3.1/cerulean/bootstrap.min.css" rel="stylesheet">
+<style>
+	td.zonename { font-weight: bold;  }
+</style>
+<body>
+
+    <div class="container">
+
+
+<h1>Zones</h1>
+<table class="table table-bordered table-condensed">
+<tr>
+<th></th>
+<th>Mean QPS</th>
+<th>1 minute</th>
+<th>5 minutes</th>
+<th>15 minutes</th>
+</tr>
+
+{{range  .Zones }}
+
+	<tr class="info">
+		<td colspan=5 class="zonename"><b>{{.Name}}</b></td>
+	</tr>
+
+	<tr>
+		<td>Queries</td>
+		<td>{{printf "%.2f" .Metrics.Queries.RateMean}}</td>
+		<td>{{printf "%.2f" .Metrics.Queries.Rate1}}</td>
+		<td>{{printf "%.2f" .Metrics.Queries.Rate5}}</td>
+		<td>{{printf "%.2f" .Metrics.Queries.Rate15}}</td>
+	</tr>
+
+	<tr>
+		<td>EDNS Queries</td>
+		<td>{{printf "%.2f" .Metrics.EdnsQueries.RateMean}}</td>
+		<td>{{printf "%.2f" .Metrics.EdnsQueries.Rate1}}</td>
+		<td>{{printf "%.2f" .Metrics.EdnsQueries.Rate5}}</td>
+		<td>{{printf "%.2f" .Metrics.EdnsQueries.Rate15}}</td>
+	</tr>
+
+{{end}}
+
+</table>
+
+</div>
+
+</body>
+</html>

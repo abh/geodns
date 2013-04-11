@@ -39,7 +39,10 @@ type Label struct {
 
 type labels map[string]*Label
 
-type Zones map[string]*Zone
+type ZoneMetrics struct {
+	Queries     *metrics.StandardMeter
+	EdnsQueries *metrics.StandardMeter
+}
 
 type Zone struct {
 	Origin    string
@@ -47,7 +50,7 @@ type Zone struct {
 	LenLabels int
 	Options   Options
 	LastRead  time.Time
-	Metrics   *metrics.StandardMeter
+	Metrics   ZoneMetrics
 }
 
 type qTypes []uint16
