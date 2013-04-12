@@ -1,0 +1,8 @@
+; GeoDNS configuration file
+;
+; It is recommended to distribute the configuration file globally
+; with your .json zone files.
+
+[stathat]
+;; Add an API key to send query counts and other metrics to stathat
+;apikey=abc123
