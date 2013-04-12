@@ -10,7 +10,7 @@ import (
 
 func statHatPoster() {
 
-	lastQueryCount := expVarToInt64(qCounter)
+	lastQueryCount := qCounter.Count()
 	stathatGroups := append(serverGroups, "total", serverId)
 	suffix := strings.Join(stathatGroups, ",")
 	// stathat.Verbose = true
@@ -25,7 +25,7 @@ func statHatPoster() {
 
 		log.Println("Posting to stathat")
 
-		current := expVarToInt64(qCounter)
+		current := qCounter.Count()
 		newQueries := current - lastQueryCount
 		lastQueryCount = current
 

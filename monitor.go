@@ -3,7 +3,6 @@ package main
 import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
-	"expvar"
 	"fmt"
 	"github.com/abh/go-metrics"
 	"html/template"
@@ -138,10 +137,10 @@ func initialStatus() string {
 func logStatus() {
 	log.Println(initialStatus())
 	// Does not impact performance too much
-	lastQueryCount := expVarToInt64(qCounter)
+	lastQueryCount := qCounter.Count()
 
 	for {
-		current := expVarToInt64(qCounter)
+		current := qCounter.Count()
 		newQueries := current - lastQueryCount
 		lastQueryCount = current
 
@@ -160,17 +159,18 @@ func monitor(zones Zones) {
 	go hub.run()
 	go httpHandler(zones)
 
-	lastQueryCount := expVarToInt64(qCounter)
+	lastQueryCount := qCounter.Count()
 
 	for {
-		current := expVarToInt64(qCounter)
+		current := qCounter.Count()
 		newQueries := current - lastQueryCount
 		lastQueryCount = current
 
 		status := map[string]string{}
 		status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
-		status["qs"] = qCounter.String()
+		status["qs"] = strconv.FormatInt(qCounter.Count(), 10)
 		status["qps"] = strconv.FormatInt(newQueries, 10)
+		status["qps1"] = fmt.Sprintf("%.3f", qCounter.Rate1())
 
 		message, err := json.Marshal(status)
 
@@ -299,9 +299,4 @@ func httpHandler(zones Zones) {
 	log.Println("Starting HTTP interface on", *flaghttp)
 
 	log.Fatal(http.ListenAndServe(*flaghttp, nil))
-}
-
-func expVarToInt64(i *expvar.Int) (j int64) {
-	j, _ = strconv.ParseInt(i.String(), 10, 64)
-	return
 }

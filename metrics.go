@@ -8,9 +8,11 @@ import (
 	"time"
 )
 
+var qCounter = metrics.NewMeter()
+
 func metricsPoster() {
 
-	lastQueryCount := expVarToInt64(qCounter)
+	lastQueryCount := qCounter.Count()
 
 	queries := metrics.NewMeter()
 	metrics.Register("queries", queries)
@@ -30,7 +32,7 @@ func metricsPoster() {
 
 		// log.Println("updating metrics")
 
-		current := expVarToInt64(qCounter)
+		current := qCounter.Count()
 		newQueries := current - lastQueryCount
 		lastQueryCount = current
 

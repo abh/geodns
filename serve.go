@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/abh/geodns/countries"
 	"github.com/miekg/dns"
 	"log"
@@ -27,8 +28,10 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
 		dns.TypeToString[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
-	qCounter.Add(1)
+	// Global meter
+	qCounter.Mark(1)
 
+	// Zone meter
 	z.Metrics.Queries.Mark(1)
 
 	logPrintln("Got request", req)
@@ -167,7 +170,8 @@ func statusRR(z *Zone) []dns.RR {
 		status["h"] = hostname
 	}
 	status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
-	status["qs"] = qCounter.String()
+	status["qs"] = strconv.FormatInt(qCounter.Count(), 10)
+	status["qps1"] = fmt.Sprintf("%.4f", qCounter.Rate1())
 
 	js, err := json.Marshal(status)
 
