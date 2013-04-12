@@ -85,7 +85,13 @@ cluster the server is part of, etc. This is used in (future) reporting/statistic
 
 * -log=false
 
-Enable to get lots of extra logging, only useful for testing and debugging.
+Enable to get lots of extra logging, only useful for testing and debugging. Absolutely not
+recommended in production unless you get very few queries (less than 1-200/second).
+
+* -cpus=1
+
+Maximum number of CPUs to use. Set to 0 to match the number of CPUs available on the system.
+Only "1" (the default) has been extensively tested.
 
 ## WebSocket interface
 

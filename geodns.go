@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"runtime/pprof"
 	"strings"
 	"time"
@@ -46,6 +47,7 @@ var (
 	flagport        = flag.String("port", "53", "default port number")
 	flaghttp        = flag.String("http", ":8053", "http listen address (:8053)")
 	flaglog         = flag.Bool("log", false, "be more verbose")
+	flagcpus        = flag.Int("cpus", 1, "Set the maximum number of CPUs to use")
 
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile = flag.String("memprofile", "", "write memory profile to this file")
@@ -90,6 +92,12 @@ func main() {
 			os.Exit(2)
 		}
 		return
+	}
+
+	if *flagcpus == 0 {
+		runtime.GOMAXPROCS(runtime.NumCPU())
+	} else {
+		runtime.GOMAXPROCS(*flagcpus)
 	}
 
 	log.Printf("Starting geodns %s\n", VERSION)
