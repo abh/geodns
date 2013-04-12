@@ -178,6 +178,20 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 			case "max_hosts":
 				zone.Options.MaxHosts = valueToInt(v)
 			}
+		case "logging":
+			{
+				logging := new(ZoneLogging)
+				for logger, enabled := range v.(map[string]interface{}) {
+					switch logger {
+					case "stathat":
+						logging.StatHat = enabled.(bool)
+					default:
+						log.Println("Unknown logger", logger)
+					}
+				}
+				zone.Logging = logging
+				// log.Printf("logging options: %#v", logging)
+			}
 			continue
 
 		case "data":

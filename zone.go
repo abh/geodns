@@ -8,11 +8,15 @@ import (
 	"time"
 )
 
-type Options struct {
+type ZoneOptions struct {
 	Serial   int
 	Ttl      int
 	MaxHosts int
 	Contact  string
+}
+
+type ZoneLogging struct {
+	StatHat bool
 }
 
 type Record struct {
@@ -48,7 +52,8 @@ type Zone struct {
 	Origin    string
 	Labels    labels
 	LenLabels int
-	Options   Options
+	Options   ZoneOptions
+	Logging   *ZoneLogging
 	LastRead  time.Time
 	Metrics   ZoneMetrics
 }

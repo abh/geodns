@@ -38,6 +38,9 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 	c.Check(tz.Options.MaxHosts, Equals, 2)
 	c.Check(tz.Options.Contact, Equals, "support.bitnames.com")
 
+	// Got logging option
+	c.Check(tz.Logging.StatHat, Equals, true)
+
 	c.Check(tz.Labels["weight"].MaxHosts, Equals, 1)
 
 	/* test different cname targets */

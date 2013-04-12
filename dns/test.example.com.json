@@ -1,6 +1,9 @@
 { "serial": 3,
   "ttl":    600,
   "max_hosts": 2,
+  "logging": {
+    "stathat": true
+  },
   "contact": "support.bitnames.com",
   "data" : {
     "":  {
