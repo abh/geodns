@@ -1,3 +1,5 @@
+// +build !devel
+
 package main
 
 import (
