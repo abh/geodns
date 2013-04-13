@@ -14,8 +14,7 @@ func metricsPoster() {
 
 	lastQueryCount := qCounter.Count()
 
-	queries := metrics.NewMeter()
-	metrics.Register("queries", queries)
+	metrics.Register("queries", qCounter)
 
 	queriesHistogram := metrics.NewHistogram(metrics.NewUniformSample(600))
 	metrics.Register("queriesHistogram", queriesHistogram)
@@ -24,8 +23,6 @@ func metricsPoster() {
 	metrics.Register("goroutines", goroutines)
 
 	go metrics.Log(metrics.DefaultRegistry, 30, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
-
-	// metrics.
 
 	for {
 		time.Sleep(1 * time.Second)
@@ -36,7 +33,6 @@ func metricsPoster() {
 		newQueries := current - lastQueryCount
 		lastQueryCount = current
 
-		queries.Mark(newQueries)
 		queriesHistogram.Update(newQueries)
 		goroutines.Update(int64(runtime.NumGoroutine()))
 
