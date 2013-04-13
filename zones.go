@@ -95,7 +95,9 @@ func zonesReadDir(dirName string, zones Zones) error {
 		if ok, _ := seenZones[zoneName]; ok {
 			continue
 		}
-		log.Println("Removing zone", zoneName, zone.Origin)
+		log.Println("Removing zone", zone.Origin)
+		metrics.Unregister(zone.Origin + " queries")
+		metrics.Unregister(zone.Origin + " EDNS queries")
 		dns.HandleRemove(zoneName)
 		delete(zones, zoneName)
 	}
