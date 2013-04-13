@@ -4,7 +4,6 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"fmt"
-	"github.com/abh/go-metrics"
 	"html/template"
 	"io"
 	"log"
@@ -211,29 +210,6 @@ func (s RatesByCount) Less(i, j int) bool {
 		return s.Rates[i].Name < s.Rates[j].Name
 	}
 	return ic > jc
-}
-
-func metricHTML(name string, i interface{}) (string, int64) {
-	// https://github.com/rcrowley/go-metrics/blob/master/log.go
-	switch m := i.(type) {
-	case metrics.Meter:
-		str := fmt.Sprintf(
-			"<h4>meter %s</h4>\n"+
-				"count: %9d<br>"+
-				"  1-min rate:  %12.2f\n"+
-				"  5-min rate:  %12.2f\n"+
-				"15-min rate: %12.2f\n"+
-				"  mean rate:   %12.2f\n",
-			name,
-			m.Count(),
-			m.Rate1(),
-			m.Rate5(),
-			m.Rate15(),
-			m.RateMean(),
-		)
-		return str, m.Count()
-	}
-	return "", 0
 }
 
 func round(val float64, prec int) float64 {

@@ -167,6 +167,4 @@ func main() {
 		f.Close()
 	}
 
-	//os.Exit(0)
-
 }
