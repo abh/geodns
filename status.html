@@ -10,42 +10,120 @@
 
 <h1>Global</h1>
 
-<table class="table table-bordered table-condensed">
-<tr>
-	<td class="info header">Uptime</td><td>{{.Uptime.DayString}}</td>
-</tr>
-</table>
+<div class="row">
+
+	<div class="span8">
+
+		<table class="table table-bordered table-condensed">
+			<tr>
+				<td class="info header">Global stats</td>
+				<td>1 min</td>
+				<td>5 min</td>
+				<td>15 min</td>
+				<td>Mean</td>
+			</tr>
+
+			<tr>
+				<td>Queries</td>
+				<td>{{printf "%.2f" .Global.Queries.Rate1}}</td>
+				<td>{{printf "%.2f" .Global.Queries.Rate5}}</td>
+				<td>{{printf "%.2f" .Global.Queries.Rate15}}</td>
+				<td>{{printf "%.2f" .Global.Queries.RateMean}}</td>
+			</tr>
+		</table>
+
+		<table class="table table-bordered table-condensed">
+			<tr>
+				<td class="info header">Histograms</td>
+				<td>Min</td>
+				<td>Mean</td>
+				<td>90%</td>
+				<td>99%</td>
+				<td>99.9%</td>
+				<td>Max</td>
+				<td>StdDev</td>
+			</tr>
+
+			<tr>
+				<td>10 minutes <small>({{.Global.Histogram10.Count}})</small></td>
+				<td>{{printf "%d"   .Global.Histogram10.Min}}</td>
+				<td>{{printf "%.2f" .Global.Histogram10.Mean}}</td>
+				<td>{{printf "%.2f" .Global.Histogram10.Pct90 }}</td>
+				<td>{{printf "%.2f" .Global.Histogram10.Pct99 }}</td>
+				<td>{{printf "%.2f" .Global.Histogram10.Pct999 }}</td>
+				<td>{{printf "%d"   .Global.Histogram10.Max}}</td>
+				<td>{{printf "%.2f" .Global.Histogram10.StdDev }}</td>
+			</tr>
+
+			<tr>
+				<td>60 minutes <small>({{.Global.Histogram60.Count}})</small></td>
+				<td>{{printf "%d"   .Global.Histogram60.Min}}</td>
+				<td>{{printf "%.2f" .Global.Histogram60.Mean}}</td>
+				<td>{{printf "%.2f" .Global.Histogram60.Pct90 }}</td>
+				<td>{{printf "%.2f" .Global.Histogram60.Pct99 }}</td>
+				<td>{{printf "%.2f" .Global.Histogram60.Pct999 }}</td>
+				<td>{{printf "%d"   .Global.Histogram60.Max}}</td>
+				<td>{{printf "%.2f" .Global.Histogram60.StdDev }}</td>
+			</tr>
+
+			<tr>
+				<td>1 day <small>({{.Global.Histogram1440.Count}})</small></td>
+				<td>{{printf "%d"   .Global.Histogram1440.Min}}</td>
+				<td>{{printf "%.2f" .Global.Histogram1440.Mean}}</td>
+				<td>{{printf "%.2f" .Global.Histogram1440.Pct90 }}</td>
+				<td>{{printf "%.2f" .Global.Histogram1440.Pct99 }}</td>
+				<td>{{printf "%.2f" .Global.Histogram1440.Pct999 }}</td>
+				<td>{{printf "%d"   .Global.Histogram1440.Max}}</td>
+				<td>{{printf "%.2f" .Global.Histogram1440.StdDev }}</td>
+			</tr>
+
+		</table>
+
+	</div>
+
+	<div class="span4">
+
+		<table class="table table-bordered table-condensed">
+		<tr>
+			<td class="info header">Uptime</td><td>{{.Uptime.DayString}}</td>
+
+		</tr>
+		</table>
+
+	</div>
+
+</div>
 
 <h1>Zones</h1>
 <table class="table table-bordered table-condensed">
 <tr>
 <th></th>
-<th>Mean QPS</th>
 <th>1 minute</th>
 <th>5 minutes</th>
 <th>15 minutes</th>
+<th>Mean QPS</th>
 </tr>
 
 {{range  .Zones }}
 
 	<tr class="info">
-		<td colspan=5 class="zonename"><b>{{.Name}}</b></td>
+		<td colspan=5 class="zonename">{{.Name}}</td>
 	</tr>
 
 	<tr>
 		<td>Queries</td>
-		<td>{{printf "%.2f" .Metrics.Queries.RateMean}}</td>
 		<td>{{printf "%.2f" .Metrics.Queries.Rate1}}</td>
 		<td>{{printf "%.2f" .Metrics.Queries.Rate5}}</td>
 		<td>{{printf "%.2f" .Metrics.Queries.Rate15}}</td>
+		<td>{{printf "%.2f" .Metrics.Queries.RateMean}}</td>
 	</tr>
 
 	<tr>
 		<td>EDNS Queries</td>
-		<td>{{printf "%.2f" .Metrics.EdnsQueries.RateMean}}</td>
 		<td>{{printf "%.2f" .Metrics.EdnsQueries.Rate1}}</td>
 		<td>{{printf "%.2f" .Metrics.EdnsQueries.Rate5}}</td>
 		<td>{{printf "%.2f" .Metrics.EdnsQueries.Rate15}}</td>
+		<td>{{printf "%.2f" .Metrics.EdnsQueries.RateMean}}</td>
 	</tr>
 
 {{end}}

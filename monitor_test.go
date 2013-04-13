@@ -10,13 +10,16 @@ import (
 )
 
 type MonitorSuite struct {
-	zones Zones
+	zones   Zones
+	metrics *ServerMetrics
 }
 
 var _ = Suite(&MonitorSuite{})
 
 func (s *MonitorSuite) SetUpSuite(c *C) {
 	s.zones = make(Zones)
+	s.metrics = NewMetrics()
+	go s.metrics.Updater()
 
 	*flaghttp = ":8881"
 

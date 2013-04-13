@@ -10,19 +10,41 @@ import (
 
 var qCounter = metrics.NewMeter()
 
-func metricsPoster() {
+type ServerMetrics struct {
+	lastQueryCount       int64
+	queriesHistogram10   *metrics.StandardHistogram
+	queriesHistogram60   *metrics.StandardHistogram
+	queriesHistogram1440 *metrics.StandardHistogram
+	goroutines           *metrics.StandardGauge
+}
 
-	lastQueryCount := qCounter.Count()
+func NewMetrics() *ServerMetrics {
+	m := new(ServerMetrics)
 
+	m.lastQueryCount = qCounter.Count()
 	metrics.Register("queries", qCounter)
 
-	queriesHistogram := metrics.NewHistogram(metrics.NewUniformSample(600))
-	metrics.Register("queriesHistogram", queriesHistogram)
+	m.queriesHistogram10 = metrics.NewHistogram(metrics.NewUniformSample(600))
+	metrics.Register("queries-histogram10", m.queriesHistogram10)
 
-	goroutines := metrics.NewGauge()
-	metrics.Register("goroutines", goroutines)
+	m.queriesHistogram60 = metrics.NewHistogram(metrics.NewUniformSample(3600))
+	metrics.Register("queries-histogram60", m.queriesHistogram60)
 
-	go metrics.Log(metrics.DefaultRegistry, 30, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
+	m.queriesHistogram1440 = metrics.NewHistogram(metrics.NewUniformSample(24 * 60 * 60))
+	metrics.Register("queries-histogram1440", m.queriesHistogram1440)
+
+	m.goroutines = metrics.NewGauge()
+	metrics.Register("goroutines", m.goroutines)
+
+	return m
+}
+
+func (m *ServerMetrics) Updater() {
+
+	go func() {
+		time.Sleep(2 * time.Second)
+		metrics.Log(metrics.DefaultRegistry, 30, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
+	}()
 
 	for {
 		time.Sleep(1 * time.Second)
@@ -30,11 +52,14 @@ func metricsPoster() {
 		// log.Println("updating metrics")
 
 		current := qCounter.Count()
-		newQueries := current - lastQueryCount
-		lastQueryCount = current
+		newQueries := current - m.lastQueryCount
+		m.lastQueryCount = current
 
-		queriesHistogram.Update(newQueries)
-		goroutines.Update(int64(runtime.NumGoroutine()))
+		m.queriesHistogram10.Update(newQueries)
+		m.queriesHistogram60.Update(newQueries)
+		m.queriesHistogram1440.Update(newQueries)
+
+		m.goroutines.Update(int64(runtime.NumGoroutine()))
 
 	}
 }

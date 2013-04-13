@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"fmt"
+	"github.com/abh/go-metrics"
 	"html/template"
 	"io"
 	"log"
@@ -227,6 +228,29 @@ func round(val float64, prec int) float64 {
 
 }
 
+type histogramData struct {
+	Count  int64
+	Max    int64
+	Min    int64
+	Mean   float64
+	Pct90  float64
+	Pct99  float64
+	Pct999 float64
+	StdDev float64
+}
+
+func setupHistogramData(met *metrics.StandardHistogram, dat *histogramData) {
+	dat.Count = met.Count()
+	dat.Max = met.Max()
+	dat.Min = met.Min()
+	dat.Mean = met.Mean()
+	dat.StdDev = met.StdDev()
+	percentiles := met.Percentiles([]float64{0.90, 0.99, 0.999})
+	dat.Pct90 = percentiles[0]
+	dat.Pct99 = percentiles[1]
+	dat.Pct999 = percentiles[2]
+}
+
 func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -257,6 +281,12 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 			Version string
 			Zones   Rates
 			Uptime  DayDuration
+			Global  struct {
+				Queries       *metrics.StandardMeter
+				Histogram10   histogramData
+				Histogram60   histogramData
+				Histogram1440 histogramData
+			}
 		}
 
 		uptime := DayDuration{time.Since(timeStarted)}
@@ -267,6 +297,12 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 			Zones:   rates,
 			Uptime:  uptime,
 		}
+
+		status.Global.Queries = metrics.Get("queries").(*metrics.StandardMeter)
+
+		setupHistogramData(metrics.Get("queries-histogram10").(*metrics.StandardHistogram), &status.Global.Histogram10)
+		setupHistogramData(metrics.Get("queries-histogram60").(*metrics.StandardHistogram), &status.Global.Histogram60)
+		setupHistogramData(metrics.Get("queries-histogram1440").(*metrics.StandardHistogram), &status.Global.Histogram1440)
 
 		err = tmpl.Execute(w, status)
 		if err != nil {
