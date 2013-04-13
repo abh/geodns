@@ -2,12 +2,19 @@
 <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" rel="stylesheet">
 <link href="//netdna.bootstrapcdn.com/bootswatch/2.3.1/cerulean/bootstrap.min.css" rel="stylesheet">
 <style>
-	td.zonename { font-weight: bold;  }
+	td.zonename,td.header { font-weight: bold; }
 </style>
 <body>
 
-    <div class="container">
+<div class="container">
 
+<h1>Global</h1>
+
+<table class="table table-bordered table-condensed">
+<tr>
+	<td class="info header">Uptime</td><td>{{.Uptime.DayString}}</td>
+</tr>
+</table>
 
 <h1>Zones</h1>
 <table class="table table-bordered table-condensed">

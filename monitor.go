@@ -280,14 +280,22 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 		type statusData struct {
 			Version string
 			Zones   Rates
+			Uptime  DayDuration
 		}
+
+		uptime := DayDuration{time.Since(timeStarted)}
+		log.Println("Uptime", uptime)
 
 		status := statusData{
 			Version: VERSION,
 			Zones:   rates,
+			Uptime:  uptime,
 		}
 
-		tmpl.Execute(w, status)
+		err = tmpl.Execute(w, status)
+		if err != nil {
+			log.Println("Status template error", err)
+		}
 	}
 }
 
