@@ -290,7 +290,6 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 		}
 
 		uptime := DayDuration{time.Since(timeStarted)}
-		log.Println("Uptime", uptime)
 
 		status := statusData{
 			Version: VERSION,
