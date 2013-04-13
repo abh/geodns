@@ -229,7 +229,6 @@ func round(val float64, prec int) float64 {
 }
 
 type histogramData struct {
-	Count  int64
 	Max    int64
 	Min    int64
 	Mean   float64
@@ -240,7 +239,6 @@ type histogramData struct {
 }
 
 func setupHistogramData(met *metrics.StandardHistogram, dat *histogramData) {
-	dat.Count = met.Count()
 	dat.Max = met.Max()
 	dat.Min = met.Min()
 	dat.Mean = met.Mean()
@@ -282,10 +280,9 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 			Zones   Rates
 			Uptime  DayDuration
 			Global  struct {
-				Queries       *metrics.StandardMeter
-				Histogram10   histogramData
-				Histogram60   histogramData
-				Histogram1440 histogramData
+				Queries         *metrics.StandardMeter
+				Histogram       histogramData
+				HistogramRecent histogramData
 			}
 		}
 
@@ -299,9 +296,8 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 
 		status.Global.Queries = metrics.Get("queries").(*metrics.StandardMeter)
 
-		setupHistogramData(metrics.Get("queries-histogram10").(*metrics.StandardHistogram), &status.Global.Histogram10)
-		setupHistogramData(metrics.Get("queries-histogram60").(*metrics.StandardHistogram), &status.Global.Histogram60)
-		setupHistogramData(metrics.Get("queries-histogram1440").(*metrics.StandardHistogram), &status.Global.Histogram1440)
+		setupHistogramData(metrics.Get("queries-histogram").(*metrics.StandardHistogram), &status.Global.Histogram)
+		setupHistogramData(metrics.Get("queries-histogram-recent").(*metrics.StandardHistogram), &status.Global.HistogramRecent)
 
 		err = tmpl.Execute(w, status)
 		if err != nil {

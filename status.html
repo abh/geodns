@@ -45,36 +45,25 @@
 			</tr>
 
 			<tr>
-				<td>10 minutes <small>({{.Global.Histogram10.Count}})</small></td>
-				<td>{{printf "%d"   .Global.Histogram10.Min}}</td>
-				<td>{{printf "%.2f" .Global.Histogram10.Mean}}</td>
-				<td>{{printf "%.2f" .Global.Histogram10.Pct90 }}</td>
-				<td>{{printf "%.2f" .Global.Histogram10.Pct99 }}</td>
-				<td>{{printf "%.2f" .Global.Histogram10.Pct999 }}</td>
-				<td>{{printf "%d"   .Global.Histogram10.Max}}</td>
-				<td>{{printf "%.2f" .Global.Histogram10.StdDev }}</td>
+				<td>Since start</td>
+				<td>{{printf "%d"   .Global.Histogram.Min}}</td>
+				<td>{{printf "%.2f" .Global.Histogram.Mean}}</td>
+				<td>{{printf "%.2f" .Global.Histogram.Pct90 }}</td>
+				<td>{{printf "%.2f" .Global.Histogram.Pct99 }}</td>
+				<td>{{printf "%.2f" .Global.Histogram.Pct999 }}</td>
+				<td>{{printf "%d"   .Global.Histogram.Max}}</td>
+				<td>{{printf "%.2f" .Global.Histogram.StdDev }}</td>
 			</tr>
 
 			<tr>
-				<td>60 minutes <small>({{.Global.Histogram60.Count}})</small></td>
-				<td>{{printf "%d"   .Global.Histogram60.Min}}</td>
-				<td>{{printf "%.2f" .Global.Histogram60.Mean}}</td>
-				<td>{{printf "%.2f" .Global.Histogram60.Pct90 }}</td>
-				<td>{{printf "%.2f" .Global.Histogram60.Pct99 }}</td>
-				<td>{{printf "%.2f" .Global.Histogram60.Pct999 }}</td>
-				<td>{{printf "%d"   .Global.Histogram60.Max}}</td>
-				<td>{{printf "%.2f" .Global.Histogram60.StdDev }}</td>
-			</tr>
-
-			<tr>
-				<td>1 day <small>({{.Global.Histogram1440.Count}})</small></td>
-				<td>{{printf "%d"   .Global.Histogram1440.Min}}</td>
-				<td>{{printf "%.2f" .Global.Histogram1440.Mean}}</td>
-				<td>{{printf "%.2f" .Global.Histogram1440.Pct90 }}</td>
-				<td>{{printf "%.2f" .Global.Histogram1440.Pct99 }}</td>
-				<td>{{printf "%.2f" .Global.Histogram1440.Pct999 }}</td>
-				<td>{{printf "%d"   .Global.Histogram1440.Max}}</td>
-				<td>{{printf "%.2f" .Global.Histogram1440.StdDev }}</td>
+				<td>Recent</td>
+				<td>{{printf "%d"   .Global.HistogramRecent.Min}}</td>
+				<td>{{printf "%.2f" .Global.HistogramRecent.Mean}}</td>
+				<td>{{printf "%.2f" .Global.HistogramRecent.Pct90 }}</td>
+				<td>{{printf "%.2f" .Global.HistogramRecent.Pct99 }}</td>
+				<td>{{printf "%.2f" .Global.HistogramRecent.Pct999 }}</td>
+				<td>{{printf "%d"   .Global.HistogramRecent.Max}}</td>
+				<td>{{printf "%.2f" .Global.HistogramRecent.StdDev }}</td>
 			</tr>
 
 		</table>
