@@ -276,10 +276,11 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 		sort.Sort(RatesByCount{rates})
 
 		type statusData struct {
-			Version string
-			Zones   Rates
-			Uptime  DayDuration
-			Global  struct {
+			Version  string
+			Zones    Rates
+			Uptime   DayDuration
+			Platform string
+			Global   struct {
 				Queries         *metrics.StandardMeter
 				Histogram       histogramData
 				HistogramRecent histogramData
@@ -289,9 +290,10 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 		uptime := DayDuration{time.Since(timeStarted)}
 
 		status := statusData{
-			Version: VERSION,
-			Zones:   rates,
-			Uptime:  uptime,
+			Version:  VERSION,
+			Zones:    rates,
+			Uptime:   uptime,
+			Platform: runtime.GOARCH + "-" + runtime.GOOS,
 		}
 
 		status.Global.Queries = metrics.Get("queries").(*metrics.StandardMeter)
