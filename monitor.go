@@ -13,7 +13,6 @@ import (
 	"os"
 	"runtime"
 	"sort"
-	"strconv"
 	"time"
 )
 
@@ -127,8 +126,8 @@ func initialStatus() string {
 		status["h"] = hostname
 	}
 
-	status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
-	status["started"] = strconv.Itoa(int(timeStarted.Unix()))
+	status["up"] = int(time.Since(timeStarted).Seconds())
+	status["started"] = int(timeStarted.Unix())
 
 	message, err := json.Marshal(status)
 	return string(message)
@@ -166,11 +165,11 @@ func monitor(zones Zones) {
 		newQueries := current - lastQueryCount
 		lastQueryCount = current
 
-		status := map[string]string{}
-		status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
-		status["qs"] = strconv.FormatInt(qCounter.Count(), 10)
-		status["qps"] = strconv.FormatInt(newQueries, 10)
-		status["qps1"] = fmt.Sprintf("%.3f", qCounter.Rate1())
+		status := map[string]interface{}{}
+		status["up"] = int(time.Since(timeStarted).Seconds())
+		status["qs"] = qCounter.Count()
+		status["qps"] = newQueries
+		status["qps1"] = qCounter.Rate1()
 
 		message, err := json.Marshal(status)
 
