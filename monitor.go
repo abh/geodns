@@ -16,6 +16,25 @@ import (
 	"time"
 )
 
+// Initial status message on websocket
+type statusStreamMsgStart struct {
+	Hostname string   `json:"h,omitemty"`
+	Version  string   `json:"v"`
+	Id       string   `json:"id"`
+	Ip       string   `json:"ip"`
+	Uptime   int      `json:"up"`
+	Started  int      `json:"started"`
+	Groups   []string `json:"groups"`
+}
+
+// Update message on websocket
+type statusStreamMsgUpdate struct {
+	Uptime     int     `json:"up"`
+	QueryCount int64   `json:"qs"`
+	Qps        int64   `json:"qps"`
+	Qps1m      float64 `json:"qps1m,omitempty"`
+}
+
 type wsConnection struct {
 	// The websocket connection.
 	ws *websocket.Conn
@@ -114,20 +133,20 @@ func wsHandler(ws *websocket.Conn) {
 }
 
 func initialStatus() string {
-	status := make(map[string]interface{})
-	status["v"] = VERSION
-	status["id"] = serverId
-	status["ip"] = serverIP
+	status := new(statusStreamMsgStart)
+	status.Version = VERSION
+	status.Id = serverId
+	status.Ip = serverIP
 	if len(serverGroups) > 0 {
-		status["groups"] = serverGroups
+		status.Groups = serverGroups
 	}
 	hostname, err := os.Hostname()
 	if err == nil {
-		status["h"] = hostname
+		status.Hostname = hostname
 	}
 
-	status["up"] = int(time.Since(timeStarted).Seconds())
-	status["started"] = int(timeStarted.Unix())
+	status.Uptime = int(time.Since(timeStarted).Seconds())
+	status.Started = int(timeStarted.Unix())
 
 	message, err := json.Marshal(status)
 	return string(message)
@@ -160,16 +179,26 @@ func monitor(zones Zones) {
 
 	lastQueryCount := qCounter.Count()
 
+	status := new(statusStreamMsgUpdate)
+	var lastQps1m float64
+
 	for {
 		current := qCounter.Count()
 		newQueries := current - lastQueryCount
 		lastQueryCount = current
 
-		status := map[string]interface{}{}
-		status["up"] = int(time.Since(timeStarted).Seconds())
-		status["qs"] = qCounter.Count()
-		status["qps"] = newQueries
-		status["qps1"] = qCounter.Rate1()
+		status.Uptime = int(time.Since(timeStarted).Seconds())
+		status.QueryCount = qCounter.Count()
+		status.Qps = newQueries
+
+		// go-metrics only updates the rate every 5 seconds, so don't pretend otherwise
+		newQps1m := qCounter.Rate1()
+		if newQps1m != lastQps1m {
+			status.Qps1m = newQps1m
+			lastQps1m = newQps1m
+		} else {
+			status.Qps1m = 0
+		}
 
 		message, err := json.Marshal(status)
 
