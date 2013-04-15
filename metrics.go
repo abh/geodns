@@ -45,7 +45,8 @@ func (m *ServerMetrics) Updater() {
 	for {
 		time.Sleep(1 * time.Second)
 
-		// log.Println("updating metrics")
+		// Make sure go-metrics get some input to update the rate
+		qCounter.Mark(0)
 
 		current := qCounter.Count()
 		newQueries := current - m.lastQueryCount
