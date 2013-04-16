@@ -36,6 +36,7 @@ func addHandler(zones Zones, name string, config *Zone) {
 		config.Metrics.EdnsQueries = metrics.NewMeter()
 		metrics.Register(config.Origin+" queries", config.Metrics.Queries)
 		metrics.Register(config.Origin+" EDNS queries", config.Metrics.EdnsQueries)
+		config.Metrics.LabelStats = NewZoneLabelStats(1000)
 	}
 
 	zones[name] = config
@@ -98,6 +99,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 		log.Println("Removing zone", zone.Origin)
 		metrics.Unregister(zone.Origin + " queries")
 		metrics.Unregister(zone.Origin + " EDNS queries")
+		zone.Metrics.LabelStats.Close()
 		dns.HandleRemove(zoneName)
 		delete(zones, zoneName)
 	}

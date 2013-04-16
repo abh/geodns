@@ -119,6 +119,21 @@
 		<td>{{printf "%.2f" .Metrics.EdnsQueries.RateMean}}</td>
 	</tr>
 
+	{{ $counts := .Metrics.LabelStats.TopCounts 10 }}
+
+	{{ if $counts }}
+	<tr class="info">
+		<td colspan=5>Labels</td>
+	</tr>
+
+	{{range $counts }}
+		<tr>
+			<td colspan=4>{{.Label}}</td><td>{{.Count}}</td>
+		</tr>
+	{{end}}
+
+	{{end}}
+
 {{end}}
 
 </table>

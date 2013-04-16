@@ -38,6 +38,8 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	label := getQuestionName(z, req)
 
+	z.Metrics.LabelStats.Add(label)
+
 	var ip string
 	var edns *dns.EDNS0_SUBNET
 	var opt_rr *dns.OPT

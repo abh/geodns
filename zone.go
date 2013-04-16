@@ -46,6 +46,7 @@ type labels map[string]*Label
 type ZoneMetrics struct {
 	Queries     *metrics.StandardMeter
 	EdnsQueries *metrics.StandardMeter
+	LabelStats  *zoneLabelStats
 }
 
 type Zone struct {

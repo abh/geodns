@@ -278,7 +278,11 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 
 		for name, zone := range zones {
 			count := zone.Metrics.Queries.Count()
-			rates = append(rates, &rate{Name: name, Count: count, Metrics: zone.Metrics})
+			rates = append(rates, &rate{
+				Name:    name,
+				Count:   count,
+				Metrics: zone.Metrics,
+			})
 		}
 
 		sort.Sort(RatesByCount{rates})
