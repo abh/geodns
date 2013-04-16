@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"io"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"runtime"
@@ -241,21 +240,6 @@ func (s RatesByCount) Less(i, j int) bool {
 	return ic > jc
 }
 
-func round(val float64, prec int) float64 {
-
-	var rounder float64
-	intermed := val * math.Pow(10, float64(prec))
-
-	if val >= 0.5 {
-		rounder = math.Ceil(intermed)
-	} else {
-		rounder = math.Floor(intermed)
-	}
-
-	return rounder / math.Pow(10, float64(prec))
-
-}
-
 type histogramData struct {
 	Max    int64
 	Min    int64
@@ -289,10 +273,6 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 			io.WriteString(w, str)
 			return
 		}
-
-		tmpl.Funcs(map[string]interface{}{
-			"round": round,
-		})
 
 		rates := make(Rates, 0)
 
