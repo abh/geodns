@@ -4,7 +4,6 @@ import (
 	"camlistore.org/pkg/errorutil"
 	"encoding/json"
 	"fmt"
-	"github.com/abh/go-metrics"
 	"github.com/miekg/dns"
 	"io/ioutil"
 	"log"
@@ -28,17 +27,8 @@ func zonesReader(dirName string, zones Zones) {
 }
 
 func addHandler(zones Zones, name string, config *Zone) {
-	oldZone, ok := zones[name]
-	if ok {
-		config.Metrics = oldZone.Metrics
-	} else {
-		config.Metrics.Queries = metrics.NewMeter()
-		config.Metrics.EdnsQueries = metrics.NewMeter()
-		metrics.Register(config.Origin+" queries", config.Metrics.Queries)
-		metrics.Register(config.Origin+" EDNS queries", config.Metrics.EdnsQueries)
-		config.Metrics.LabelStats = NewZoneLabelStats(10000)
-	}
-
+	oldZone := zones[name]
+	config.SetupMetrics(oldZone)
 	zones[name] = config
 	dns.HandleFunc(name, setupServerFunc(config))
 }
@@ -97,9 +87,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 			continue
 		}
 		log.Println("Removing zone", zone.Origin)
-		metrics.Unregister(zone.Origin + " queries")
-		metrics.Unregister(zone.Origin + " EDNS queries")
-		zone.Metrics.LabelStats.Close()
+		zone.Close()
 		dns.HandleRemove(zoneName)
 		delete(zones, zoneName)
 	}
@@ -109,10 +97,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 
 func setupPgeodnsZone(zones Zones) {
 	zoneName := "pgeodns"
-	Zone := new(Zone)
-	Zone.Labels = make(labels)
-	Zone.Origin = zoneName
-	Zone.LenLabels = dns.LenLabels(Zone.Origin)
+	Zone := NewZone(zoneName)
 	label := new(Label)
 	label.Records = make(map[uint16]Records)
 	label.Weight = make(map[uint16]int)
@@ -136,13 +121,7 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 		panic(err)
 	}
 
-	zone = new(Zone)
-	zone.Labels = make(labels)
-	zone.Origin = zoneName
-	zone.LenLabels = dns.LenLabels(zone.Origin)
-	zone.Options.Ttl = 120
-	zone.Options.MaxHosts = 2
-	zone.Options.Contact = "support.bitnames.com"
+	zone = NewZone(zoneName)
 
 	var objmap map[string]interface{}
 	decoder := json.NewDecoder(fh)

@@ -61,6 +61,38 @@ type Zone struct {
 
 type qTypes []uint16
 
+func NewZone(name string) *Zone {
+	zone := new(Zone)
+	zone.Labels = make(labels)
+	zone.Origin = name
+	zone.LenLabels = dns.LenLabels(zone.Origin)
+
+	// defaults
+	zone.Options.Ttl = 120
+	zone.Options.MaxHosts = 2
+	zone.Options.Contact = "support.bitnames.com"
+
+	return zone
+}
+
+func (z *Zone) SetupMetrics(old *Zone) {
+	if old != nil {
+		z.Metrics = old.Metrics
+	} else {
+		z.Metrics.Queries = metrics.NewMeter()
+		z.Metrics.EdnsQueries = metrics.NewMeter()
+		metrics.Register(z.Origin+" queries", z.Metrics.Queries)
+		metrics.Register(z.Origin+" EDNS queries", z.Metrics.EdnsQueries)
+		z.Metrics.LabelStats = NewZoneLabelStats(10000)
+	}
+}
+
+func (z *Zone) Close() {
+	metrics.Unregister(z.Origin + " queries")
+	metrics.Unregister(z.Origin + " EDNS queries")
+	z.Metrics.LabelStats.Close()
+}
+
 func (l *Label) firstRR(dnsType uint16) dns.RR {
 	return l.Records[dnsType][0].RR
 }
