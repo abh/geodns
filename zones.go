@@ -36,7 +36,7 @@ func addHandler(zones Zones, name string, config *Zone) {
 		config.Metrics.EdnsQueries = metrics.NewMeter()
 		metrics.Register(config.Origin+" queries", config.Metrics.Queries)
 		metrics.Register(config.Origin+" EDNS queries", config.Metrics.EdnsQueries)
-		config.Metrics.LabelStats = NewZoneLabelStats(1000)
+		config.Metrics.LabelStats = NewZoneLabelStats(10000)
 	}
 
 	zones[name] = config
