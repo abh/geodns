@@ -1,5 +1,15 @@
 # GeoDNS Changelog
 
+## 2.2.7, April 16th 2013
+* Count EDNS queries per zone, pretty status page
+  * Status page has various per-zone stats
+  * Show global query stats, etc
+* Add option to configure 'loggers'
+* Add -cpus option to use multiple CPUs
+* Add sample geodns.conf
+* Use numbers instead of strings when appropriate in websocket stream
+* Various refactoring and bug-fixes
+
 ## 2.2.6, April 9th 2013
 
 * Begin more detailed /status page
