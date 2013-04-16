@@ -97,6 +97,8 @@
 <th>Mean QPS</th>
 </tr>
 
+{{ $topOption := .TopOption}}
+
 {{range  .Zones }}
 
 	<tr class="info">
@@ -119,20 +121,32 @@
 		<td>{{printf "%.2f" .Metrics.EdnsQueries.RateMean}}</td>
 	</tr>
 
-	{{ $counts := .Metrics.LabelStats.TopCounts 10 }}
+	{{ $counts := .Metrics.LabelStats.TopCounts $topOption }}
 
 	{{ if $counts }}
-	<tr class="info">
-		<td colspan=5>Labels</td>
-	</tr>
-
-	{{range $counts }}
-		<tr>
-			<td colspan=4>{{.Label}}</td><td>{{.Count}}</td>
+		<tr class="info">
+			<td colspan=5>Labels</td>
 		</tr>
+		{{range $counts }}
+			<tr>
+				<td colspan=4>{{.Label}}</td><td>{{.Count}}</td>
+			</tr>
+		{{end}}
 	{{end}}
 
+	{{ $clients := .Metrics.ClientStats.TopCounts $topOption }}
+
+	{{ if $clients }}
+		<tr class="info">
+			<td colspan=5>Clients</td>
+		</tr>
+		{{range $clients }}
+			<tr>
+				<td colspan=4>{{.Label}}</td><td>{{.Count}}</td>
+			</tr>
+		{{end}}
 	{{end}}
+
 
 {{end}}
 

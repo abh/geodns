@@ -47,6 +47,7 @@ type ZoneMetrics struct {
 	Queries     *metrics.StandardMeter
 	EdnsQueries *metrics.StandardMeter
 	LabelStats  *zoneLabelStats
+	ClientStats *zoneLabelStats
 }
 
 type Zone struct {
@@ -84,6 +85,7 @@ func (z *Zone) SetupMetrics(old *Zone) {
 		metrics.Register(z.Origin+" queries", z.Metrics.Queries)
 		metrics.Register(z.Origin+" EDNS queries", z.Metrics.EdnsQueries)
 		z.Metrics.LabelStats = NewZoneLabelStats(10000)
+		z.Metrics.ClientStats = NewZoneLabelStats(10000)
 	}
 }
 
@@ -91,6 +93,7 @@ func (z *Zone) Close() {
 	metrics.Unregister(z.Origin + " queries")
 	metrics.Unregister(z.Origin + " EDNS queries")
 	z.Metrics.LabelStats.Close()
+	z.Metrics.ClientStats.Close()
 }
 
 func (l *Label) firstRR(dnsType uint16) dns.RR {

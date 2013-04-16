@@ -40,7 +40,10 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	z.Metrics.LabelStats.Add(label)
 
-	var ip string
+	realIp, _, _ := net.SplitHostPort(w.RemoteAddr().String())
+	z.Metrics.ClientStats.Add(realIp)
+
+	var ip string // EDNS or real IP
 	var edns *dns.EDNS0_SUBNET
 	var opt_rr *dns.OPT
 
@@ -65,15 +68,15 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		}
 	}
 
+	if len(ip) == 0 { // no edns subnet
+		ip = realIp
+	}
+
 	var country string
 	var netmask int
 	if geoIP != nil {
-		if len(ip) == 0 { // no edns subnet
-			ip, _, _ = net.SplitHostPort(w.RemoteAddr().String())
-		}
 		country, netmask = geoIP.GetCountry(ip)
 		country = strings.ToLower(country)
-		logPrintln("Country:", ip, country)
 	}
 
 	m := new(dns.Msg)

@@ -95,6 +95,7 @@ func (s *ServeSuite) TestServingEDNS(c *C) {
 	r = exchangeSubnet(c, "www.test.example.com.", dns.TypeA, "194.239.134.1")
 	c.Check(r.Answer, HasLen, 1)
 	if len(r.Answer) > 0 {
+		// EDNS-SUBNET test (request A, respond CNAME)
 		c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo-europe.bitnames.com.")
 	}
 

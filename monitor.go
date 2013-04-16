@@ -12,6 +12,7 @@ import (
 	"os"
 	"runtime"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -265,6 +266,19 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, req *http.Request) {
 
+		req.ParseForm()
+
+		topOption := 10
+		topParam := req.Form["top"]
+
+		if len(topParam) > 0 {
+			var err error
+			topOption, err = strconv.Atoi(topParam[0])
+			if err != nil {
+				topOption = 10
+			}
+		}
+
 		tmpl := template.New("status_html")
 		tmpl, err := tmpl.Parse(string(status_html()))
 
@@ -297,15 +311,17 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 				Histogram       histogramData
 				HistogramRecent histogramData
 			}
+			TopOption int
 		}
 
 		uptime := DayDuration{time.Since(timeStarted)}
 
 		status := statusData{
-			Version:  VERSION,
-			Zones:    rates,
-			Uptime:   uptime,
-			Platform: runtime.GOARCH + "-" + runtime.GOOS,
+			Version:   VERSION,
+			Zones:     rates,
+			Uptime:    uptime,
+			Platform:  runtime.GOARCH + "-" + runtime.GOOS,
+			TopOption: topOption,
 		}
 
 		status.Global.Queries = metrics.Get("queries").(*metrics.StandardMeter)
