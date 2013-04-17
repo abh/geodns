@@ -104,25 +104,35 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	if labels == nil {
 
-		if label == "_status" && (qtype == dns.TypeANY || qtype == dns.TypeTXT) {
-			m.Answer = statusRR(z)
+		firstLabel := (strings.Split(label, "."))[0]
+
+		if firstLabel == "_status" {
+			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
+				m.Answer = statusRR(label + "." + z.Origin + ".")
+			} else {
+				m.Ns = append(m.Ns, z.SoaRR())
+			}
 			m.Authoritative = true
 			w.WriteMsg(m)
 			return
 		}
 
-		if label == "_country" && (qtype == dns.TypeANY || qtype == dns.TypeTXT) {
-			h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
-			h.Name = "_country." + z.Origin + "."
+		if firstLabel == "_country" {
+			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
+				h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
+				h.Name = label + "." + z.Origin + "."
 
-			m.Answer = []dns.RR{&dns.TXT{Hdr: h,
-				Txt: []string{
-					w.RemoteAddr().String(),
-					ip,
-					string(country),
-					string(countries.CountryContinent[country]),
-				},
-			}}
+				m.Answer = []dns.RR{&dns.TXT{Hdr: h,
+					Txt: []string{
+						w.RemoteAddr().String(),
+						ip,
+						string(country),
+						string(countries.CountryContinent[country]),
+					},
+				}}
+			} else {
+				m.Ns = append(m.Ns, z.SoaRR())
+			}
 
 			m.Authoritative = true
 			w.WriteMsg(m)
@@ -164,9 +174,9 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	return
 }
 
-func statusRR(z *Zone) []dns.RR {
+func statusRR(label string) []dns.RR {
 	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
-	h.Name = "_status." + z.Origin + "."
+	h.Name = label
 
 	status := map[string]string{"v": VERSION, "id": serverId}
 

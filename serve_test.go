@@ -39,6 +39,23 @@ func (s *ServeSuite) TestServing(c *C) {
 		c.Fail()
 	}
 
+	// Allow _country and _status queries as long as the first label is that
+	r = exchange(c, "_country.foo.pgeodns.", dns.TypeTXT)
+	txt = r.Answer[0].(*dns.TXT).Txt[0]
+	// Got appropriate response for _country txt query
+	if !strings.HasPrefix(txt, "127.0.0.1:") {
+		c.Log("Unexpected result for _country.foo.pgeodns", txt)
+		c.Fail()
+	}
+
+	// Make sure A requests for _status doesn't NXDOMAIN
+	r = exchange(c, "_status.pgeodns.", dns.TypeA)
+	c.Check(r.Answer, HasLen, 0)
+	// Got one SOA record
+	c.Check(r.Ns, HasLen, 1)
+	// NOERROR for A request
+	c.Check(r.Rcode, Equals, dns.RcodeSuccess)
+
 	r = exchange(c, "bar.test.example.com.", dns.TypeA)
 	ip := r.Answer[0].(*dns.A).A
 	c.Check(ip.String(), Equals, "192.168.1.2")
