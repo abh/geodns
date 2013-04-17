@@ -117,11 +117,18 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 
 	fh, err := os.Open(fileName)
 	if err != nil {
-		log.Println("Could not read ", fileName, ": ", err)
+		log.Printf("Could not read '%s': %s", fileName, err)
 		panic(err)
 	}
 
 	zone = NewZone(zoneName)
+
+	fileInfo, err := fh.Stat()
+	if err != nil {
+		log.Printf("Could not stat '%s': %s", fileName, err)
+	} else {
+		zone.Options.Serial = int(fileInfo.ModTime().Unix())
+	}
 
 	var objmap map[string]interface{}
 	decoder := json.NewDecoder(fh)

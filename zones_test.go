@@ -27,6 +27,10 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 	// Just check that example.com and test.example.org loaded, too.
 	c.Check(s.zones["example.com"].Origin, Equals, "example.com")
 	c.Check(s.zones["test.example.org"].Origin, Equals, "test.example.org")
+	if s.zones["test.example.org"].Options.Serial == 0 {
+		c.Log("Serial number is 0, should be set by file timestamp")
+		c.Fail()
+	}
 
 	// The real tests are in test.example.com so we have a place
 	// to make nutty configuration entries
