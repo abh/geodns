@@ -2,7 +2,8 @@
   "ttl":    600,
   "max_hosts": 2,
   "logging": {
-    "stathat": true
+    "stathat": true,
+    "stathat_api": "abc-test"
   },
   "contact": "support.bitnames.com",
   "data" : {

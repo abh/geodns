@@ -96,7 +96,18 @@ Only "1" (the default) has been extensively tested.
 ## WebSocket interface
 
 geodns runs a WebSocket server on port 8053 that outputs various performance
-metrics, see `monitor.go` for details.
+metrics. The WebSocket URL is `/monitor`. There's a "companion program" that can
+use this across a cluster to show aggregate statistics, email for more information.
+
+## Runtime status
+
+There's a page with various runtime information (queries per second, queries and
+most frequently requested labels per zone, etc) at `/status`.
+
+## StatHat integration
+
+GeoDNS can post runtime data to [StatHat](http://www.stathat.com/).
+([Documentation](https://github.com/abh/geodns/wiki/StatHat))
 
 ## Country and continent lookups
 

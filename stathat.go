@@ -8,6 +8,54 @@ import (
 	"time"
 )
 
+func (zs *Zones) statHatPoster() {
+
+	if len(Config.StatHat.ApiKey) == 0 {
+		return
+	}
+
+	stathatGroups := append(serverGroups, "total", serverId)
+	suffix := strings.Join(stathatGroups, ",")
+
+	lastCounts := map[string]int64{}
+	lastEdnsCounts := map[string]int64{}
+
+	for name, zone := range *zs {
+		if zone.Logging.StatHat == true {
+			lastCounts[name] = zone.Metrics.Queries.Count()
+			lastEdnsCounts[name] = zone.Metrics.EdnsQueries.Count()
+		}
+	}
+
+	for {
+		time.Sleep(60 * time.Second)
+
+		for name, zone := range *zs {
+			if zone.Logging != nil && zone.Logging.StatHat == true {
+
+				apiKey := zone.Logging.StatHatAPI
+				if len(apiKey) == 0 {
+					apiKey = Config.StatHat.ApiKey
+				}
+				if len(apiKey) == 0 {
+					continue
+				}
+
+				count := zone.Metrics.Queries.Count()
+				newCount := count - lastCounts[name]
+				lastCounts[name] = count
+				stathat.PostEZCount("zone "+name+" queries~"+suffix, Config.StatHat.ApiKey, int(newCount))
+
+				ednsCount := zone.Metrics.EdnsQueries.Count()
+				newEdnsCount := ednsCount - lastEdnsCounts[name]
+				lastEdnsCounts[name] = ednsCount
+				stathat.PostEZCount("zone "+name+" edns queries~"+suffix, Config.StatHat.ApiKey, int(newEdnsCount))
+
+			}
+		}
+	}
+}
+
 func statHatPoster() {
 
 	lastQueryCount := qCounter.Count()

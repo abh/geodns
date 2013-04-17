@@ -145,6 +145,7 @@ func main() {
 	Zones := make(Zones)
 
 	go monitor(Zones)
+	go Zones.statHatPoster()
 
 	setupPgeodnsZone(Zones)
 

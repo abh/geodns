@@ -11,6 +11,9 @@ func (s *ConfigSuite) TestZone(c *C) {
 	// test.example.com was loaded
 	c.Assert(ex.Labels, NotNil)
 
+	c.Check(ex.Logging.StatHat, Equals, true)
+	c.Check(ex.Logging.StatHatAPI, Equals, "abc-test")
+
 	c.Check(ex.Labels["weight"].MaxHosts, Equals, 1)
 
 	// Make sure that the empty "no.bar" zone gets skipped and "bar" is used

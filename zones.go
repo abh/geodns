@@ -164,12 +164,15 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 		case "logging":
 			{
 				logging := new(ZoneLogging)
-				for logger, enabled := range v.(map[string]interface{}) {
+				for logger, v := range v.(map[string]interface{}) {
 					switch logger {
 					case "stathat":
-						logging.StatHat = enabled.(bool)
+						logging.StatHat = valueToBool(v)
+					case "stathat_api":
+						logging.StatHatAPI = valueToString(v)
+						logging.StatHat = true
 					default:
-						log.Println("Unknown logger", logger)
+						log.Println("Unknown logger option", logger)
 					}
 				}
 				zone.Logging = logging
@@ -426,6 +429,43 @@ func setupSOA(Zone *Zone) {
 	label.Records[dns.TypeSOA] = make([]Record, 1)
 	label.Records[dns.TypeSOA][0] = record
 
+}
+
+func valueToBool(v interface{}) (rv bool) {
+	switch v.(type) {
+	case bool:
+		rv = v.(bool)
+	case string:
+		str := v.(string)
+		switch str {
+		case "true":
+			rv = true
+		case "1":
+			rv = true
+		}
+	case float64:
+		if v.(float64) > 0 {
+			rv = true
+		}
+	default:
+		log.Println("Can't convert", v, "to bool")
+		panic("Can't convert value")
+	}
+	return rv
+
+}
+
+func valueToString(v interface{}) (rv string) {
+	switch v.(type) {
+	case string:
+		rv = v.(string)
+	case float64:
+		rv = strconv.FormatFloat(v.(float64), 'f', -1, 64)
+	default:
+		log.Println("Can't convert", v, "to string")
+		panic("Can't convert value")
+	}
+	return rv
 }
 
 func valueToInt(v interface{}) (rv int) {

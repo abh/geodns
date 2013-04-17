@@ -16,7 +16,8 @@ type ZoneOptions struct {
 }
 
 type ZoneLogging struct {
-	StatHat bool
+	StatHat    bool
+	StatHatAPI string
 }
 
 type Record struct {
