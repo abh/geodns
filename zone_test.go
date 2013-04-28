@@ -45,6 +45,16 @@ func (s *ConfigSuite) TestExampleComZone(c *C) {
 	c.Check(Ns[0].RR.(*dns.NS).Ns, Equals, "ns1.example.net.")
 	c.Check(Ns[1].RR.(*dns.NS).Ns, Equals, "ns2.example.net.")
 
+	label, qtype = ex.findLabels("foo", "", qTypes{dns.TypeTXT})
+	Txt := label.Records[dns.TypeTXT]
+	c.Check(Txt, HasLen, 1)
+	c.Check(Txt[0].RR.(*dns.TXT).Txt[0], Equals, "this is foo")
+
+	label, qtype = ex.findLabels("weight", "", qTypes{dns.TypeTXT})
+	Txt = label.Records[dns.TypeTXT]
+	c.Check(Txt, HasLen, 2)
+	c.Check(Txt[0].RR.(*dns.TXT).Txt[0], Equals, "w1000")
+	c.Check(Txt[1].RR.(*dns.TXT).Txt[0], Equals, "w1")
 }
 
 func (s *ConfigSuite) TestExampleOrgZone(c *C) {

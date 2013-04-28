@@ -206,10 +206,11 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 	recordTypes := map[string]uint16{
 		"a":     dns.TypeA,
 		"aaaa":  dns.TypeAAAA,
-		"ns":    dns.TypeNS,
+		"alias": dns.TypeMF,
 		"cname": dns.TypeCNAME,
 		"mx":    dns.TypeMX,
-		"alias": dns.TypeMF,
+		"ns":    dns.TypeNS,
+		"txt":   dns.TypeTXT,
 	}
 
 	for dk, dv_inter := range data {
@@ -371,6 +372,33 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					rr := &dns.NS{Hdr: h, Ns: dns.Fqdn(ns)}
 
 					record.RR = rr
+
+				case dns.TypeTXT:
+					rec := records[rType][i]
+
+					var txt string
+
+					switch rec.(type) {
+					case string:
+						txt = rec.(string)
+					case map[string]interface{}:
+
+						recmap := rec.(map[string]interface{})
+
+						if weight, ok := recmap["weight"]; ok {
+							record.Weight = valueToInt(weight)
+						}
+						if t, ok := recmap["txt"]; ok {
+							txt = t.(string)
+						}
+					}
+					if len(txt) > 0 {
+						rr := &dns.TXT{Hdr: h, Txt: []string{txt}}
+						record.RR = rr
+					} else {
+						log.Printf("Zero length txt record for '%s' in '%s'\n", label.Label, Zone.Origin)
+						continue
+					}
 
 				default:
 					log.Println("type:", rType)

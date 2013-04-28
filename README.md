@@ -145,7 +145,11 @@ A record for users in Europe than anywhere else, use:
     {
         "serial": 1,
         "data": {
-            "": { "mx": { "mx": "mail.example.com", "preference": 10 } },
+            "": {
+                "ns": [ "ns.example.net", "ns2.example.net" ],
+                "txt": "Example zone",
+                "mx": { "mx": "mail.example.com", "preference": 10 }
+            },
             "mail": { "a": [ ["192.168.0.1", 100], ["192.168.10.1", 50] ] },
             "mail.europe": { "a": [ ["192.168.255.1", 0] ] },
             "smtp": { "alias": "mail" }
@@ -169,7 +173,7 @@ ticket in the issue tracker with what you are missing.
 Each record has the format of a short array with the first element being the
 IP address and the second the weight.
 
-    { "a": [ [ "192.168.0.1", 10], ["192.168.2.1", 5] ] }
+    [ [ "192.168.0.1", 10], ["192.168.2.1", 5] ]
 
 See above for how the weights work.
 
@@ -181,12 +185,12 @@ Same format as A records (except the record type is "aaaa").
 
 Internally resolved cname, of sorts. Only works internally in a zone.
 
-    "alias": "foo"
+    "foo"
 
 ### CNAME
 
-    "cname": "target.example.com."
-    "cname": "www"
+    "target.example.com."
+    "www"
 
 The target will have the current zone name appended if it's not a FQDN (since v2.2.0).
 
@@ -197,9 +201,9 @@ record should be returned.
 
 The `preference` is the MX record preference returned to the client.
 
-    "mx": { "mx": "foo.example.com" }
-    "mx": { "mx": "foo.example.com", "weight": 100 }
-    "mx": { "mx": "foo.example.com", "weight": 100, "preference": 10 }
+    { "mx": "foo.example.com" }
+    { "mx": "foo.example.com", "weight": 100 }
+    { "mx": "foo.example.com", "weight": 100, "preference": 10 }
 
 `weight` and `preference` are optional.
 
@@ -208,14 +212,23 @@ The `preference` is the MX record preference returned to the client.
 NS records for the label, use it on the top level empty label (`""`) to specify
 the nameservers for the domain.
 
-    "ns": [ "ns1.example.com", "ns2.example.com" ]
+    [ "ns1.example.com", "ns2.example.com" ]
 
 There's an alternate legacy syntax that has space for glue records (IPv4 addresses),
 but in GeoDNS the values in the object are ignored so the list syntax above is
 recommended.
 
-    "ns": { "ns1.example.net.": null, "ns2.example.net.": null }
+    { "ns1.example.net.": null, "ns2.example.net.": null }
 
+### TXT
+
+Simple syntax
+
+    "Some text"
+
+Or with weights
+
+    { "txt": "Some text", "weight": 10 }
 
 ## License and Copyright
 
