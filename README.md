@@ -113,9 +113,22 @@ GeoDNS can post runtime data to [StatHat](http://www.stathat.com/).
 
 ## Weighted records
 
-Except for NS records all records can have a 'weight' assigned. If any records
-of a particular type for a particular name have a weight, the system will return
-the "max_hosts" records (default 2)
+Most records can have a 'weight' assigned. If any records of a particular type
+for a particular name have a weight, the system will return `max_hosts` records
+(default 2).
+
+If the weight for all records is 0, all matching records will be returned. The
+weight for a label can be any integer as long as the weights for a label and record
+type is less than 2 billion.
+
+As an example, if you configure
+
+    10.0.0.1, weight 10
+    10.0.0.2, weight 20
+    10.0.0.3, weight 30
+    10.0.0.4, weight 40
+
+with `max_hosts` 2 then .4 will be returned about 4 times more often than .1.
 
 ## Configuration format
 
@@ -158,6 +171,8 @@ IP address and the second the weight.
 
     { "a": [ [ "192.168.0.1", 10], ["192.168.2.1", 5] ] }
 
+See above for how the weights work.
+
 ### AAAA
 
 Same format as A records (except the record type is "aaaa").
@@ -177,7 +192,16 @@ The target will have the current zone name appended if it's not a FQDN (since v2
 
 ### MX
 
+MX records support a `weight` similar to A records to indicate how often the particular
+record should be returned.
+
+The `preference` is the MX record preference returned to the client.
+
     { "mx": "foo.example.com" }
+    { "mx": "foo.example.com", "weight": 100 }
+    { "mx": "foo.example.com", "weight": 100, "preference": 10 }
+
+`weight` and `preference` are optional.
 
 ### NS
 
@@ -190,7 +214,6 @@ but in GeoDNS the values in the object are ignored so the list syntax above is
 recommended.
 
     { "ns": { "ns1.example.net.": null, "ns2.example.net.": null } }
-
 
 ## License and Copyright
 
