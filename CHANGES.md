@@ -1,5 +1,14 @@
 # GeoDNS Changelog
 
+## 2.2.8, April 28th 2013
+* Support per-zone stats posted to StatHat
+* Support TXT records
+* Don't return NXDOMAIN for A queries to _status and _country
+* Set serial number from file modtime if not explicitly set in json
+* Improve record type documentation
+* Warn about unknown record types in zone json files
+* Add -version option
+
 ## 2.2.7, April 16th 2013
 * Count EDNS queries per zone, pretty status page
   * Status page has various per-zone stats
