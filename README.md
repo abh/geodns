@@ -189,7 +189,7 @@ There's an alternate legacy syntax that has space for glue records (IPv4 address
 but in GeoDNS the values in the object are ignored so the list syntax above is
 recommended.
 
-    { "ns1.example.net.": null, "ns2.example.net.": null },
+    { "ns": { "ns1.example.net.": null, "ns2.example.net.": null } }
 
 
 ## License and Copyright
