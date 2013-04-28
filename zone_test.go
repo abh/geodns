@@ -5,7 +5,7 @@ import (
 	. "launchpad.net/gocheck"
 )
 
-func (s *ConfigSuite) TestZone(c *C) {
+func (s *ConfigSuite) TestExampleComZone(c *C) {
 	ex := s.zones["test.example.com"]
 
 	// test.example.com was loaded
@@ -38,4 +38,27 @@ func (s *ConfigSuite) TestZone(c *C) {
 	label, qtype = ex.findLabels("www", "", qTypes{dns.TypeCNAME, dns.TypeA})
 	c.Check(label.Records[dns.TypeCNAME], HasLen, 1)
 	c.Check(qtype, Equals, dns.TypeCNAME)
+
+	label, qtype = ex.findLabels("", "", qTypes{dns.TypeNS})
+	Ns := label.Records[dns.TypeNS]
+	c.Check(Ns, HasLen, 2)
+	c.Check(Ns[0].RR.(*dns.NS).Ns, Equals, "ns1.example.net.")
+	c.Check(Ns[1].RR.(*dns.NS).Ns, Equals, "ns2.example.net.")
+
+}
+
+func (s *ConfigSuite) TestExampleOrgZone(c *C) {
+	ex := s.zones["test.example.org"]
+
+	// test.example.org was loaded
+	c.Assert(ex.Labels, NotNil)
+
+	label, qtype := ex.findLabels("sub", "", qTypes{dns.TypeNS})
+	c.Assert(qtype, Equals, dns.TypeNS)
+
+	Ns := label.Records[dns.TypeNS]
+	c.Check(Ns, HasLen, 2)
+	c.Check(Ns[0].RR.(*dns.NS).Ns, Equals, "ns1.example.com.")
+	c.Check(Ns[1].RR.(*dns.NS).Ns, Equals, "ns2.example.com.")
+
 }

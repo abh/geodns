@@ -97,6 +97,11 @@ func (s *ServeSuite) TestServingAliases(c *C) {
 	if len(r.Answer) > 0 {
 		c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo-europe.bitnames.com.")
 	}
+
+	// Alias to Ns records
+	r = exchange(c, "sub-alias.test.example.org.", dns.TypeNS)
+	c.Check(r.Answer[0].(*dns.NS).Ns, Equals, "ns1.example.com.")
+
 }
 
 func (s *ServeSuite) TestServingEDNS(c *C) {

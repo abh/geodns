@@ -119,6 +119,10 @@ func (z *Zone) SoaRR() dns.RR {
 	return z.Labels[""].firstRR(dns.TypeSOA)
 }
 
+// Find label "s" in country "cc" falling back to the appropriate
+// continent and the global label name as needed. Looks for the
+// first available qType at each targeting level. Return a Label
+// and the qtype that was "found"
 func (z *Zone) findLabels(s, cc string, qts qTypes) (*Label, uint16) {
 
 	selectors := []string{}
