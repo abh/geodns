@@ -1,6 +1,9 @@
 #!/bin/sh
 #go get -v
 REVISION=`git rev-parse --short=5  HEAD`
+BUILDTIME=`TZ=UTC date "+%Y-%m-%dT%H:%MZ"`
 echo $REVISION > REVISION
-go build -ldflags "-X main.gitVersion $REVISION" -v
+go build \
+  -ldflags "-X main.gitVersion $REVISION -X main.buildTime $BUILDTIME" \
+  -v && \
 go install

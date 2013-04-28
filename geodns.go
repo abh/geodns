@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -29,8 +30,10 @@ import (
 	"time"
 )
 
-var VERSION string = "2.2.7"
+var VERSION string = "2.2.8"
+var buildTime string
 var gitVersion string
+
 var serverId string
 var serverIP string
 var serverGroups []string
@@ -47,6 +50,8 @@ var (
 	flaglog         = flag.Bool("log", false, "be more verbose")
 	flagcpus        = flag.Int("cpus", 1, "Set the maximum number of CPUs to use")
 
+	flagShowVersion = flag.Bool("version", false, "Show dnsconfig version")
+
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile = flag.String("memprofile", "", "write memory profile to this file")
 )
@@ -62,6 +67,11 @@ func init() {
 
 func main() {
 	flag.Parse()
+
+	if *flagShowVersion {
+		fmt.Println("geodns", VERSION, buildTime)
+		os.Exit(0)
+	}
 
 	if len(*flagidentifier) > 0 {
 		ids := strings.Split(*flagidentifier, ",")
