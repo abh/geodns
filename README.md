@@ -181,12 +181,12 @@ Same format as A records (except the record type is "aaaa").
 
 Internally resolved cname, of sorts. Only works internally in a zone.
 
-    { "alias": "foo" }
+    "alias": "foo"
 
 ### CNAME
 
-    { "cname": "target.example.com." }
-    { "cname": "www" }
+    "cname": "target.example.com."
+    "cname": "www"
 
 The target will have the current zone name appended if it's not a FQDN (since v2.2.0).
 
@@ -197,23 +197,25 @@ record should be returned.
 
 The `preference` is the MX record preference returned to the client.
 
-    { "mx": "foo.example.com" }
-    { "mx": "foo.example.com", "weight": 100 }
-    { "mx": "foo.example.com", "weight": 100, "preference": 10 }
+    "mx": { "mx": "foo.example.com" }
+    "mx": { "mx": "foo.example.com", "weight": 100 }
+    "mx": { "mx": "foo.example.com", "weight": 100, "preference": 10 }
 
 `weight` and `preference` are optional.
 
 ### NS
 
-NS records for the label,
+NS records for the label, use it on the top level empty label (`""`) to specify
+the nameservers for the domain.
 
-    { "ns": [ "ns1.example.com", "ns2.example.com" ] }
+    "ns": [ "ns1.example.com", "ns2.example.com" ]
 
 There's an alternate legacy syntax that has space for glue records (IPv4 addresses),
 but in GeoDNS the values in the object are ignored so the list syntax above is
 recommended.
 
-    { "ns": { "ns1.example.net.": null, "ns2.example.net.": null } }
+    "ns": { "ns1.example.net.": null, "ns2.example.net.": null }
+
 
 ## License and Copyright
 
