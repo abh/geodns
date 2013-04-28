@@ -220,17 +220,22 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 		label := Zone.AddLabel(dk)
 
-		if ttl, ok := dv["ttl"]; ok {
-			label.Ttl = valueToInt(ttl)
-		}
+		for rType, rdata := range dv {
 
-		if maxHosts, ok := dv["max_hosts"]; ok {
-			label.MaxHosts = valueToInt(maxHosts)
-		}
+			switch rType {
+			case "max_hosts":
+				label.MaxHosts = valueToInt(rdata)
+				continue
+			case "ttl":
+				label.Ttl = valueToInt(rdata)
+				continue
+			}
 
-		for rType, dnsType := range recordTypes {
-
-			rdata := dv[rType]
+			dnsType, ok := recordTypes[rType]
+			if !ok {
+				log.Printf("Unsupported record type '%s'\n", rType)
+				continue
+			}
 
 			if rdata == nil {
 				//log.Printf("No %s records for label %s\n", rType, dk)
