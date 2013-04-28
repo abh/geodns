@@ -145,35 +145,51 @@ will be kept.
 
 ## Supported record types
 
+Each label has a hash (object/associative array) of record data, the keys are the type.
+The supported types and their options are listed below.
+
+Adding support for more record types is relatively straight forward, please open a
+ticket in the issue tracker with what you are missing.
+
 ### A
 
 Each record has the format of a short array with the first element being the
 IP address and the second the weight.
 
-   { "a": [ [ "192.168.0.1", 10], ["192.168.2.1", 5] ] }
+    { "a": [ [ "192.168.0.1", 10], ["192.168.2.1", 5] ] }
 
 ### AAAA
 
 Same format as A records (except the record type is "aaaa").
 
-### CNAME
-
-The target will have the current zone name appended if it's not a FQDN (since v2.2.0).
-
-  { "cname": "target.example.com." }
-  { "cname": "www" }
-
-### NS
-
-### MX
-
-   { "mx": "foo.example.com" }
-
 ### Alias
 
 Internally resolved cname, of sorts. Only works internally in a zone.
 
-   { "alias": "foo" }
+    { "alias": "foo" }
+
+### CNAME
+
+    { "cname": "target.example.com." }
+    { "cname": "www" }
+
+The target will have the current zone name appended if it's not a FQDN (since v2.2.0).
+
+### MX
+
+    { "mx": "foo.example.com" }
+
+### NS
+
+NS records for the label,
+
+    { "ns": [ "ns1.example.com", "ns2.example.com" ] }
+
+There's an alternate legacy syntax that has space for glue records (IPv4 addresses),
+but in GeoDNS the values in the object are ignored so the list syntax above is
+recommended.
+
+    { "ns1.example.net.": null, "ns2.example.net.": null },
 
 
 ## License and Copyright
