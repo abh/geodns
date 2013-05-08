@@ -30,7 +30,7 @@ import (
 	"time"
 )
 
-var VERSION string = "2.2.8"
+var VERSION string = "2.3.0"
 var buildTime string
 var gitVersion string
 

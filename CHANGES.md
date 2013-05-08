@@ -1,5 +1,9 @@
 # GeoDNS Changelog
 
+## 2.3.0, May 7th 2013
+* Fix edns-client-subnet bug in dns library so it
+  works with OpenDNS
+
 ## 2.2.8, April 28th 2013
 * Support per-zone stats posted to StatHat
 * Support TXT records
