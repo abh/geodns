@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/miekg/dns"
+	"github.com/abh/dns"
 	"io"
 	"io/ioutil"
 	. "launchpad.net/gocheck"

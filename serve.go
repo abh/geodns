@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/abh/geodns/countries"
-	"github.com/miekg/dns"
+	"github.com/abh/dns"
 	"log"
 	"net"
 	"os"

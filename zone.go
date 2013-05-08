@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/abh/geodns/countries"
 	"github.com/abh/go-metrics"
-	"github.com/miekg/dns"
+	"github.com/abh/dns"
 	"strings"
 	"time"
 )

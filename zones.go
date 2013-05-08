@@ -4,7 +4,7 @@ import (
 	"camlistore.org/pkg/errorutil"
 	"encoding/json"
 	"fmt"
-	"github.com/miekg/dns"
+	"github.com/abh/dns"
 	"io/ioutil"
 	"log"
 	"net"
