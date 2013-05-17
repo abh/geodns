@@ -31,6 +31,11 @@ func (zs *Zones) statHatPoster() {
 		time.Sleep(60 * time.Second)
 
 		for name, zone := range *zs {
+
+			count := zone.Metrics.Queries.Count()
+			newCount := count - lastCounts[name]
+			lastCounts[name] = count
+
 			if zone.Logging != nil && zone.Logging.StatHat == true {
 
 				apiKey := zone.Logging.StatHatAPI
@@ -40,10 +45,6 @@ func (zs *Zones) statHatPoster() {
 				if len(apiKey) == 0 {
 					continue
 				}
-
-				count := zone.Metrics.Queries.Count()
-				newCount := count - lastCounts[name]
-				lastCounts[name] = count
 				stathat.PostEZCount("zone "+name+" queries~"+suffix, Config.StatHat.ApiKey, int(newCount))
 
 				ednsCount := zone.Metrics.EdnsQueries.Count()
