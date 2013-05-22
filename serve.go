@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/abh/geodns/countries"
 	"github.com/abh/dns"
+	"github.com/abh/geodns/countries"
 	"log"
 	"net"
 	"os"
@@ -72,11 +72,20 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		ip = realIp
 	}
 
+	var targets []string
 	var country string
 	var netmask int
 	if geoIP != nil {
 		country, netmask = geoIP.GetCountry(ip)
 		country = strings.ToLower(country)
+		if len(country) > 0 {
+			targets = append(targets, country)
+			continent := countries.CountryContinent[country]
+			if len(continent) > 0 {
+				targets = append(targets, continent)
+			}
+		}
+		targets = append(targets, "@")
 	}
 
 	m := new(dns.Msg)
@@ -97,7 +106,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		}
 	}
 
-	labels, labelQtype := z.findLabels(label, country, qTypes{dns.TypeMF, dns.TypeCNAME, qtype})
+	labels, labelQtype := z.findLabels(label, targets, qTypes{dns.TypeMF, dns.TypeCNAME, qtype})
 	if labelQtype == 0 {
 		labelQtype = qtype
 	}
