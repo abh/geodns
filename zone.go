@@ -8,10 +8,11 @@ import (
 )
 
 type ZoneOptions struct {
-	Serial   int
-	Ttl      int
-	MaxHosts int
-	Contact  string
+	Serial    int
+	Ttl       int
+	MaxHosts  int
+	Contact   string
+	Targeting TargetOptions
 }
 
 type ZoneLogging struct {
@@ -72,6 +73,7 @@ func NewZone(name string) *Zone {
 	zone.Options.Ttl = 120
 	zone.Options.MaxHosts = 2
 	zone.Options.Contact = "support.bitnames.com"
+	zone.Options.Targeting = TargetGlobal + TargetCountry + TargetContinent
 
 	return zone
 }

@@ -168,6 +168,12 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 				zone.Options.Contact = v.(string)
 			case "max_hosts":
 				zone.Options.MaxHosts = valueToInt(v)
+			case "targeting":
+				zone.Options.Targeting, err = parseTargets(v.(string))
+				if err != nil {
+					log.Printf("Could not parse targeting '%s': %s", v, err)
+					return nil, err
+				}
 			}
 		case "logging":
 			{
