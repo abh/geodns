@@ -9,3 +9,6 @@ install:
   - go build -v
   - go install
 
+script:
+  - cd $TRAVIS_BUILD_DIR && go test -gocheck.v
+  - go test -gocheck.v -gocheck.b -gocheck.btime=2s
