@@ -30,11 +30,12 @@ import (
 	"time"
 )
 
+// VERSION is the current version of GeoDNS
 var VERSION string = "2.3.0"
 var buildTime string
 var gitVersion string
 
-var serverId string
+var serverID string
 var serverIP string
 var serverGroups []string
 
@@ -75,7 +76,7 @@ func main() {
 
 	if len(*flagidentifier) > 0 {
 		ids := strings.Split(*flagidentifier, ",")
-		serverId = ids[0]
+		serverID = ids[0]
 		if len(ids) > 1 {
 			serverGroups = ids[1:]
 		}

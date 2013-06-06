@@ -20,8 +20,8 @@ import (
 type statusStreamMsgStart struct {
 	Hostname string   `json:"h,omitemty"`
 	Version  string   `json:"v"`
-	Id       string   `json:"id"`
-	Ip       string   `json:"ip"`
+	ID       string   `json:"id"`
+	IP       string   `json:"ip"`
 	Uptime   int      `json:"up"`
 	Started  int      `json:"started"`
 	Groups   []string `json:"groups"`
@@ -135,8 +135,8 @@ func wsHandler(ws *websocket.Conn) {
 func initialStatus() string {
 	status := new(statusStreamMsgStart)
 	status.Version = VERSION
-	status.Id = serverId
-	status.Ip = serverIP
+	status.ID = serverID
+	status.IP = serverIP
 	if len(serverGroups) > 0 {
 		status.Groups = serverGroups
 	}

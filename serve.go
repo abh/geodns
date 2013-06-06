@@ -178,7 +178,7 @@ func statusRR(label string) []dns.RR {
 	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
 	h.Name = label
 
-	status := map[string]string{"v": VERSION, "id": serverId}
+	status := map[string]string{"v": VERSION, "id": serverID}
 
 	hostname, err := os.Hostname()
 	if err == nil {

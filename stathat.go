@@ -14,7 +14,7 @@ func (zs *Zones) statHatPoster() {
 		return
 	}
 
-	stathatGroups := append(serverGroups, "total", serverId)
+	stathatGroups := append(serverGroups, "total", serverID)
 	suffix := strings.Join(stathatGroups, ",")
 
 	lastCounts := map[string]int64{}
@@ -60,7 +60,7 @@ func (zs *Zones) statHatPoster() {
 func statHatPoster() {
 
 	lastQueryCount := qCounter.Count()
-	stathatGroups := append(serverGroups, "total", serverId)
+	stathatGroups := append(serverGroups, "total", serverID)
 	suffix := strings.Join(stathatGroups, ",")
 	// stathat.Verbose = true
 
@@ -79,7 +79,7 @@ func statHatPoster() {
 		lastQueryCount = current
 
 		stathat.PostEZCount("queries~"+suffix, Config.StatHat.ApiKey, int(newQueries))
-		stathat.PostEZValue("goroutines "+serverId, Config.StatHat.ApiKey, float64(runtime.NumGoroutine()))
+		stathat.PostEZValue("goroutines "+serverID, Config.StatHat.ApiKey, float64(runtime.NumGoroutine()))
 
 	}
 }

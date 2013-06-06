@@ -17,6 +17,7 @@ import (
 	"time"
 )
 
+// Zones maps domain names to zone data
 type Zones map[string]*Zone
 
 func zonesReader(dirName string, zones Zones) {
@@ -42,7 +43,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 
 	seenZones := map[string]bool{}
 
-	var parse_err error
+	var parseErr error
 
 	for _, file := range dir {
 		fileName := file.Name()
@@ -70,7 +71,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 				}
 				config.LastRead = file.ModTime()
 				zones[zoneName] = config
-				parse_err = err
+				parseErr = err
 				continue
 			}
 			config.LastRead = file.ModTime()
@@ -92,7 +93,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 		delete(zones, zoneName)
 	}
 
-	return parse_err
+	return parseErr
 }
 
 func setupPgeodnsZone(zones Zones) {
@@ -251,11 +252,11 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 			case map[string]interface{}:
 				// Handle NS map syntax, map[ns2.example.net:<nil> ns1.example.net:<nil>]
 				tmp := make([]interface{}, 0)
-				for rdata_k, rdata_v := range rdata.(map[string]interface{}) {
-					if rdata_v == nil {
-						rdata_v = ""
+				for rdataK, rdataV := range rdata.(map[string]interface{}) {
+					if rdataV == nil {
+						rdataV = ""
 					}
-					tmp = append(tmp, []string{rdata_k, rdata_v.(string)})
+					tmp = append(tmp, []string{rdataK, rdataV.(string)})
 				}
 				records[rType] = tmp
 			case string:

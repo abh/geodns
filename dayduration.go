@@ -26,6 +26,7 @@ func fmtInt(buf []byte, v uint64) int {
 	return w
 }
 
+// DayString returns string version of the time duration without too much precision.
 // Copied from time/time.go
 func (d DayDuration) DayString() string {
 	var buf [32]byte
