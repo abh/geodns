@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"strings"
-	// "github.com/abh/geodns/countries"
 )
 
 type TargetOptions int
@@ -15,6 +15,43 @@ const (
 	TargetRegionGroup
 	TargetRegion
 )
+
+func (t TargetOptions) GetTargets(ip net.IP) ([]string, int) {
+
+	targets := make([]string, 0)
+
+	var country, continent string
+	var netmask int
+
+	switch {
+	case t >= TargetRegionGroup:
+		var region, regionGroup string
+		country, continent, regionGroup, region, netmask = geoIP.GetCountryRegion(ip)
+		if t&TargetRegion > 0 && len(region) > 0 {
+			targets = append(targets, region)
+		}
+		if t&TargetRegionGroup > 0 && len(regionGroup) > 0 {
+			targets = append(targets, regionGroup)
+		}
+
+	case t >= TargetContinent:
+		country, continent, netmask = geoIP.GetCountry(ip)
+	}
+
+	if len(country) > 0 {
+		if t&TargetCountry > 0 {
+			targets = append(targets, country)
+		}
+		if t&TargetContinent > 0 && len(continent) > 0 {
+			targets = append(targets, continent)
+		}
+	}
+
+	if t&TargetGlobal > 0 {
+		targets = append(targets, "@")
+	}
+	return targets, netmask
+}
 
 func (t TargetOptions) String() string {
 	targets := make([]string, 0)

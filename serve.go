@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/abh/dns"
-	"github.com/abh/geodns/countries"
 	"log"
 	"net"
 	"os"
@@ -18,8 +17,6 @@ func getQuestionName(z *Zone, req *dns.Msg) string {
 	ql := lx[0 : len(lx)-z.LenLabels]
 	return strings.ToLower(strings.Join(ql, "."))
 }
-
-var geoIP = setupGeoIP()
 
 func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
@@ -41,9 +38,10 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	z.Metrics.LabelStats.Add(label)
 
 	realIp, _, _ := net.SplitHostPort(w.RemoteAddr().String())
+
 	z.Metrics.ClientStats.Add(realIp)
 
-	var ip string // EDNS or real IP
+	var ip net.IP // EDNS or real IP
 	var edns *dns.EDNS0_SUBNET
 	var opt_rr *dns.OPT
 
@@ -61,7 +59,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 					logPrintln("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
 					if e.Address != nil {
 						edns = e
-						ip = e.Address.String()
+						ip = e.Address
 					}
 				}
 			}
@@ -69,24 +67,10 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 
 	if len(ip) == 0 { // no edns subnet
-		ip = realIp
+		ip = net.ParseIP(realIp)
 	}
 
-	var targets []string
-	var country string
-	var netmask int
-	if geoIP != nil {
-		country, netmask = geoIP.GetCountry(ip)
-		country = strings.ToLower(country)
-		if len(country) > 0 {
-			targets = append(targets, country)
-			continent := countries.CountryContinent[country]
-			if len(continent) > 0 {
-				targets = append(targets, continent)
-			}
-		}
-		targets = append(targets, "@")
-	}
+	targets, netmask := z.Options.Targeting.GetTargets(ip)
 
 	m := new(dns.Msg)
 	m.SetReply(req)
@@ -131,13 +115,17 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 				h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
 				h.Name = label + "." + z.Origin + "."
 
+				txt := []string{
+					w.RemoteAddr().String(),
+					ip.String(),
+				}
+
+				targets, netmask := z.Options.Targeting.GetTargets(ip)
+				txt = append(txt, strings.Join(targets, " "))
+				txt = append(txt, fmt.Sprintf("/%d", netmask))
+
 				m.Answer = []dns.RR{&dns.TXT{Hdr: h,
-					Txt: []string{
-						w.RemoteAddr().String(),
-						ip,
-						string(country),
-						string(countries.CountryContinent[country]),
-					},
+					Txt: txt,
 				}}
 			} else {
 				m.Ns = append(m.Ns, z.SoaRR())
