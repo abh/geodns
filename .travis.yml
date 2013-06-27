@@ -4,7 +4,7 @@ before_install:
 install:
   - mkdir -p $TRAVIS_BUILD_DIR/db
   - curl -s http://geodns.bitnames.com/geoip/GeoLiteCity.dat.gz  | gzip -cd > $TRAVIS_BUILD_DIR/db/GeoIPCity.dat
-  - go get github.com/miekg/dns
+  - go get github.com/abh/dns
   - go get github.com/abh/geoip
   - go get launchpad.net/gocheck
   - go get -v
