@@ -2,7 +2,7 @@
 
 This is the DNS server powering the [NTP Pool](http://www.pool.ntp.org/) system and other
 similar services. It supersedes the [pgeodns](http://github.com/abh/pgeodns) server.
-[![Build Status](https://secure.travis-ci.org/abh/geodns.png)](http://travis-ci.org/abh/geodns)
+[![Build Status](https://drone.io/github.com/abh/geodns/status.png)](https://drone.io/github.com/abh/geodns/latest)
 
 ## Installation
 
