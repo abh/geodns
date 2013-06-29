@@ -14,8 +14,8 @@ import (
 )
 
 func getQuestionName(z *Zone, req *dns.Msg) string {
-	lx := dns.SplitLabels(req.Question[0].Name)
-	ql := lx[0 : len(lx)-z.LenLabels]
+	lx := dns.SplitDomainName(req.Question[0].Name)
+	ql := lx[0 : len(lx)-z.LabelCount]
 	return strings.ToLower(strings.Join(ql, "."))
 }
 
