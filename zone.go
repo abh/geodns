@@ -52,13 +52,13 @@ type ZoneMetrics struct {
 }
 
 type Zone struct {
-	Origin    string
-	Labels    labels
-	LenLabels int
-	Options   ZoneOptions
-	Logging   *ZoneLogging
-	LastRead  time.Time
-	Metrics   ZoneMetrics
+	Origin     string
+	Labels     labels
+	LabelCount int
+	Options    ZoneOptions
+	Logging    *ZoneLogging
+	LastRead   time.Time
+	Metrics    ZoneMetrics
 }
 
 type qTypes []uint16
@@ -67,7 +67,7 @@ func NewZone(name string) *Zone {
 	zone := new(Zone)
 	zone.Labels = make(labels)
 	zone.Origin = name
-	zone.LenLabels = dns.LenLabels(zone.Origin)
+	zone.LabelCount = dns.CountLabel(zone.Origin)
 
 	// defaults
 	zone.Options.Ttl = 120
