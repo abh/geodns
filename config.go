@@ -16,6 +16,9 @@ type AppConfig struct {
 	Flags struct {
 		HasStatHat bool
 	}
+	GeoIP struct {
+		Directory string
+	}
 }
 
 var Config = new(AppConfig)

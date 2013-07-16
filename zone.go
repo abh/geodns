@@ -1,18 +1,18 @@
 package main
 
 import (
-	"github.com/abh/geodns/countries"
-	"github.com/abh/go-metrics"
 	"github.com/abh/dns"
+	"github.com/abh/go-metrics"
 	"strings"
 	"time"
 )
 
 type ZoneOptions struct {
-	Serial   int
-	Ttl      int
-	MaxHosts int
-	Contact  string
+	Serial    int
+	Ttl       int
+	MaxHosts  int
+	Contact   string
+	Targeting TargetOptions
 }
 
 type ZoneLogging struct {
@@ -73,6 +73,7 @@ func NewZone(name string) *Zone {
 	zone.Options.Ttl = 120
 	zone.Options.MaxHosts = 2
 	zone.Options.Contact = "support.bitnames.com"
+	zone.Options.Targeting = TargetGlobal + TargetCountry + TargetContinent
 
 	return zone
 }
@@ -123,26 +124,22 @@ func (z *Zone) SoaRR() dns.RR {
 // continent and the global label name as needed. Looks for the
 // first available qType at each targeting level. Return a Label
 // and the qtype that was "found"
-func (z *Zone) findLabels(s, cc string, qts qTypes) (*Label, uint16) {
+func (z *Zone) findLabels(s string, targets []string, qts qTypes) (*Label, uint16) {
 
-	selectors := []string{}
+	for _, target := range targets {
 
-	if len(cc) > 0 {
-		continent := countries.CountryContinent[cc]
-		var s_cc string
-		if len(s) > 0 {
-			s_cc = s + "." + cc
-			if len(continent) > 0 {
-				continent = s + "." + continent
+		var name string
+
+		switch target {
+		case "@":
+			name = s
+		default:
+			if len(s) > 0 {
+				name = s + "." + target
+			} else {
+				name = target
 			}
-		} else {
-			s_cc = cc
 		}
-		selectors = append(selectors, s_cc, continent)
-	}
-	selectors = append(selectors, s)
-
-	for _, name := range selectors {
 
 		if label, ok := z.Labels[name]; ok {
 
@@ -158,7 +155,7 @@ func (z *Zone) findLabels(s, cc string, qts qTypes) (*Label, uint16) {
 					if label.Records[dns.TypeMF] != nil {
 						name = label.firstRR(dns.TypeMF).(*dns.MF).Mf
 						// TODO: need to avoid loops here somehow
-						return z.findLabels(name, cc, qts)
+						return z.findLabels(name, targets, qts)
 					}
 				default:
 					// return the label if it has the right record

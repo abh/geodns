@@ -168,6 +168,12 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 				zone.Options.Contact = v.(string)
 			case "max_hosts":
 				zone.Options.MaxHosts = valueToInt(v)
+			case "targeting":
+				zone.Options.Targeting, err = parseTargets(v.(string))
+				if err != nil {
+					log.Printf("Could not parse targeting '%s': %s", v, err)
+					return nil, err
+				}
 			}
 		case "logging":
 			{
@@ -198,6 +204,13 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 	//log.Printf("ZO T: %T %s\n", Zones["0.us"], Zones["0.us"])
 
 	//log.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
+
+	switch {
+	case zone.Options.Targeting >= TargetRegionGroup:
+		geoIP.setupGeoIPCity()
+	case zone.Options.Targeting >= TargetContinent:
+		geoIP.setupGeoIPCountry()
+	}
 
 	return zone, nil
 }
