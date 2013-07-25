@@ -91,9 +91,11 @@ func (s *ServeSuite) TestServingMixedCase(c *C) {
 		c.Fail()
 	}
 
-	r = exchange(c, "baR.test.eXAmPLe.cOM.", dns.TypeA)
+	n := "baR.test.eXAmPLe.cOM."
+	r = exchange(c, n, dns.TypeA)
 	ip := r.Answer[0].(*dns.A).A
 	c.Check(ip.String(), Equals, "192.168.1.2")
+	c.Check(r.Answer[0].Header().Name, Equals, n)
 
 }
 
