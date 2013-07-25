@@ -81,6 +81,22 @@ func (s *ServeSuite) TestServing(c *C) {
 	c.Check(r.Answer[1].(*dns.MX).Preference, Equals, uint16(20))
 }
 
+func (s *ServeSuite) TestServingMixedCase(c *C) {
+
+	r := exchange(c, "_sTaTUs.pGEOdns.", dns.TypeTXT)
+	c.Assert(r.Rcode, Equals, dns.RcodeSuccess)
+	txt := r.Answer[0].(*dns.TXT).Txt[0]
+	if !strings.HasPrefix(txt, "{") {
+		c.Log("Unexpected result for _status.pgeodns", txt)
+		c.Fail()
+	}
+
+	r = exchange(c, "baR.test.eXAmPLe.cOM.", dns.TypeA)
+	ip := r.Answer[0].(*dns.A).A
+	c.Check(ip.String(), Equals, "192.168.1.2")
+
+}
+
 func (s *ServeSuite) TestServingAliases(c *C) {
 	// Alias, no geo matches
 	r := exchange(c, "bar-alias.test.example.com.", dns.TypeA)
