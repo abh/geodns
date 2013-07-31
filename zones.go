@@ -1,10 +1,10 @@
 package main
 
 import (
-	"camlistore.org/pkg/errorutil"
 	"encoding/json"
 	"fmt"
 	"github.com/abh/dns"
+	"github.com/abh/errorutil"
 	"io/ioutil"
 	"log"
 	"net"
