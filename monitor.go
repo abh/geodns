@@ -3,14 +3,37 @@ package main
 import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
+	"fmt"
+	"github.com/abh/go-metrics"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"runtime"
+	"sort"
 	"strconv"
 	"time"
 )
+
+// Initial status message on websocket
+type statusStreamMsgStart struct {
+	Hostname string   `json:"h,omitemty"`
+	Version  string   `json:"v"`
+	ID       string   `json:"id"`
+	IP       string   `json:"ip"`
+	Uptime   int      `json:"up"`
+	Started  int      `json:"started"`
+	Groups   []string `json:"groups"`
+}
+
+// Update message on websocket
+type statusStreamMsgUpdate struct {
+	Uptime     int     `json:"up"`
+	QueryCount int64   `json:"qs"`
+	Qps        int64   `json:"qps"`
+	Qps1m      float64 `json:"qps1m,omitempty"`
+}
 
 type wsConnection struct {
 	// The websocket connection.
@@ -72,7 +95,11 @@ func (c *wsConnection) reader() {
 		var message string
 		err := websocket.Message.Receive(c.ws, &message)
 		if err != nil {
-			log.Println("WS read error:", err)
+			if err == io.EOF {
+				log.Println("WS connection closed")
+			} else {
+				log.Println("WS read error:", err)
+			}
 			break
 		}
 		log.Println("WS message", message)
@@ -106,46 +133,72 @@ func wsHandler(ws *websocket.Conn) {
 }
 
 func initialStatus() string {
-	status := map[string]string{"v": VERSION, "id": serverId}
+	status := new(statusStreamMsgStart)
+	status.Version = VERSION
+	status.ID = serverID
+	status.IP = serverIP
+	if len(serverGroups) > 0 {
+		status.Groups = serverGroups
+	}
 	hostname, err := os.Hostname()
 	if err == nil {
-		status["h"] = hostname
+		status.Hostname = hostname
 	}
+
+	status.Uptime = int(time.Since(timeStarted).Seconds())
+	status.Started = int(timeStarted.Unix())
+
 	message, err := json.Marshal(status)
 	return string(message)
 }
 
 func logStatus() {
 	log.Println(initialStatus())
-	lastQueryCount := qCounter
+	// Does not impact performance too much
+	lastQueryCount := qCounter.Count()
 
 	for {
-		newQueries := qCounter - lastQueryCount
-		lastQueryCount = qCounter
+		current := qCounter.Count()
+		newQueries := current - lastQueryCount
+		lastQueryCount = current
+
 		log.Println("goroutines", runtime.NumGoroutine(), "queries", newQueries)
 
 		time.Sleep(60 * time.Second)
 	}
 }
 
-func monitor() {
+func monitor(zones Zones) {
 	go logStatus()
 
 	if len(*flaghttp) == 0 {
 		return
 	}
 	go hub.run()
-	go httpHandler()
+	go httpHandler(zones)
 
-	lastQueryCount := qCounter
+	lastQueryCount := qCounter.Count()
+
+	status := new(statusStreamMsgUpdate)
+	var lastQps1m float64
+
 	for {
-		newQueries := qCounter - lastQueryCount
-		lastQueryCount = qCounter
+		current := qCounter.Count()
+		newQueries := current - lastQueryCount
+		lastQueryCount = current
 
-		status := map[string]string{}
-		status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
-		status["qs"] = strconv.FormatUint(qCounter, 10)
-		status["qps"] = strconv.FormatUint(newQueries, 10)
+		status.Uptime = int(time.Since(timeStarted).Seconds())
+		status.QueryCount = qCounter.Count()
+		status.Qps = newQueries
+
+		// go-metrics only updates the rate every 5 seconds, so don't pretend otherwise
+		newQps1m := qCounter.Rate1()
+		if newQps1m != lastQps1m {
+			status.Qps1m = newQps1m
+			lastQps1m = newQps1m
+		} else {
+			status.Qps1m = 0
+		}
 
 		message, err := json.Marshal(status)
 
@@ -167,9 +220,128 @@ func MainServer(w http.ResponseWriter, req *http.Request) {
 		`</body></html>`)
 }
 
-func httpHandler() {
+type rate struct {
+	Name    string
+	Count   int64
+	Metrics ZoneMetrics
+}
+type Rates []*rate
+
+func (s Rates) Len() int      { return len(s) }
+func (s Rates) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+type RatesByCount struct{ Rates }
+
+func (s RatesByCount) Less(i, j int) bool {
+	ic := s.Rates[i].Count
+	jc := s.Rates[j].Count
+	if ic == jc {
+		return s.Rates[i].Name < s.Rates[j].Name
+	}
+	return ic > jc
+}
+
+type histogramData struct {
+	Max    int64
+	Min    int64
+	Mean   float64
+	Pct90  float64
+	Pct99  float64
+	Pct999 float64
+	StdDev float64
+}
+
+func setupHistogramData(met *metrics.StandardHistogram, dat *histogramData) {
+	dat.Max = met.Max()
+	dat.Min = met.Min()
+	dat.Mean = met.Mean()
+	dat.StdDev = met.StdDev()
+	percentiles := met.Percentiles([]float64{0.90, 0.99, 0.999})
+	dat.Pct90 = percentiles[0]
+	dat.Pct99 = percentiles[1]
+	dat.Pct999 = percentiles[2]
+}
+
+func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
+
+	return func(w http.ResponseWriter, req *http.Request) {
+
+		req.ParseForm()
+
+		topOption := 10
+		topParam := req.Form["top"]
+
+		if len(topParam) > 0 {
+			var err error
+			topOption, err = strconv.Atoi(topParam[0])
+			if err != nil {
+				topOption = 10
+			}
+		}
+
+		tmpl := template.New("status_html")
+		tmpl, err := tmpl.Parse(string(status_html()))
+
+		if err != nil {
+			str := fmt.Sprintf("Could not parse template: %s", err)
+			io.WriteString(w, str)
+			return
+		}
+
+		rates := make(Rates, 0)
+
+		for name, zone := range zones {
+			count := zone.Metrics.Queries.Count()
+			rates = append(rates, &rate{
+				Name:    name,
+				Count:   count,
+				Metrics: zone.Metrics,
+			})
+		}
+
+		sort.Sort(RatesByCount{rates})
+
+		type statusData struct {
+			Version  string
+			Zones    Rates
+			Uptime   DayDuration
+			Platform string
+			Global   struct {
+				Queries         *metrics.StandardMeter
+				Histogram       histogramData
+				HistogramRecent histogramData
+			}
+			TopOption int
+		}
+
+		uptime := DayDuration{time.Since(timeStarted)}
+
+		status := statusData{
+			Version:   VERSION,
+			Zones:     rates,
+			Uptime:    uptime,
+			Platform:  runtime.GOARCH + "-" + runtime.GOOS,
+			TopOption: topOption,
+		}
+
+		status.Global.Queries = metrics.Get("queries").(*metrics.StandardMeter)
+
+		setupHistogramData(metrics.Get("queries-histogram").(*metrics.StandardHistogram), &status.Global.Histogram)
+		setupHistogramData(metrics.Get("queries-histogram-recent").(*metrics.StandardHistogram), &status.Global.HistogramRecent)
+
+		err = tmpl.Execute(w, status)
+		if err != nil {
+			log.Println("Status template error", err)
+		}
+	}
+}
+
+func httpHandler(zones Zones) {
 	http.Handle("/monitor", websocket.Handler(wsHandler))
+	http.HandleFunc("/status", StatusServer(zones))
 	http.HandleFunc("/", MainServer)
+
+	log.Println("Starting HTTP interface on", *flaghttp)
 
 	log.Fatal(http.ListenAndServe(*flaghttp, nil))
 }

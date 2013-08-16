@@ -40,8 +40,11 @@ func getInterfaces() []string {
 		}
 		uniq[host] = true
 
-		if len(serverId) == 0 {
-			serverId = ip
+		if len(serverID) == 0 {
+			serverID = ip
+		}
+		if len(serverIP) == 0 {
+			serverIP = ip
 		}
 		inter = append(inter, host)
 

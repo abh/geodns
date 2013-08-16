@@ -1,11 +1,19 @@
 language: go
+go:
+  - 1.1
+  - tip
 before_install:
   - sudo apt-get install libgeoip-dev bzr
 install:
-  - go get github.com/miekg/dns
+  - mkdir -p $TRAVIS_BUILD_DIR/db
+  - curl -s http://geodns.bitnames.com/geoip/GeoLiteCity.dat.gz  | gzip -cd > $TRAVIS_BUILD_DIR/db/GeoIPCity.dat
+  - go get github.com/abh/dns
   - go get github.com/abh/geoip
   - go get launchpad.net/gocheck
   - go get -v
   - go build -v
   - go install
 
+script:
+  - cd $TRAVIS_BUILD_DIR && go test -gocheck.v
+  - go test -gocheck.v -gocheck.b -gocheck.btime=2s

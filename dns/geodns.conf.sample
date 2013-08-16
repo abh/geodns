@@ -1,0 +1,12 @@
+; GeoDNS configuration file
+;
+; It is recommended to distribute the configuration file globally
+; with your .json zone files.
+
+[geoip]
+;; Directory containing the GeoIP .dat database files
+;directory=/usr/local/share/GeoIP/
+
+[stathat]
+;; Add an API key to send query counts and other metrics to stathat
+;apikey=abc123

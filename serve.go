@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/abh/geodns/countries"
-	"github.com/miekg/dns"
+	"fmt"
+	"github.com/abh/dns"
 	"log"
 	"net"
 	"os"
@@ -13,12 +13,10 @@ import (
 )
 
 func getQuestionName(z *Zone, req *dns.Msg) string {
-	lx := dns.SplitLabels(req.Question[0].Name)
-	ql := lx[0 : len(lx)-z.LenLabels]
+	lx := dns.SplitDomainName(req.Question[0].Name)
+	ql := lx[0 : len(lx)-z.LabelCount]
 	return strings.ToLower(strings.Join(ql, "."))
 }
-
-var geoIP = setupGeoIP()
 
 func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
@@ -27,19 +25,52 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
 		dns.TypeToString[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
-	// is this safe/atomic or does it need to go through a channel?
-	qCounter++
+	// Global meter
+	qCounter.Mark(1)
+
+	// Zone meter
+	z.Metrics.Queries.Mark(1)
 
 	logPrintln("Got request", req)
 
 	label := getQuestionName(z, req)
 
-	var country string
-	if geoIP != nil {
-		ip, _, _ := net.SplitHostPort(w.RemoteAddr().String())
-		country = strings.ToLower(geoIP.GetCountry(ip))
-		logPrintln("Country:", ip, country)
+	z.Metrics.LabelStats.Add(label)
+
+	realIp, _, _ := net.SplitHostPort(w.RemoteAddr().String())
+
+	z.Metrics.ClientStats.Add(realIp)
+
+	var ip net.IP // EDNS or real IP
+	var edns *dns.EDNS0_SUBNET
+	var opt_rr *dns.OPT
+
+	for _, extra := range req.Extra {
+
+		switch extra.(type) {
+		case *dns.OPT:
+			for _, o := range extra.(*dns.OPT).Option {
+				opt_rr = extra.(*dns.OPT)
+				switch e := o.(type) {
+				case *dns.EDNS0_NSID:
+					// do stuff with e.Nsid
+				case *dns.EDNS0_SUBNET:
+					z.Metrics.EdnsQueries.Mark(1)
+					logPrintln("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
+					if e.Address != nil {
+						edns = e
+						ip = e.Address
+					}
+				}
+			}
+		}
 	}
+
+	if len(ip) == 0 { // no edns subnet
+		ip = net.ParseIP(realIp)
+	}
+
+	targets, netmask := z.Options.Targeting.GetTargets(ip)
 
 	m := new(dns.Msg)
 	m.SetReply(req)
@@ -48,34 +79,57 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 	m.Authoritative = true
 
-	// TODO(ask) Fix the findLabels API to make this work better
-	if alias := z.findLabels(label, "", dns.TypeMF); alias != nil &&
-		alias.Records[dns.TypeMF] != nil {
-		// We found an alias record, so pretend the question was for that name instead
-		label = alias.firstRR(dns.TypeMF).(*dns.MF).Mf
+	// TODO: set scope to 0 if there are no alternate responses
+	if edns != nil {
+		if edns.Family != 0 {
+			if netmask < 16 {
+				netmask = 16
+			}
+			edns.SourceScope = uint8(netmask)
+			m.Extra = append(m.Extra, opt_rr)
+		}
 	}
 
-	labels := z.findLabels(label, country, qtype)
+	labels, labelQtype := z.findLabels(label, targets, qTypes{dns.TypeMF, dns.TypeCNAME, qtype})
+	if labelQtype == 0 {
+		labelQtype = qtype
+	}
+
 	if labels == nil {
 
-		if label == "_status" && (qtype == dns.TypeANY || qtype == dns.TypeTXT) {
-			m.Answer = statusRR(z)
+		firstLabel := (strings.Split(label, "."))[0]
+
+		if firstLabel == "_status" {
+			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
+				m.Answer = statusRR(label + "." + z.Origin + ".")
+			} else {
+				m.Ns = append(m.Ns, z.SoaRR())
+			}
 			m.Authoritative = true
 			w.WriteMsg(m)
 			return
 		}
 
-		if label == "_country" && (qtype == dns.TypeANY || qtype == dns.TypeTXT) {
-			h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
-			h.Name = "_country." + z.Origin + "."
+		if firstLabel == "_country" {
+			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
+				h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
+				h.Name = label + "." + z.Origin + "."
 
-			m.Answer = []dns.RR{&dns.TXT{Hdr: h,
-				Txt: []string{
+				txt := []string{
 					w.RemoteAddr().String(),
-					string(country),
-					string(countries.CountryContinent[country]),
-				},
-			}}
+					ip.String(),
+				}
+
+				targets, netmask := z.Options.Targeting.GetTargets(ip)
+				txt = append(txt, strings.Join(targets, " "))
+				txt = append(txt, fmt.Sprintf("/%d", netmask))
+
+				m.Answer = []dns.RR{&dns.TXT{Hdr: h,
+					Txt: txt,
+				}}
+			} else {
+				m.Ns = append(m.Ns, z.SoaRR())
+			}
 
 			m.Authoritative = true
 			w.WriteMsg(m)
@@ -92,7 +146,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		return
 	}
 
-	if servers := labels.Picker(qtype, labels.MaxHosts); servers != nil {
+	if servers := labels.Picker(labelQtype, labels.MaxHosts); servers != nil {
 		var rrs []dns.RR
 		for _, record := range servers {
 			rr := record.RR
@@ -103,16 +157,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 
 	if len(m.Answer) == 0 {
-		if labels := z.Labels[label]; labels != nil {
-			if _, ok := labels.Records[dns.TypeCNAME]; ok {
-				cname := labels.firstRR(dns.TypeCNAME)
-				m.Answer = append(m.Answer, cname)
-			} else {
-				m.Ns = append(m.Ns, z.SoaRR())
-			}
-		} else {
-			m.Ns = append(m.Ns, z.SoaRR())
-		}
+		m.Ns = append(m.Ns, z.SoaRR())
 	}
 
 	logPrintln(m)
@@ -126,18 +171,19 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	return
 }
 
-func statusRR(z *Zone) []dns.RR {
+func statusRR(label string) []dns.RR {
 	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
-	h.Name = "_status." + z.Origin + "."
+	h.Name = label
 
-	status := map[string]string{"v": VERSION, "id": serverId}
+	status := map[string]string{"v": VERSION, "id": serverID}
 
 	hostname, err := os.Hostname()
 	if err == nil {
 		status["h"] = hostname
 	}
 	status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
-	status["qs"] = strconv.FormatUint(qCounter, 10)
+	status["qs"] = strconv.FormatInt(qCounter.Count(), 10)
+	status["qps1"] = fmt.Sprintf("%.4f", qCounter.Rate1())
 
 	js, err := json.Marshal(status)
 
@@ -150,7 +196,7 @@ func setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {
 	}
 }
 
-func listenAndServe(ip string, Zones *Zones) {
+func listenAndServe(ip string) {
 
 	prots := []string{"udp", "tcp"}
 
