@@ -325,6 +325,7 @@ func StatusServer(zones Zones,asJson bool) func(http.ResponseWriter, *http.Reque
                         if err != nil {
 				log.Println("json marshal error", err)
                         } else {
+ 				w.Header().Set("Content-Type","application/json")
 				w.Write(b)
 			}
                 } else {
