@@ -262,7 +262,7 @@ func setupHistogramData(met *metrics.StandardHistogram, dat *histogramData) {
 	dat.Pct999 = percentiles[2]
 }
 
-func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
+func StatusServer(zones Zones,asJson Bool) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, req *http.Request) {
 
@@ -279,13 +279,15 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 			}
 		}
 
-		tmpl := template.New("status_html")
-		tmpl, err := tmpl.Parse(string(status_html()))
+                if ! asJson {
+		        tmpl := template.New("status_html")
+		        tmpl, err := tmpl.Parse(string(status_html()))
 
-		if err != nil {
-			str := fmt.Sprintf("Could not parse template: %s", err)
-			io.WriteString(w, str)
-			return
+		        if err != nil {
+				str := fmt.Sprintf("Could not parse template: %s", err)
+				io.WriteString(w, str)
+				return
+			}
 		}
 
 		rates := make(Rates, 0)
@@ -329,16 +331,26 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 		setupHistogramData(metrics.Get("queries-histogram").(*metrics.StandardHistogram), &status.Global.Histogram)
 		setupHistogramData(metrics.Get("queries-histogram-recent").(*metrics.StandardHistogram), &status.Global.HistogramRecent)
 
-		err = tmpl.Execute(w, status)
-		if err != nil {
-			log.Println("Status template error", err)
+                if asJson {
+                        b,err := json.Marshal(status)
+                        if err != nil {
+				log.Println("json marshal error", err)
+                        } else {
+				w.Write(b)
+			}
+                } else {
+			err = tmpl.Execute(w, status)
+			if err != nil {
+				log.Println("Status template error", err)
+			}
 		}
 	}
 }
 
 func httpHandler(zones Zones) {
 	http.Handle("/monitor", websocket.Handler(wsHandler))
-	http.HandleFunc("/status", StatusServer(zones))
+	http.HandleFunc("/status", StatusServer(zones,false))
+        http.HandleFunc("/status.json",StatusServer(zones,true))
 	http.HandleFunc("/", MainServer)
 
 	log.Println("Starting HTTP interface on", *flaghttp)
