@@ -262,7 +262,7 @@ func setupHistogramData(met *metrics.StandardHistogram, dat *histogramData) {
 	dat.Pct999 = percentiles[2]
 }
 
-func StatusServer(zones Zones,asJson Bool) func(http.ResponseWriter, *http.Request) {
+func StatusServer(zones Zones,asJson bool) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, req *http.Request) {
 
@@ -339,7 +339,7 @@ func StatusServer(zones Zones,asJson Bool) func(http.ResponseWriter, *http.Reque
 				w.Write(b)
 			}
                 } else {
-			err = tmpl.Execute(w, status)
+			err := tmpl.Execute(w, status)
 			if err != nil {
 				log.Println("Status template error", err)
 			}
