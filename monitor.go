@@ -266,7 +266,7 @@ func setupHistogramData(met *metrics.StandardHistogram, dat *histogramData) {
 	dat.Pct999 = percentiles[2]
 }
 
-func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
+func StatusServer(zones Zones, asJson bool) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, req *http.Request) {
 
@@ -281,20 +281,6 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 			if err != nil {
 				topOption = 10
 			}
-		}
-
-		statusTemplate, err := FSString(development, "/templates/status.html")
-		if err != nil {
-			log.Println("Could not read template:", err)
-			w.WriteHeader(500)
-			return
-		}
-		tmpl, err := template.New("status_html").Parse(statusTemplate)
-
-		if err != nil {
-			str := fmt.Sprintf("Could not parse template: %s", err)
-			io.WriteString(w, str)
-			return
 		}
 
 		rates := make(Rates, 0)
@@ -337,6 +323,32 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 
 		setupHistogramData(metrics.Get("queries-histogram").(*metrics.StandardHistogram), &status.Global.Histogram)
 
+		if asJson {
+			b, err := json.Marshal(status)
+			if err != nil {
+				log.Println("json marshal error", err)
+				http.Error(w, "Error encoding JSON", 500)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(b)
+			return
+		}
+
+		statusTemplate, err := FSString(development, "/templates/status.html")
+		if err != nil {
+			log.Println("Could not read template:", err)
+			w.WriteHeader(500)
+			return
+		}
+		tmpl, err := template.New("status_html").Parse(statusTemplate)
+
+		if err != nil {
+			str := fmt.Sprintf("Could not parse template: %s", err)
+			io.WriteString(w, str)
+			return
+		}
+
 		err = tmpl.Execute(w, status)
 		if err != nil {
 			log.Println("Status template error", err)
@@ -346,7 +358,8 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 
 func httpHandler(zones Zones) {
 	http.Handle("/monitor", websocket.Handler(wsHandler))
-	http.HandleFunc("/status", StatusServer(zones))
+	http.HandleFunc("/status", StatusServer(zones, false))
+	http.HandleFunc("/status.json", StatusServer(zones, true))
 	http.HandleFunc("/", MainServer)
 
 	log.Println("Starting HTTP interface on", *flaghttp)
