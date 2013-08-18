@@ -279,17 +279,6 @@ func StatusServer(zones Zones,asJson bool) func(http.ResponseWriter, *http.Reque
 			}
 		}
 
-                if ! asJson {
-		        tmpl := template.New("status_html")
-		        tmpl, err := tmpl.Parse(string(status_html()))
-
-		        if err != nil {
-				str := fmt.Sprintf("Could not parse template: %s", err)
-				io.WriteString(w, str)
-				return
-			}
-		}
-
 		rates := make(Rates, 0)
 
 		for name, zone := range zones {
@@ -339,9 +328,17 @@ func StatusServer(zones Zones,asJson bool) func(http.ResponseWriter, *http.Reque
 				w.Write(b)
 			}
                 } else {
-			err := tmpl.Execute(w, status)
-			if err != nil {
-				log.Println("Status template error", err)
+                        tmpl := template.New("status_html")
+                        tmpl, err := tmpl.Parse(string(status_html()))
+
+                        if err != nil {
+                                str := fmt.Sprintf("Could not parse template: %s", err)
+                                io.WriteString(w, str)
+                                return
+                        }
+			terr := tmpl.Execute(w, status)
+			if terr != nil {
+				log.Println("Status template error", terr)
 			}
 		}
 	}
