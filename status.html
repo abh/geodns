@@ -1,0 +1,158 @@
+<html><head><title>GeoDNS {{ .Version }}</title>
+<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" rel="stylesheet">
+<link href="//netdna.bootstrapcdn.com/bootswatch/2.3.1/cerulean/bootstrap.min.css" rel="stylesheet">
+<style>
+	td.zonename,td.header { font-weight: bold; }
+</style>
+<body>
+
+<div class="container">
+
+<h1>Global</h1>
+
+<div class="row">
+
+	<div class="span8">
+
+		<table class="table table-bordered table-condensed">
+			<tr>
+				<td class="info header">Global stats</td>
+				<td>1 min</td>
+				<td>5 min</td>
+				<td>15 min</td>
+				<td>Mean</td>
+			</tr>
+
+			<tr>
+				<td>Queries</td>
+				<td>{{printf "%.2f" .Global.Queries.Rate1}}</td>
+				<td>{{printf "%.2f" .Global.Queries.Rate5}}</td>
+				<td>{{printf "%.2f" .Global.Queries.Rate15}}</td>
+				<td>{{printf "%.2f" .Global.Queries.RateMean}}</td>
+			</tr>
+		</table>
+
+		<table class="table table-bordered table-condensed">
+			<tr>
+				<td class="info header">Histograms</td>
+				<td>Min</td>
+				<td>Mean</td>
+				<td>90%</td>
+				<td>99%</td>
+				<td>99.9%</td>
+				<td>Max</td>
+				<td>StdDev</td>
+			</tr>
+
+			<tr>
+				<td>Since start</td>
+				<td>{{printf "%d"   .Global.Histogram.Min}}</td>
+				<td>{{printf "%.2f" .Global.Histogram.Mean}}</td>
+				<td>{{printf "%.2f" .Global.Histogram.Pct90 }}</td>
+				<td>{{printf "%.2f" .Global.Histogram.Pct99 }}</td>
+				<td>{{printf "%.2f" .Global.Histogram.Pct999 }}</td>
+				<td>{{printf "%d"   .Global.Histogram.Max}}</td>
+				<td>{{printf "%.2f" .Global.Histogram.StdDev }}</td>
+			</tr>
+
+			<tr>
+				<td>Recent</td>
+				<td>{{printf "%d"   .Global.HistogramRecent.Min}}</td>
+				<td>{{printf "%.2f" .Global.HistogramRecent.Mean}}</td>
+				<td>{{printf "%.2f" .Global.HistogramRecent.Pct90 }}</td>
+				<td>{{printf "%.2f" .Global.HistogramRecent.Pct99 }}</td>
+				<td>{{printf "%.2f" .Global.HistogramRecent.Pct999 }}</td>
+				<td>{{printf "%d"   .Global.HistogramRecent.Max}}</td>
+				<td>{{printf "%.2f" .Global.HistogramRecent.StdDev }}</td>
+			</tr>
+
+		</table>
+
+	</div>
+
+	<div class="span4">
+
+		<table class="table table-bordered table-condensed">
+		<tr>
+			<td class="header">Uptime</td>
+			<td>{{.Uptime.DayString}}</td>
+		</tr>
+		<tr>
+			<td class="header">Platform</td>
+			<td>{{.Platform}}</td>
+		</tr>
+		</table>
+
+	</div>
+
+</div>
+
+<h1>Zones</h1>
+<table class="table table-bordered table-condensed">
+<tr>
+<th></th>
+<th>1 minute</th>
+<th>5 minutes</th>
+<th>15 minutes</th>
+<th>Mean QPS</th>
+</tr>
+
+{{ $topOption := .TopOption}}
+
+{{range  .Zones }}
+
+	<tr class="info">
+		<td colspan=5 class="zonename">{{.Name}}</td>
+	</tr>
+
+	<tr>
+		<td>Queries</td>
+		<td>{{printf "%.2f" .Metrics.Queries.Rate1}}</td>
+		<td>{{printf "%.2f" .Metrics.Queries.Rate5}}</td>
+		<td>{{printf "%.2f" .Metrics.Queries.Rate15}}</td>
+		<td>{{printf "%.2f" .Metrics.Queries.RateMean}}</td>
+	</tr>
+
+	<tr>
+		<td>EDNS Queries</td>
+		<td>{{printf "%.2f" .Metrics.EdnsQueries.Rate1}}</td>
+		<td>{{printf "%.2f" .Metrics.EdnsQueries.Rate5}}</td>
+		<td>{{printf "%.2f" .Metrics.EdnsQueries.Rate15}}</td>
+		<td>{{printf "%.2f" .Metrics.EdnsQueries.RateMean}}</td>
+	</tr>
+
+	{{ $counts := .Metrics.LabelStats.TopCounts $topOption }}
+
+	{{ if $counts }}
+		<tr class="info">
+			<td colspan=5>Labels</td>
+		</tr>
+		{{range $counts }}
+			<tr>
+				<td colspan=4>{{.Label}}</td><td>{{.Count}}</td>
+			</tr>
+		{{end}}
+	{{end}}
+
+	{{ $clients := .Metrics.ClientStats.TopCounts $topOption }}
+
+	{{ if $clients }}
+		<tr class="info">
+			<td colspan=5>Clients</td>
+		</tr>
+		{{range $clients }}
+			<tr>
+				<td colspan=4>{{.Label}}</td><td>{{.Count}}</td>
+			</tr>
+		{{end}}
+	{{end}}
+
+
+{{end}}
+
+</table>
+
+</div>
+
+</body>
+</html>
