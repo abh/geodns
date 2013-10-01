@@ -1,5 +1,9 @@
 # GeoDNS Changelog
 
+## 2.4.3
+
+* Fix GeoIP custom directory bug (in geoip library)
+
 ## 2.4.2
 
 * Update EDNS-SUBNET option number (in dns library)
