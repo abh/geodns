@@ -1,5 +1,7 @@
 # GeoDNS Changelog
 
+* Add server id and ip to _country responses for easier debugging.
+
 ## 2.4.3
 
 * Fix GeoIP custom directory bug (in geoip library)

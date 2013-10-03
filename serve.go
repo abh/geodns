@@ -122,7 +122,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 				targets, netmask := z.Options.Targeting.GetTargets(ip)
 				txt = append(txt, strings.Join(targets, " "))
-				txt = append(txt, fmt.Sprintf("/%d", netmask))
+				txt = append(txt, fmt.Sprintf("/%d", netmask), serverID, serverIP)
 
 				m.Answer = []dns.RR{&dns.TXT{Hdr: h,
 					Txt: txt,
