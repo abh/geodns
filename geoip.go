@@ -42,6 +42,9 @@ func (g *GeoIP) GetCountryRegion(ip net.IP) (country, continent, regionGroup, re
 	}
 
 	record := geoIP.city.GetRecord(ip.String())
+	if record == nil {
+		return
+	}
 
 	country = record.CountryCode
 	region = record.Region
