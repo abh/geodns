@@ -158,23 +158,22 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 		//log.Printf("k: %s v: %#v, T: %T\n", k, v, v)
 
 		switch k {
-		case "ttl", "serial", "max_hosts", "contact":
-			switch option := k; option {
-			case "ttl":
-				zone.Options.Ttl = valueToInt(v)
-			case "serial":
-				zone.Options.Serial = valueToInt(v)
-			case "contact":
-				zone.Options.Contact = v.(string)
-			case "max_hosts":
-				zone.Options.MaxHosts = valueToInt(v)
-			case "targeting":
-				zone.Options.Targeting, err = parseTargets(v.(string))
-				if err != nil {
-					log.Printf("Could not parse targeting '%s': %s", v, err)
-					return nil, err
-				}
+
+		case "ttl":
+			zone.Options.Ttl = valueToInt(v)
+		case "serial":
+			zone.Options.Serial = valueToInt(v)
+		case "contact":
+			zone.Options.Contact = v.(string)
+		case "max_hosts":
+			zone.Options.MaxHosts = valueToInt(v)
+		case "targeting":
+			zone.Options.Targeting, err = parseTargets(v.(string))
+			if err != nil {
+				log.Printf("Could not parse targeting '%s': %s", v, err)
+				return nil, err
 			}
+
 		case "logging":
 			{
 				logging := new(ZoneLogging)

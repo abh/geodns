@@ -1,5 +1,8 @@
 # GeoDNS Changelog
 
+## 2.4.4
+
+* Fix parsing of 'targeting' option
 * Add server id and ip to _country responses for easier debugging.
 
 ## 2.4.3

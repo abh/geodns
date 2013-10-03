@@ -5,6 +5,7 @@
     "stathat": true,
     "stathat_api": "abc-test"
   },
+  "targeting": "country continent @ regiongroup region",
   "contact": "support.bitnames.com",
   "data" : {
     "":  {
