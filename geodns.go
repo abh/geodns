@@ -62,6 +62,10 @@ func init() {
 		VERSION = VERSION + "/" + gitVersion
 	}
 
+	if *memprofile != "" {
+		runtime.MemProfileRate = 1024
+	}
+
 	log.SetPrefix("geodns ")
 	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
 }
