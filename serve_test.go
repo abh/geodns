@@ -141,6 +141,12 @@ func (s *ServeSuite) TestServingEDNS(c *C) {
 
 }
 
+func (s *ServeSuite) BenchmarkServing(c *C) {
+	for i := 0; i < c.N; i++ {
+		exchange(c, "_country.foo.pgeodns.", dns.TypeTXT)
+	}
+}
+
 func exchangeSubnet(c *C, name string, dnstype uint16, ip string) *dns.Msg {
 	msg := new(dns.Msg)
 
