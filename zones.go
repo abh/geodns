@@ -224,6 +224,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		"mx":    dns.TypeMX,
 		"ns":    dns.TypeNS,
 		"txt":   dns.TypeTXT,
+		"spf":   dns.TypeSPF,
 	}
 
 	for dk, dv_inter := range data {
@@ -412,6 +413,33 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						log.Printf("Zero length txt record for '%s' in '%s'\n", label.Label, Zone.Origin)
 						continue
 					}
+				case dns.TypeSPF:
+					rec := records[rType][i]
+
+					var spf string
+
+					switch rec.(type) {
+					case string:
+						spf = rec.(string)
+					case map[string]interface{}:
+
+						recmap := rec.(map[string]interface{})
+
+						if weight, ok := recmap["weight"]; ok {
+							record.Weight = valueToInt(weight)
+						}
+						if t, ok := recmap["spf"]; ok {
+							spf = t.(string)
+						}
+					}
+					if len(spf) > 0 {
+						rr := &dns.SPF{Hdr: h, SPF: []string{spf}}
+						record.RR = rr
+					} else {
+						log.Printf("Zero length SPF record for '%s' in '%s'\n", label.Label, Zone.Origin)
+						continue
+                    }
+
 
 				default:
 					log.Println("type:", rType)
