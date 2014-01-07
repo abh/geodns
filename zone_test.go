@@ -45,6 +45,11 @@ func (s *ConfigSuite) TestExampleComZone(c *C) {
 	c.Check(Ns[0].RR.(*dns.NS).Ns, Equals, "ns1.example.net.")
 	c.Check(Ns[1].RR.(*dns.NS).Ns, Equals, "ns2.example.net.")
 
+	label, qtype = ex.findLabels("", []string{"@"}, qTypes{dns.TypeSPF})
+	Spf := label.Records[dns.TypeSPF]
+	c.Check(Spf, HasLen, 1)
+	c.Check(Spf[0].RR.(*dns.SPF).Txt[0], Equals, "v=spf1 ~all")
+
 	label, qtype = ex.findLabels("foo", []string{"@"}, qTypes{dns.TypeTXT})
 	Txt := label.Records[dns.TypeTXT]
 	c.Check(Txt, HasLen, 1)
