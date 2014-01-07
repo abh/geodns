@@ -413,6 +413,8 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						log.Printf("Zero length txt record for '%s' in '%s'\n", label.Label, Zone.Origin)
 						continue
 					}
+					// Initial SPF support added here, cribbed from the TypeTXT case definition - SPF records should be handled identically
+
 				case dns.TypeSPF:
 					rec := records[rType][i]
 
@@ -433,13 +435,12 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						}
 					}
 					if len(spf) > 0 {
-						rr := &dns.SPF{Hdr: h, SPF: []string{spf}}
+						rr := &dns.SPF{Hdr: h, Txt: []string{spf}}
 						record.RR = rr
 					} else {
 						log.Printf("Zero length SPF record for '%s' in '%s'\n", label.Label, Zone.Origin)
 						continue
-                    }
-
+					}
 
 				default:
 					log.Println("type:", rType)
