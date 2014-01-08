@@ -225,6 +225,8 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		"ns":    dns.TypeNS,
 		"txt":   dns.TypeTXT,
 		"spf":   dns.TypeSPF,
+		"sshfp": dns.TypeSSHFP,
+		"srv":   dns.TypeSRV,
 	}
 
 	for dk, dv_inter := range data {
@@ -347,6 +349,33 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						Hdr:        h,
 						Mx:         mx,
 						Preference: pref}
+
+				case dns.TypeSRV:
+					rec := records[rType][i].(map[string]interface{})
+					priority := uint16(0)
+					srv_weight := uint16(0)
+					port := uint16(0)
+					target := rec["target"].(string)
+
+					if !dns.IsFqdn(target) {
+						target = target + "." + Zone.Origin
+					}
+
+					if rec["srv_weight"] != nil {
+						srv_weight = uint16(valueToInt(rec["srv_weight"]))
+					}
+					if rec["port"] != nil {
+						port = uint16(valueToInt(rec["port"]))
+					}
+					if rec["priority"] != nil {
+						priority = uint16(valueToInt(rec["priority"]))
+					}
+					record.RR = &dns.SRV{
+						Hdr:      h,
+						Priority: priority,
+						Weight:   srv_weight,
+						Port:     port,
+						Target:   target}
 
 				case dns.TypeCNAME:
 					rec := records[rType][i]

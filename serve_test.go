@@ -78,6 +78,13 @@ func (s *ServeSuite) TestServing(c *C) {
 	r = exchange(c, "test.example.com.", dns.TypeSPF)
 	c.Check(r.Answer[0].(*dns.SPF).Txt[0], Equals, "v=spf1 ~all")
 
+	//SRV
+	r = exchange(c, "_sip._tcp.test.example.com.", dns.TypeSRV)
+	c.Check(r.Answer[0].(*dns.SRV).Target, Equals, "sipserver.example.com.")
+	c.Check(r.Answer[0].(*dns.SRV).Port, Equals, uint16(5060))
+	c.Check(r.Answer[0].(*dns.SRV).Priority, Equals, uint16(10))
+	c.Check(r.Answer[0].(*dns.SRV).Weight, Equals, uint16(100))
+
 	// MX
 	r = exchange(c, "test.example.com.", dns.TypeMX)
 	c.Check(r.Answer[0].(*dns.MX).Mx, Equals, "mx.example.net.")

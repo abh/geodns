@@ -242,6 +242,18 @@ An spf record is typically at the root of a zone, and a label can have an array 
 
       "spf": [ { "spf": "v=spf1 ~all", "weight": 1 } , "spf": "v=spf1 10.0.0.1", "weight": 100]
 
+### SRV
+
+An SRV record has four components: the weight, priority, port and target. The keys for these are "srv_weight", "priority", "target" and "port". Note the difference between srv_weight (the weight key for the SRV qtype) and "weight".
+
+An example srv record definition for the _sip._tcp service:
+
+"_sip._tcp": { "srv": [ { "port": 5060, "srv_weight": 100, "priority": 10, "target": "sipserver.example.com."}] },
+
+Much like MX records, SRV records can have multiple targets, eg:
+
+"_http._tcp": { "srv": [ { "port": 80, "srv_weight": 10, "priority": 10, "target": "www.example.com."}, { "port": 8080, "srv_weight": 10, "priority": 20, "target": "www2.example.com."}] },
+
 ## License and Copyright
 
 This software is Copyright 2012-2013 Ask Bjørn Hansen. For licensing information
