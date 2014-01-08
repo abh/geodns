@@ -10,6 +10,7 @@
   "data" : {
     "":  {
       "ns": { "ns1.example.net.": null, "ns2.example.net.": null },
+      "spf": [ { "spf": "v=spf1 ~all", "weight": 1000 } ],
       "mx": [ { "preference": 20, "mx": "mx2.example.net", "weight": 0 },
               { "preference": 10, "mx": "mx.example.net.", "weight": 1 }
             ]

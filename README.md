@@ -148,6 +148,7 @@ A record for users in Europe than anywhere else, use:
             "": {
                 "ns": [ "ns.example.net", "ns2.example.net" ],
                 "txt": "Example zone",
+                "spf": [ { "spf": "v=spf1 ~all", "weight": 1 } ],
                 "mx": { "mx": "mail.example.com", "preference": 10 }
             },
             "mail": { "a": [ ["192.168.0.1", 100], ["192.168.10.1", 50] ] },
@@ -229,6 +230,17 @@ Simple syntax
 Or with weights
 
     { "txt": "Some text", "weight": 10 }
+
+### SPF 
+
+An SPF record is semantically identical to a TXT record with the exception that the label is set to 'spf'. An example of an spf record with weights:
+
+
+    { "spf": "v=spf1 ~all]", "weight": 1 }
+
+An spf record is typically at the root of a zone, and a label can have an array of SPF records, e.g
+
+      "spf": [ { "spf": "v=spf1 ~all", "weight": 1 } , "spf": "v=spf1 10.0.0.1", "weight": 100]
 
 ## License and Copyright
 
