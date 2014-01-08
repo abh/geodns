@@ -51,6 +51,9 @@
     "www.europe": {
       "cname": "geo-europe.bitnames.com."
     },
+    "www.se": {
+      "cname": [ [ "geo-europe", 10 ], [ "geo-dk", 10 ] ]
+    },
     "www-cname": {
       "cname": "bar"
     },

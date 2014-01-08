@@ -103,6 +103,22 @@ func (s *ServeSuite) TestServingMixedCase(c *C) {
 
 }
 
+func (s *ServeSuite) TestCname(c *C) {
+	// Cname, two possible results
+
+	results := make(map[string]int)
+
+	for i := 0; i < 10; i++ {
+		r := exchange(c, "www.se.test.example.com.", dns.TypeA)
+		target := r.Answer[0].(*dns.CNAME).Target
+		results[target]++
+	}
+
+	// Two possible results from this cname
+	c.Check(results, HasLen, 2)
+
+}
+
 func (s *ServeSuite) TestServingAliases(c *C) {
 	// Alias, no geo matches
 	r := exchange(c, "bar-alias.test.example.com.", dns.TypeA)

@@ -300,21 +300,11 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				switch dnsType {
 				case dns.TypeA, dns.TypeAAAA:
-					rec := records[rType][i].([]interface{})
-					ip := rec[0].(string)
-					var err error
 
-					if len(rec) > 1 {
-						switch rec[1].(type) {
-						case string:
-							record.Weight, err = strconv.Atoi(rec[1].(string))
-							if err != nil {
-								panic("Error converting weight to integer")
-							}
-						case float64:
-							record.Weight = int(rec[1].(float64))
-						}
-					}
+					str, weight := getStringWeight(records[rType][i].([]interface{}))
+					ip := str
+					record.Weight = weight
+
 					switch dnsType {
 					case dns.TypeA:
 						if x := net.ParseIP(ip); x != nil {
@@ -350,10 +340,18 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				case dns.TypeCNAME:
 					rec := records[rType][i]
-					target := rec.(string)
+					var target string
+					var weight int
+					switch rec.(type) {
+					case string:
+						target = rec.(string)
+					case []interface{}:
+						target, weight = getStringWeight(rec.([]interface{}))
+					}
 					if !dns.IsFqdn(target) {
 						target = target + "." + Zone.Origin
 					}
+					record.Weight = weight
 					record.RR = &dns.CNAME{Hdr: h, Target: dns.Fqdn(target)}
 
 				case dns.TypeMF:
@@ -463,6 +461,27 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 	setupSOA(Zone)
 
 	//log.Println(Zones[k])
+}
+
+func getStringWeight(rec []interface{}) (string, int) {
+
+	str := rec[0].(string)
+	var weight int
+	var err error
+
+	if len(rec) > 1 {
+		switch rec[1].(type) {
+		case string:
+			weight, err = strconv.Atoi(rec[1].(string))
+			if err != nil {
+				panic("Error converting weight to integer")
+			}
+		case float64:
+			weight = int(rec[1].(float64))
+		}
+	}
+
+	return str, weight
 }
 
 func setupSOA(Zone *Zone) {
