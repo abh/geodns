@@ -225,7 +225,6 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		"ns":    dns.TypeNS,
 		"txt":   dns.TypeTXT,
 		"spf":   dns.TypeSPF,
-		"sshfp": dns.TypeSSHFP,
 		"srv":   dns.TypeSRV,
 	}
 
