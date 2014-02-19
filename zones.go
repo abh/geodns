@@ -210,6 +210,9 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 	case zone.Options.Targeting >= TargetContinent:
 		geoIP.setupGeoIPCountry()
 	}
+	if zone.Options.Targeting&TargetASN > 0 {
+		geoIP.setupGeoIPASN()
+	}
 
 	return zone, nil
 }

@@ -5,7 +5,7 @@
     "stathat": true,
     "stathat_api": "abc-test"
   },
-  "targeting": "country continent @ regiongroup region",
+  "targeting": "country continent @ regiongroup region ip asn",
   "contact": "support.bitnames.com",
   "data" : {
     "":  {
@@ -33,6 +33,8 @@
       "ttl": "601"
     },
     "bar.no": { "a": [] },
+    "bar.as15169": { "a": [ ["192.168.1.4" ] ] },
+    "bar.1.0.0.255": { "a": [ ["192.168.1.3" ] ] },
     "0": {
       "a": [ [ "192.168.0.1", 10 ] ]
     },
