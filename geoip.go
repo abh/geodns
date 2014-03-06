@@ -18,9 +18,9 @@ type GeoIP struct {
 	cityLastLoad time.Time
 	hasCity      bool
 
-	asn          *geoip.GeoIP
-	hasAsn       bool
-	asnLastLoad  time.Time
+	asn         *geoip.GeoIP
+	hasAsn      bool
+	asnLastLoad time.Time
 }
 
 var geoIP = new(GeoIP)
@@ -65,7 +65,7 @@ func (g *GeoIP) GetCountryRegion(ip net.IP) (country, continent, regionGroup, re
 	return
 }
 
-func (g *GeoIP) GetASN (ip net.IP) (asn string, netmask int) {
+func (g *GeoIP) GetASN(ip net.IP) (asn string, netmask int) {
 	if g.asn == nil {
 		log.Println("No asn database available")
 		return

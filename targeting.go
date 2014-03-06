@@ -32,7 +32,7 @@ func (t TargetOptions) GetTargets(ip net.IP) ([]string, int) {
 	if t&TargetRegion > 0 || t&TargetRegionGroup > 0 {
 		country, continent, regionGroup, region, netmask = geoIP.GetCountryRegion(ip)
 
-	}else if t&TargetCountry > 0 || t&TargetContinent > 0 {
+	} else if t&TargetCountry > 0 || t&TargetContinent > 0 {
 		country, continent, netmask = geoIP.GetCountry(ip)
 	}
 
@@ -40,7 +40,7 @@ func (t TargetOptions) GetTargets(ip net.IP) ([]string, int) {
 		ipStr := ip.String()
 		targets = append(targets, ipStr)
 		dotIndex := strings.LastIndex(ipStr, ".")
-		targets = append(targets, ipStr[:dotIndex] + ".0")
+		targets = append(targets, ipStr[:dotIndex]+".0")
 	}
 
 	if t&TargetASN > 0 && len(asn) > 0 {
