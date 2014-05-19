@@ -458,6 +458,20 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		}
 	}
 
+	// loop over exisiting labels, create zone records for missing sub-domains
+	for k := range Zone.Labels {
+		if strings.Contains(k, ".") {
+			subLabels := strings.Split(k, ".")
+			for i := 1; i < len(subLabels); i++ {
+				subSubLabel := strings.Join(subLabels[i:len(subLabels)], ".")
+				if _, ok := Zone.Labels[subSubLabel]; !ok {
+					Zone.AddLabel(subSubLabel)
+				}
+			}
+
+		}
+	}
+
 	setupSOA(Zone)
 
 	//log.Println(Zones[k])
