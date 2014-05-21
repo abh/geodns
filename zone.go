@@ -102,6 +102,10 @@ func (l *Label) firstRR(dnsType uint16) dns.RR {
 	return l.Records[dnsType][0].RR
 }
 
+func (l *Label) pickerRR(dnsType uint16) dns.RR {
+	return l.Picker(dnsType, 1)[0].RR
+}
+
 func (z *Zone) AddLabel(k string) *Label {
 	k = strings.ToLower(k)
 	z.Labels[k] = new(Label)
@@ -153,7 +157,7 @@ func (z *Zone) findLabels(s string, targets []string, qts qTypes) (*Label, uint1
 					return z.Labels[s], qtype
 				case dns.TypeMF:
 					if label.Records[dns.TypeMF] != nil {
-						name = label.firstRR(dns.TypeMF).(*dns.MF).Mf
+						name = label.pickerRR(dns.TypeMF).(*dns.MF).Mf
 						// TODO: need to avoid loops here somehow
 						return z.findLabels(name, targets, qts)
 					}
