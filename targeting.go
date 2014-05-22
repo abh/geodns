@@ -36,11 +36,8 @@ func (t TargetOptions) GetTargets(ip net.IP) ([]string, int) {
 		country, continent, netmask = geoIP.GetCountry(ip)
 	}
 
-	if t&TargetIP > 0 {
-		ipStr := ip.String()
-		targets = append(targets, ipStr)
-		dotIndex := strings.LastIndex(ipStr, ".")
-		targets = append(targets, ipStr[:dotIndex]+".0")
+	if t&TargetIP > 0 && len(ip) > 0 && ip.To4() != nil {
+		targets = append(targets, ip.String())
 	}
 
 	if t&TargetASN > 0 && len(asn) > 0 {
