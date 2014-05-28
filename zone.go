@@ -23,6 +23,7 @@ type ZoneLogging struct {
 type Record struct {
 	RR     dns.RR
 	Weight int
+	Active bool
 }
 
 type Records []Record

@@ -25,20 +25,30 @@ func (label *Label) Picker(qtype uint16, max int) Records {
 
 	if label_rr := label.Records[qtype]; label_rr != nil {
 
+		var servers []Record
+		tmpservers := make([]Record, len(label_rr))
+		copy(tmpservers, label_rr)
+		sum := label.Weight[qtype]
+
+		for i := range tmpservers {
+			if !tmpservers[i].Active {
+				sum -= tmpservers[i].Weight
+			} else {
+				servers = append(servers, tmpservers[i])
+			}
+		}		
+		
 		// not "balanced", just return all
-		if label.Weight[qtype] == 0 {
+		if sum == 0 {
 			return label_rr
 		}
 
-		rr_count := len(label_rr)
+		rr_count := len(servers)
 		if max > rr_count {
 			max = rr_count
 		}
 
-		servers := make([]Record, len(label_rr))
-		copy(servers, label_rr)
 		result := make([]Record, max)
-		sum := label.Weight[qtype]
 
 		for si := 0; si < max; si++ {
 			n := rand.Intn(sum + 1)
