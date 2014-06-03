@@ -24,6 +24,7 @@ type Record struct {
 	RR     dns.RR
 	Weight int
 	Active bool
+	Backup bool
 }
 
 type Records []Record

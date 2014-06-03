@@ -14,6 +14,8 @@ import (
 	"sort"
 	"strconv"
 	"time"
+	"github.com/abh/dns"
+	"github.com/gorilla/mux"
 )
 
 // Initial status message on websocket
@@ -33,6 +35,15 @@ type statusStreamMsgUpdate struct {
 	QueryCount int64   `json:"qs"`
 	Qps        int64   `json:"qps"`
 	Qps1m      float64 `json:"qps1m,omitempty"`
+}
+
+type SetActiveMsg struct {
+	Record          string `json:"record"`
+	Active	        bool   `json:"active"`
+	FoundTypeA      int    `json:"foundtypeA"`
+	FoundTypeAAAA   int    `json:"foundtypeAAAA"`
+	FoundTypeCNAME  int    `json:"foundtypeCNAME"`
+	FoundTypeMF     int    `json:"foundtypeMF"`
 }
 
 type wsConnection struct {
@@ -56,6 +67,8 @@ var hub = monitorHub{
 	unregister:  make(chan *wsConnection, 10),
 	connections: make(map[*wsConnection]bool),
 }
+
+var router = mux.NewRouter()
 
 func (h *monitorHub) run() {
 	for {
@@ -209,11 +222,7 @@ func monitor(zones Zones) {
 	}
 }
 
-func MainServer(w http.ResponseWriter, req *http.Request) {
-	if req.RequestURI != "/version" {
-		http.NotFound(w, req)
-		return
-	}
+func Version(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(w, `<html><head><title>GeoDNS `+
 		VERSION+`</title><body>`+
 		initialStatus()+
@@ -336,10 +345,77 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
+func SetActive(zones Zones, action bool) func(http.ResponseWriter, *http.Request) {
+
+	return func(w http.ResponseWriter, req *http.Request) {
+		record := mux.Vars(req)["record"]
+
+		if record == "" {
+			http.Error(w, "{\"error\": record parameter required\"\"}", http.StatusBadRequest)
+			return
+		}
+
+		result := new(SetActiveMsg)
+		result.Record = record
+		result.Active = action
+
+		for zi, z := range zones {
+			for li, l := range z.Labels {
+				for t, rs := range l.Records {
+					switch t {
+						case dns.TypeA:
+						for ri, r := range rs {
+							if r.RR.(*dns.A).A.String() == record {
+								zones[zi].Labels[li].Records[t][ri].Active = action
+								result.FoundTypeA++
+							}
+						}
+						case dns.TypeAAAA:
+						for ri, r := range rs {
+							if r.RR.(*dns.AAAA).AAAA.String() == record {
+								zones[zi].Labels[li].Records[t][ri].Active = action
+								result.FoundTypeAAAA++
+							}
+						}
+						case dns.TypeMF:
+						for ri, r := range rs {
+							if r.RR.(*dns.MF).Mf == record {
+								zones[zi].Labels[li].Records[t][ri].Active = action
+								result.FoundTypeMF++
+							}
+						}
+						case dns.TypeCNAME:
+						for ri, r := range rs {
+							if r.RR.(*dns.CNAME).Target == record {
+								zones[zi].Labels[li].Records[t][ri].Active = action
+								result.FoundTypeCNAME++
+							}
+						}
+					}
+				}
+			}
+		}
+
+		bytes, err := json.MarshalIndent(result, "", "   ")
+		if err != nil {
+	               	log.Println("result json error", err)
+	               	return
+	        }
+
+	        fmt.Fprintf(w, "%s", bytes)
+
+	}
+}
+
 func httpHandler(zones Zones) {
+
 	http.Handle("/monitor", websocket.Handler(wsHandler))
-	http.HandleFunc("/status", StatusServer(zones))
-	http.HandleFunc("/", MainServer)
+	http.Handle("/", router)
+
+	router.HandleFunc("/version", Version)
+	router.HandleFunc("/status", StatusServer(zones))
+	router.HandleFunc("/api/active/{record}", SetActive(zones, true))
+	router.HandleFunc("/api/passive/{record}", SetActive(zones, false))
 
 	log.Println("Starting HTTP interface on", *flaghttp)
 

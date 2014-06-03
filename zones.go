@@ -304,10 +304,12 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				switch dnsType {
 				case dns.TypeA, dns.TypeAAAA:
 					active := true
-					str, weight, active := getStringWeight(records[rType][i].([]interface{}))
+					backup := false
+					str, weight, active, backup := getStringWeight(records[rType][i].([]interface{}))
 					ip := str
 					record.Weight = weight
 					record.Active = active
+					record.Backup = backup
 
 					switch dnsType {
 					case dns.TypeA:
@@ -347,17 +349,20 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					var target string
 					var weight int
 					active := true
+					backup := false
 					switch rec.(type) {
 					case string:
 						target = rec.(string)
 					case []interface{}:
-						target, weight, active = getStringWeight(rec.([]interface{}))
+						target, weight, active, backup = getStringWeight(rec.([]interface{}))
 					}
 					if !dns.IsFqdn(target) {
 						target = target + "." + Zone.Origin
 					}
 					record.Weight = weight
 					record.Active = active
+					record.Backup = backup
+
 					record.RR = &dns.CNAME{Hdr: h, Target: dns.Fqdn(target)}
 
 				case dns.TypeMF:
@@ -365,14 +370,17 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
                                         var target string
                                         var weight int
 					active := true
+					backup := false
                                         switch rec.(type) {
                                         case string:
                                                 target = rec.(string)
                                         case []interface{}:
-                                                target, weight, active = getStringWeight(rec.([]interface{}))
+                                                target, weight, active, backup = getStringWeight(rec.([]interface{}))
                                         }
                                         record.Weight = weight
 					record.Active = active
+					record.Backup = backup
+
 					// MF records (how we store aliases) are not FQDNs
 					record.RR = &dns.MF{Hdr: h, Mf: target}
 
@@ -480,21 +488,27 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 	//log.Println(Zones[k])
 }
 
-func getStringWeight(rec []interface{}) (string, int, bool) {
+func getStringWeight(rec []interface{}) (string, int, bool, bool) {
 
         str := rec[0].(string)
 	var weight int
         var err error
+	backup := false
         active := true
 
-        if len(rec) > 1 && len(rec) < 4 {
-               	for i := 1; i < len(rec); i++ {
+	len := len(rec)
+        if len > 1 && len < 5 {
+               	for i := 1; i < len; i++ {
                        	switch rec[i].(type) {
                        	case string:
-                                weight, err = strconv.Atoi(rec[i].(string))
-                               	if err != nil {
-                                       	panic("Error converting weight to integer")
-                               	}
+				if (rec[i].(string) == "backup") {
+					backup = true
+				} else {
+	                                weight, err = strconv.Atoi(rec[i].(string))
+	                               	if err != nil {
+	                                       	panic("Error converting weight to integer")
+	                               	}
+				}
                        	case float64:
                                	weight = int(rec[i].(float64))
                        	case bool:
@@ -502,8 +516,8 @@ func getStringWeight(rec []interface{}) (string, int, bool) {
                        	}
                 }
         }
-
-        return str, weight, active
+	
+        return str, weight, active, backup
 }
 
 func setupSOA(Zone *Zone) {
