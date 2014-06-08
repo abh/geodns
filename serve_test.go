@@ -83,6 +83,35 @@ func (s *ServeSuite) TestServing(c *C) {
 	c.Check(r.Answer[0].(*dns.MX).Mx, Equals, "mx.example.net.")
 	c.Check(r.Answer[1].(*dns.MX).Mx, Equals, "mx2.example.net.")
 	c.Check(r.Answer[1].(*dns.MX).Preference, Equals, uint16(20))
+
+        // Verify the first A record was created
+	r = exchange(c, "a.b.c.test.example.com.", dns.TypeA)
+	ip = r.Answer[0].(*dns.A).A
+	c.Check(ip.String(), Equals, "192.168.1.7")
+
+        // Verify sub-labels are created
+	r = exchange(c, "b.c.test.example.com.", dns.TypeA)
+	c.Check(r.Answer, HasLen, 0)
+	c.Check(r.Rcode, Equals, dns.RcodeSuccess)
+
+	r = exchange(c, "c.test.example.com.", dns.TypeA)
+	c.Check(r.Answer, HasLen, 0)
+	c.Check(r.Rcode, Equals, dns.RcodeSuccess)
+
+        // Verify the first A record was created
+	r = exchange(c, "three.two.one.test.example.com.", dns.TypeA)
+	ip = r.Answer[0].(*dns.A).A
+	c.Check(ip.String(), Equals, "192.168.1.5")
+
+        // Verify single sub-labels is created and no record is returned
+	r = exchange(c, "two.one.test.example.com.", dns.TypeA)
+	c.Check(r.Answer, HasLen, 0)
+	c.Check(r.Rcode, Equals, dns.RcodeSuccess)
+
+        // Verify the A record wasn't over written
+	r = exchange(c, "one.test.example.com.", dns.TypeA)
+	ip = r.Answer[0].(*dns.A).A
+	c.Check(ip.String(), Equals, "192.168.1.6")
 }
 
 func (s *ServeSuite) TestServingMixedCase(c *C) {
