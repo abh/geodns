@@ -38,9 +38,11 @@ func (t TargetOptions) GetTargets(ip net.IP) ([]string, int) {
 
 	if t&TargetIP > 0 {
 		ipStr := ip.String()
-		targets = append(targets, ipStr)
+		targets = append(targets, "["+ipStr+"]")
 		dotIndex := strings.LastIndex(ipStr, ".")
-		targets = append(targets, ipStr[:dotIndex]+".0")
+		if dotIndex > 0 {
+			targets = append(targets, "["+ipStr[:dotIndex]+".0]")
+		}
 	}
 
 	if t&TargetASN > 0 && len(asn) > 0 {
