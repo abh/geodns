@@ -41,7 +41,7 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 
 	c.Check(tz.Options.MaxHosts, Equals, 2)
 	c.Check(tz.Options.Contact, Equals, "support.bitnames.com")
-	c.Check(tz.Options.Targeting.String(), Equals, "@ continent country regiongroup region")
+	c.Check(tz.Options.Targeting.String(), Equals, "@ continent country regiongroup region asn ip")
 
 	// Got logging option
 	c.Check(tz.Logging.StatHat, Equals, true)
