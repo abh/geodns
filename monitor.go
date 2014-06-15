@@ -281,8 +281,13 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 			}
 		}
 
-		tmpl := template.New("status_html")
-		tmpl, err := tmpl.Parse(string(status_html()))
+		statusTemplate, err := templates_status_html()
+		if err != nil {
+			log.Println("Could not read template", err)
+			w.WriteHeader(500)
+			return
+		}
+		tmpl, err := template.New("status_html").Parse(string(statusTemplate))
 
 		if err != nil {
 			str := fmt.Sprintf("Could not parse template: %s", err)
