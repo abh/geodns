@@ -257,5 +257,5 @@ Much like MX records, SRV records can have multiple targets, eg:
 
 ## License and Copyright
 
-This software is Copyright 2012-2013 Ask Bjørn Hansen. For licensing information
+This software is Copyright 2012-2014 Ask Bjørn Hansen. For licensing information
 please see the file called LICENSE.
