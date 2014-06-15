@@ -62,4 +62,10 @@ func (s *TargetingSuite) TestGetTargets(c *C) {
 	tgt, _ = parseTargets("@ continent regiongroup country region asn ip")
 	targets, _ = tgt.GetTargets(ip)
 	c.Check(targets, DeepEquals, []string{"[207.171.1.1]", "[207.171.1.0]", "as7012", "us-ca", "us-west", "us", "north-america", "@"})
+
+	ip = net.ParseIP("2607:f238:2:0::ff:4")
+	tgt, _ = parseTargets("ip")
+	targets, _ = tgt.GetTargets(ip)
+	c.Check(targets, DeepEquals, []string{"[2607:f238:2::ff:4]", "[2607:f238:2::]"})
+
 }

@@ -18,6 +18,12 @@ const (
 	TargetIP
 )
 
+var cidr48Mask net.IPMask
+
+func init() {
+	cidr48Mask = net.CIDRMask(48, 128)
+}
+
 func (t TargetOptions) GetTargets(ip net.IP) ([]string, int) {
 
 	targets := make([]string, 0)
@@ -45,6 +51,10 @@ func (t TargetOptions) GetTargets(ip net.IP) ([]string, int) {
 				ip4[3] = 0
 				targets = append(targets, "["+ip4.String()+"]")
 			}
+		} else {
+			// v6 address, also target the /48 address
+			ip48 := ip.Mask(cidr48Mask)
+			targets = append(targets, "["+ip48.String()+"]")
 		}
 	}
 
