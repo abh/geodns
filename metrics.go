@@ -1,27 +1,26 @@
 package main
 
 import (
-	metrics "github.com/abh/go-metrics"
-	"log"
-	"os"
 	"runtime"
 	"time"
+
+	metrics "github.com/abh/go-metrics"
 )
 
-var qCounter = metrics.NewMeter()
-
 type ServerMetrics struct {
+	qCounter               metrics.Meter
 	lastQueryCount         int64
-	queriesHistogram       *metrics.StandardHistogram
-	queriesHistogramRecent *metrics.StandardHistogram
-	goroutines             *metrics.StandardGauge
+	queriesHistogram       metrics.Histogram
+	queriesHistogramRecent metrics.Histogram
+	goroutines             metrics.Gauge
 }
 
 func NewMetrics() *ServerMetrics {
 	m := new(ServerMetrics)
 
-	m.lastQueryCount = qCounter.Count()
-	metrics.Register("queries", qCounter)
+	m.qCounter = metrics.NewMeter()
+	m.lastQueryCount = m.qCounter.Count()
+	metrics.Register("queries", m.qCounter)
 
 	m.queriesHistogram = metrics.NewHistogram(metrics.NewUniformSample(1800))
 	metrics.Register("queries-histogram", m.queriesHistogram)
@@ -46,9 +45,9 @@ func (m *ServerMetrics) Updater() {
 		time.Sleep(1 * time.Second)
 
 		// Make sure go-metrics get some input to update the rate
-		qCounter.Mark(0)
+		m.qCounter.Mark(0)
 
-		current := qCounter.Count()
+		current := m.qCounter.Count()
 		newQueries := current - m.lastQueryCount
 		m.lastQueryCount = current
 
@@ -56,6 +55,5 @@ func (m *ServerMetrics) Updater() {
 		m.queriesHistogramRecent.Update(newQueries)
 
 		m.goroutines.Update(int64(runtime.NumGoroutine()))
-
 	}
 }

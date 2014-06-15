@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/abh/dns"
-	"github.com/abh/go-metrics"
 	"strings"
 	"time"
+
+	"github.com/abh/dns"
+	"github.com/abh/go-metrics"
 )
 
 type ZoneOptions struct {
@@ -45,8 +46,8 @@ type Label struct {
 type labels map[string]*Label
 
 type ZoneMetrics struct {
-	Queries     *metrics.StandardMeter
-	EdnsQueries *metrics.StandardMeter
+	Queries     metrics.Meter
+	EdnsQueries metrics.Meter
 	LabelStats  *zoneLabelStats
 	ClientStats *zoneLabelStats
 }

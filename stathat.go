@@ -1,11 +1,13 @@
 package main
 
 import (
-	"github.com/stathat/go"
 	"log"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/abh/go-metrics"
+	"github.com/stathat/go"
 )
 
 func (zs *Zones) statHatPoster() {
@@ -59,6 +61,7 @@ func (zs *Zones) statHatPoster() {
 
 func statHatPoster() {
 
+	qCounter := metrics.Get("queries").(metrics.Meter)
 	lastQueryCount := qCounter.Count()
 	stathatGroups := append(serverGroups, "total", serverID)
 	suffix := strings.Join(stathatGroups, ",")

@@ -3,13 +3,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/abh/dns"
 	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/abh/dns"
+	"github.com/abh/go-metrics"
 )
 
 func getQuestionName(z *Zone, req *dns.Msg) string {
@@ -26,7 +28,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		dns.TypeToString[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
 	// Global meter
-	qCounter.Mark(1)
+	metrics.Get("queries").(metrics.Meter).Mark(1)
 
 	// Zone meter
 	z.Metrics.Queries.Mark(1)
@@ -181,6 +183,8 @@ func statusRR(label string) []dns.RR {
 	if err == nil {
 		status["h"] = hostname
 	}
+
+	qCounter := metrics.Get("queries").(metrics.Meter)
 	status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
 	status["qs"] = strconv.FormatInt(qCounter.Count(), 10)
 	status["qps1"] = fmt.Sprintf("%.4f", qCounter.Rate1())
