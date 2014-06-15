@@ -34,8 +34,8 @@ func (s *TargetingSuite) TestTargetParse(c *C) {
 	str = tgt.String()
 	c.Check(str, Equals, "@ continent country asn")
 }
-func (s *TargetingSuite) TestGetTargets(c *C) {
 
+func (s *TargetingSuite) TestGetTargets(c *C) {
 	ip := net.ParseIP("207.171.1.1")
 
 	geoIP.setupGeoIPCity()
