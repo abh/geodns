@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/abh/dns"
-	"github.com/abh/errorutil"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,6 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/abh/dns"
+	"github.com/abh/errorutil"
 )
 
 // Zones maps domain names to zone data
@@ -300,7 +301,13 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				h.Ttl = uint32(label.Ttl)
 				h.Class = dns.ClassINET
 				h.Rrtype = dnsType
-				h.Name = label.Label + "." + Zone.Origin + "."
+
+				switch len(label.Label) {
+				case 0:
+					h.Name = Zone.Origin + "."
+				default:
+					h.Name = label.Label + "." + Zone.Origin + "."
+				}
 
 				switch dnsType {
 				case dns.TypeA, dns.TypeAAAA:

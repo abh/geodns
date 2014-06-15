@@ -62,6 +62,9 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 		firstRR(dns.TypeMF).(*dns.MF).
 		Mf, Equals, "www")
 
+	// The header name should just have a dot-prefix
+	c.Check(tz.Labels[""].Records[dns.TypeNS][0].RR.(*dns.NS).Hdr.Name, Equals, "test.example.com.")
+
 }
 
 func (s *ConfigSuite) TestRemoveConfig(c *C) {
