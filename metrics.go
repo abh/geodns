@@ -10,28 +10,24 @@ import (
 )
 
 type ServerMetrics struct {
-	qCounter               metrics.Meter
-	lastQueryCount         int64
-	queriesHistogram       metrics.Histogram
-	queriesHistogramRecent metrics.Histogram
-	goroutines             metrics.Gauge
+	qCounter         metrics.Meter
+	lastQueryCount   int64
+	queriesHistogram metrics.Histogram
+	goroutines       metrics.Gauge
 }
 
 func NewMetrics() *ServerMetrics {
 	m := new(ServerMetrics)
 
-	m.qCounter = metrics.NewMeter()
+	m.qCounter = metrics.GetOrRegisterMeter("queries", nil)
 	m.lastQueryCount = m.qCounter.Count()
-	metrics.Register("queries", m.qCounter)
 
-	m.queriesHistogram = metrics.NewHistogram(metrics.NewUniformSample(1800))
-	metrics.Register("queries-histogram", m.queriesHistogram)
+	m.queriesHistogram = metrics.GetOrRegisterHistogram(
+		"queries-histogram", nil,
+		metrics.NewExpDecaySample(600, 0.015),
+	)
 
-	m.queriesHistogramRecent = metrics.NewHistogram(metrics.NewExpDecaySample(600, 0.015))
-	metrics.Register("queries-histogram-recent", m.queriesHistogramRecent)
-
-	m.goroutines = metrics.NewGauge()
-	metrics.Register("goroutines", m.goroutines)
+	m.goroutines = metrics.GetOrRegisterGauge("goroutines", nil)
 
 	return m
 }
@@ -54,7 +50,6 @@ func (m *ServerMetrics) Updater() {
 		m.lastQueryCount = current
 
 		m.queriesHistogram.Update(newQueries)
-		m.queriesHistogramRecent.Update(newQueries)
 
 		m.goroutines.Update(int64(runtime.NumGoroutine()))
 	}

@@ -329,7 +329,6 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 		status.Global.Queries = metrics.Get("queries").(*metrics.StandardMeter)
 
 		setupHistogramData(metrics.Get("queries-histogram").(*metrics.StandardHistogram), &status.Global.Histogram)
-		setupHistogramData(metrics.Get("queries-histogram-recent").(*metrics.StandardHistogram), &status.Global.HistogramRecent)
 
 		err = tmpl.Execute(w, status)
 		if err != nil {
