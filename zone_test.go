@@ -39,11 +39,15 @@ func (s *ConfigSuite) TestExampleComZone(c *C) {
 	c.Check(label.Records[dns.TypeCNAME], HasLen, 1)
 	c.Check(qtype, Equals, dns.TypeCNAME)
 
+	// pretty.Println(ex.Labels[""].Records[dns.TypeNS])
+
 	label, qtype = ex.findLabels("", []string{"@"}, qTypes{dns.TypeNS})
 	Ns := label.Records[dns.TypeNS]
 	c.Check(Ns, HasLen, 2)
-	c.Check(Ns[0].RR.(*dns.NS).Ns, Equals, "ns1.example.net.")
-	c.Check(Ns[1].RR.(*dns.NS).Ns, Equals, "ns2.example.net.")
+	// Test that we get the expected NS records (in any order because
+	// of the configuration format used for this zone)
+	c.Check(Ns[0].RR.(*dns.NS).Ns, Matches, "^ns[12]\\.example\\.net.$")
+	c.Check(Ns[1].RR.(*dns.NS).Ns, Matches, "^ns[12]\\.example\\.net.$")
 
 	label, qtype = ex.findLabels("", []string{"@"}, qTypes{dns.TypeSPF})
 	Spf := label.Records[dns.TypeSPF]
