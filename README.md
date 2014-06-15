@@ -232,7 +232,7 @@ Or with weights
 
     { "txt": "Some text", "weight": 10 }
 
-### SPF 
+### SPF
 
 An SPF record is semantically identical to a TXT record with the exception that the label is set to 'spf'. An example of an spf record with weights:
 
@@ -249,11 +249,18 @@ An SRV record has four components: the weight, priority, port and target. The ke
 
 An example srv record definition for the _sip._tcp service:
 
-"_sip._tcp": { "srv": [ { "port": 5060, "srv_weight": 100, "priority": 10, "target": "sipserver.example.com."}] },
+    "_sip._tcp": {
+        "srv": [ { "port": 5060, "srv_weight": 100, "priority": 10, "target": "sipserver.example.com."} ]
+    },
 
 Much like MX records, SRV records can have multiple targets, eg:
 
-"_http._tcp": { "srv": [ { "port": 80, "srv_weight": 10, "priority": 10, "target": "www.example.com."}, { "port": 8080, "srv_weight": 10, "priority": 20, "target": "www2.example.com."}] },
+    "_http._tcp": {
+        "srv": [
+            { "port": 80, "srv_weight": 10, "priority": 10, "target": "www.example.com."},
+            { "port": 8080, "srv_weight": 10, "priority": 20, "target": "www2.example.com."}
+        ]
+    },
 
 ## License and Copyright
 
