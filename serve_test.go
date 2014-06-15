@@ -20,7 +20,9 @@ var _ = Suite(&ServeSuite{})
 
 func (s *ServeSuite) SetUpSuite(c *C) {
 
-	// log.Println("Setting up serve test suite")
+	// setup and register metrics
+	metrics := NewMetrics()
+	go metrics.Updater(false)
 
 	Zones := make(Zones)
 	setupPgeodnsZone(Zones)

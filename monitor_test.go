@@ -19,11 +19,14 @@ var _ = Suite(&MonitorSuite{})
 func (s *MonitorSuite) SetUpSuite(c *C) {
 	s.zones = make(Zones)
 	s.metrics = NewMetrics()
-	go s.metrics.Updater()
+	go s.metrics.Updater(false)
 
 	*flaghttp = ":8881"
 
 	fmt.Println("Starting http server")
+
+	// TODO: use httptest
+	// https://groups.google.com/forum/?fromgroups=#!topic/golang-nuts/Jk785WB7F8I
 
 	zonesReadDir("dns", s.zones)
 	go httpHandler(s.zones)

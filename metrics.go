@@ -32,12 +32,14 @@ func NewMetrics() *ServerMetrics {
 	return m
 }
 
-func (m *ServerMetrics) Updater() {
+func (m *ServerMetrics) Updater(printStatus bool) {
 
-	go func() {
-		time.Sleep(2 * time.Second)
-		metrics.Log(metrics.DefaultRegistry, 30, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
-	}()
+	if printStatus {
+		go func() {
+			time.Sleep(2 * time.Second)
+			metrics.Log(metrics.DefaultRegistry, 30, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
+		}()
+	}
 
 	for {
 		time.Sleep(1 * time.Second)
