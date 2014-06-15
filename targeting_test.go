@@ -1,8 +1,8 @@
 package main
 
 import (
-	. "launchpad.net/gocheck"
 	"net"
+	. "launchpad.net/gocheck"
 )
 
 type TargetingSuite struct {
@@ -36,7 +36,7 @@ func (s *TargetingSuite) TestTargetParse(c *C) {
 }
 func (s *TargetingSuite) TestGetTargets(c *C) {
 
-	ip := net.ParseIP("207.171.7.51")
+	ip := net.ParseIP("207.171.1.1")
 
 	geoIP.setupGeoIPCity()
 	geoIP.setupGeoIPCountry()
@@ -61,5 +61,5 @@ func (s *TargetingSuite) TestGetTargets(c *C) {
 
 	tgt, _ = parseTargets("@ continent regiongroup country region asn ip")
 	targets, _ = tgt.GetTargets(ip)
-	c.Check(targets, DeepEquals, []string{"207.171.7.51", "207.171.7.0", "as53582", "us-ca", "us-west", "us", "north-america", "@"})
+	c.Check(targets, DeepEquals, []string{"[207.171.1.1]", "[207.171.1.0]", "as7012", "us-ca", "us-west", "us", "north-america", "@"})
 }
