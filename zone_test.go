@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/abh/dns"
-	. "launchpad.net/gocheck"
+	. "gopkg.in/check.v1"
 )
 
 func (s *ConfigSuite) TestExampleComZone(c *C) {
@@ -61,7 +61,7 @@ func (s *ConfigSuite) TestExampleComZone(c *C) {
 	c.Check(Txt[0].RR.(*dns.TXT).Txt[0], Equals, "w1000")
 	c.Check(Txt[1].RR.(*dns.TXT).Txt[0], Equals, "w1")
 
-        //verify empty labels are created
+	//verify empty labels are created
 	label, qtype = ex.findLabels("a.b.c", []string{"@"}, qTypes{dns.TypeA})
 	c.Check(label.Records[dns.TypeA], HasLen, 1)
 	c.Check(label.Records[dns.TypeA][0].RR.(*dns.A).A.String(), Equals, "192.168.1.7")
@@ -74,7 +74,7 @@ func (s *ConfigSuite) TestExampleComZone(c *C) {
 	c.Check(label.Records[dns.TypeA], HasLen, 0)
 	c.Check(label.Label, Equals, "c")
 
-        //verify label is created
+	//verify label is created
 	label, qtype = ex.findLabels("three.two.one", []string{"@"}, qTypes{dns.TypeA})
 	c.Check(label.Records[dns.TypeA], HasLen, 1)
 	c.Check(label.Records[dns.TypeA][0].RR.(*dns.A).A.String(), Equals, "192.168.1.5")
@@ -83,7 +83,7 @@ func (s *ConfigSuite) TestExampleComZone(c *C) {
 	c.Check(label.Records[dns.TypeA], HasLen, 0)
 	c.Check(label.Label, Equals, "two.one")
 
-        //verify label isn't overwritten
+	//verify label isn't overwritten
 	label, qtype = ex.findLabels("one", []string{"@"}, qTypes{dns.TypeA})
 	c.Check(label.Records[dns.TypeA], HasLen, 1)
 	c.Check(label.Records[dns.TypeA][0].RR.(*dns.A).A.String(), Equals, "192.168.1.6")

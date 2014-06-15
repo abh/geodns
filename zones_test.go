@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/abh/dns"
 	"io"
 	"io/ioutil"
-	. "launchpad.net/gocheck"
 	"os"
 	"testing"
+
+	"github.com/abh/dns"
+	. "gopkg.in/check.v1"
 )
 
 // Hook up gocheck into the gotest runner.

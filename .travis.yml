@@ -11,7 +11,7 @@ install:
   - curl -s http://download.maxmind.com/download/geoip/database/asnum/GeoIPASNum.dat.gz | gzip -cd > $TRAVIS_BUILD_DIR/db/GeoIPASNum.dat
   - go get github.com/abh/dns
   - go get github.com/abh/geoip
-  - go get launchpad.net/gocheck
+  - go get gopkg.in/check.v1
   - go get -v
   - go build -v
   - go install
