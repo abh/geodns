@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-	"os"
 	"runtime"
 	"time"
 
@@ -32,14 +30,7 @@ func NewMetrics() *ServerMetrics {
 	return m
 }
 
-func (m *ServerMetrics) Updater(printStatus bool) {
-
-	if printStatus {
-		go func() {
-			time.Sleep(2 * time.Second)
-			metrics.Log(metrics.DefaultRegistry, 30*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
-		}()
-	}
+func (m *ServerMetrics) Updater() {
 
 	for {
 		time.Sleep(1 * time.Second)

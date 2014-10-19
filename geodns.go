@@ -135,7 +135,7 @@ func main() {
 	go configWatcher(configFileName)
 
 	metrics := NewMetrics()
-	go metrics.Updater(true)
+	go metrics.Updater()
 
 	go statHatPoster()
 

@@ -22,7 +22,7 @@ func (s *ServeSuite) SetUpSuite(c *C) {
 
 	// setup and register metrics
 	metrics := NewMetrics()
-	go metrics.Updater(false)
+	go metrics.Updater()
 
 	Zones := make(Zones)
 	setupPgeodnsZone(Zones)
