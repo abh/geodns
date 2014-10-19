@@ -1,17 +1,24 @@
 package main
 
 import (
-	"code.google.com/p/gcfg"
 	"fmt"
-	"github.com/howeyc/fsnotify"
 	"log"
 	"os"
 	"time"
+
+	"code.google.com/p/gcfg"
+	"github.com/howeyc/fsnotify"
 )
 
 type AppConfig struct {
 	StatHat struct {
 		ApiKey string
+	}
+	InfluxDB struct {
+		Host     string
+		Database string
+		Username string
+		Password string
 	}
 	Flags struct {
 		HasStatHat bool

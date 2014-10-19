@@ -161,6 +161,7 @@ func main() {
 
 	go monitor(Zones)
 	go Zones.statHatPoster()
+	go Zones.influxdbPoster()
 
 	setupPgeodnsZone(Zones)
 

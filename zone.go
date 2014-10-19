@@ -19,6 +19,8 @@ type ZoneOptions struct {
 type ZoneLogging struct {
 	StatHat    bool
 	StatHatAPI string
+
+	InfluxDB bool
 }
 
 type Record struct {
