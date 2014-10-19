@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"code.google.com/p/go.net/websocket"
-	"github.com/abh/go-metrics"
+	"github.com/rcrowley/go-metrics"
 )
 
 // Initial status message on websocket

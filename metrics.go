@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"time"
 
-	metrics "github.com/abh/go-metrics"
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 type ServerMetrics struct {
@@ -37,7 +37,7 @@ func (m *ServerMetrics) Updater(printStatus bool) {
 	if printStatus {
 		go func() {
 			time.Sleep(2 * time.Second)
-			metrics.Log(metrics.DefaultRegistry, 30, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
+			metrics.Log(metrics.DefaultRegistry, 30*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
 		}()
 	}
 

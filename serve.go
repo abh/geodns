@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/abh/dns"
-	"github.com/abh/go-metrics"
+	"github.com/rcrowley/go-metrics"
 )
 
 func getQuestionName(z *Zone, req *dns.Msg) string {

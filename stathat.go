@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abh/go-metrics"
+	"github.com/rcrowley/go-metrics"
 	"github.com/stathat/go"
 )
 
