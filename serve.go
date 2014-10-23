@@ -148,6 +148,10 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		var rrs []dns.RR
 		for _, record := range servers {
 			rr := record.RR
+			if rr.Header().Rrtype != qtype && qtype != dns.TypeA {
+				rrs = rrs[:0]
+				break
+			}
 			rr.Header().Name = req.Question[0].Name
 			rrs = append(rrs, rr)
 
