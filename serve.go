@@ -19,7 +19,6 @@ func getQuestionName(z *Zone, req *dns.Msg) string {
 }
 
 func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
-
 	qtype := req.Question[0].Qtype
 
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
@@ -141,7 +140,6 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		m.Authoritative = true
 
 		m.Ns = []dns.RR{z.SoaRR()}
-
 		w.WriteMsg(m)
 		return
 	}
@@ -152,6 +150,37 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			rr := record.RR
 			rr.Header().Name = req.Question[0].Name
 			rrs = append(rrs, rr)
+
+			if rr.Header().Rrtype == dns.TypeCNAME {
+				if rr.(*dns.CNAME).Target == req.Question[0].Name {
+					rrs = rrs[:0]
+					break
+				}
+        			msg := new(dns.Msg)
+			        msg.SetQuestion(rr.(*dns.CNAME).Target, dns.TypeA)
+				msg.CheckGlue = true
+				dns.DefaultServeMux.ServeDNS(w, msg)
+				for _, gluerr := range msg.Answer {
+                                    rrs = append(rrs, gluerr)
+				}
+			} else if rr.Header().Rrtype == dns.TypeNS {
+				msg := new(dns.Msg)
+				msg.SetQuestion(rr.(*dns.NS).Ns, dns.TypeA)
+				msg.CheckGlue = true
+				dns.DefaultServeMux.ServeDNS(w, msg)
+				for _, gluerr := range msg.Answer {
+					m.Extra = append(m.Extra, gluerr)
+				}
+			} else if rr.Header().Rrtype == dns.TypeMX {
+				msg := new(dns.Msg)
+				msg.SetQuestion(rr.(*dns.MX).Mx, dns.TypeA)
+				msg.CheckGlue = true
+				dns.DefaultServeMux.ServeDNS(w, msg)
+				for _, gluerr := range msg.Answer {
+					m.Extra = append(m.Extra, gluerr)
+				}
+			}
+
 		}
 		m.Answer = rrs
 	}
@@ -160,14 +189,122 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		m.Ns = append(m.Ns, z.SoaRR())
 	}
 
-	logPrintln(m)
-
 	err := w.WriteMsg(m)
 	if err != nil {
 		// if Pack'ing fails the Write fails. Return SERVFAIL.
 		log.Println("Error writing packet", m)
 		dns.HandleFailed(w, req)
 	}
+	return
+}
+
+func setGlueMsg(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
+	qtype := req.Question[0].Qtype
+
+	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
+		dns.TypeToString[qtype], req.MsgHdr.Id, w.RemoteAddr())
+
+	// Global meter
+	qCounter.Mark(1)
+
+	// Zone meter
+	z.Metrics.Queries.Mark(1)
+
+	logPrintln("Got request", req)
+
+	label := getQuestionName(z, req)
+
+	z.Metrics.LabelStats.Add(label)
+
+	realIp, _, _ := net.SplitHostPort(w.RemoteAddr().String())
+
+	z.Metrics.ClientStats.Add(realIp)
+
+	var ip net.IP // EDNS or real IP
+	var edns *dns.EDNS0_SUBNET
+	var opt_rr *dns.OPT
+
+	for _, extra := range req.Extra {
+
+		switch extra.(type) {
+		case *dns.OPT:
+			for _, o := range extra.(*dns.OPT).Option {
+				opt_rr = extra.(*dns.OPT)
+				switch e := o.(type) {
+				case *dns.EDNS0_NSID:
+					// do stuff with e.Nsid
+				case *dns.EDNS0_SUBNET:
+					z.Metrics.EdnsQueries.Mark(1)
+					logPrintln("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
+					if e.Address != nil {
+						edns = e
+						ip = e.Address
+					}
+				}
+			}
+		}
+	}
+
+	if len(ip) == 0 { // no edns subnet
+		ip = net.ParseIP(realIp)
+	}
+
+	targets, netmask := z.Options.Targeting.GetTargets(ip)
+
+	m := new(dns.Msg)
+	m.SetReply(req)
+	if e := m.IsEdns0(); e != nil {
+		m.SetEdns0(4096, e.Do())
+	}
+	m.Authoritative = true
+
+	// TODO: set scope to 0 if there are no alternate responses
+	if edns != nil {
+		if edns.Family != 0 {
+			if netmask < 16 {
+				netmask = 16
+			}
+			edns.SourceScope = uint8(netmask)
+			m.Extra = append(m.Extra, opt_rr)
+		}
+	}
+
+	labels, labelQtype := z.findLabels(label, targets, qTypes{dns.TypeMF, dns.TypeCNAME, qtype})
+	if labelQtype == 0 {
+		labelQtype = qtype
+	}
+
+	if labels == nil {
+		return
+	}
+
+	if servers := labels.Picker(labelQtype, labels.MaxHosts); servers != nil {
+		var rrs []dns.RR
+		for _, record := range servers {
+			rr := record.RR
+			rr.Header().Name = req.Question[0].Name
+			rrs = append(rrs, rr)
+
+			if rr.Header().Rrtype == dns.TypeCNAME {
+				if rr.(*dns.CNAME).Target == req.Question[0].Name {
+					rrs = rrs[:0]
+					break
+				}
+				msg := new(dns.Msg)
+				msg.SetQuestion(rr.(*dns.CNAME).Target, dns.TypeA)
+				msg.CheckGlue = true
+				dns.DefaultServeMux.ServeDNS(w, msg)
+				for _, gluerr := range msg.Answer {
+					rrs = append(rrs, gluerr)
+				}
+			}
+
+		}
+		m.Answer = rrs
+	}
+
+        req.Answer = m.Answer
+
 	return
 }
 
@@ -192,7 +329,11 @@ func statusRR(label string) []dns.RR {
 
 func setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {
 	return func(w dns.ResponseWriter, r *dns.Msg) {
-		serve(w, r, Zone)
+                if r.CheckGlue {
+                    setGlueMsg(w, r, Zone)
+                } else {
+		    serve(w, r, Zone)
+                }
 	}
 }
 
