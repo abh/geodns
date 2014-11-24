@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/abh/dns"
-	. "launchpad.net/gocheck"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/abh/dns"
+	. "gopkg.in/check.v1"
 )
 
 const (
@@ -19,7 +20,9 @@ var _ = Suite(&ServeSuite{})
 
 func (s *ServeSuite) SetUpSuite(c *C) {
 
-	// log.Println("Setting up serve test suite")
+	// setup and register metrics
+	metrics := NewMetrics()
+	go metrics.Updater()
 
 	Zones := make(Zones)
 	setupPgeodnsZone(Zones)
@@ -74,11 +77,51 @@ func (s *ServeSuite) TestServing(c *C) {
 	r = exchange(c, "www.test.example.com.", dns.TypeA)
 	c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo.bitnames.com.")
 
+	//SPF
+	r = exchange(c, "test.example.com.", dns.TypeSPF)
+	c.Check(r.Answer[0].(*dns.SPF).Txt[0], Equals, "v=spf1 ~all")
+
+	//SRV
+	r = exchange(c, "_sip._tcp.test.example.com.", dns.TypeSRV)
+	c.Check(r.Answer[0].(*dns.SRV).Target, Equals, "sipserver.example.com.")
+	c.Check(r.Answer[0].(*dns.SRV).Port, Equals, uint16(5060))
+	c.Check(r.Answer[0].(*dns.SRV).Priority, Equals, uint16(10))
+	c.Check(r.Answer[0].(*dns.SRV).Weight, Equals, uint16(100))
+
 	// MX
 	r = exchange(c, "test.example.com.", dns.TypeMX)
 	c.Check(r.Answer[0].(*dns.MX).Mx, Equals, "mx.example.net.")
 	c.Check(r.Answer[1].(*dns.MX).Mx, Equals, "mx2.example.net.")
 	c.Check(r.Answer[1].(*dns.MX).Preference, Equals, uint16(20))
+
+	// Verify the first A record was created
+	r = exchange(c, "a.b.c.test.example.com.", dns.TypeA)
+	ip = r.Answer[0].(*dns.A).A
+	c.Check(ip.String(), Equals, "192.168.1.7")
+
+	// Verify sub-labels are created
+	r = exchange(c, "b.c.test.example.com.", dns.TypeA)
+	c.Check(r.Answer, HasLen, 0)
+	c.Check(r.Rcode, Equals, dns.RcodeSuccess)
+
+	r = exchange(c, "c.test.example.com.", dns.TypeA)
+	c.Check(r.Answer, HasLen, 0)
+	c.Check(r.Rcode, Equals, dns.RcodeSuccess)
+
+	// Verify the first A record was created
+	r = exchange(c, "three.two.one.test.example.com.", dns.TypeA)
+	ip = r.Answer[0].(*dns.A).A
+	c.Check(ip.String(), Equals, "192.168.1.5")
+
+	// Verify single sub-labels is created and no record is returned
+	r = exchange(c, "two.one.test.example.com.", dns.TypeA)
+	c.Check(r.Answer, HasLen, 0)
+	c.Check(r.Rcode, Equals, dns.RcodeSuccess)
+
+	// Verify the A record wasn't over written
+	r = exchange(c, "one.test.example.com.", dns.TypeA)
+	ip = r.Answer[0].(*dns.A).A
+	c.Check(ip.String(), Equals, "192.168.1.6")
 }
 
 func (s *ServeSuite) TestServingMixedCase(c *C) {
@@ -96,6 +139,22 @@ func (s *ServeSuite) TestServingMixedCase(c *C) {
 	ip := r.Answer[0].(*dns.A).A
 	c.Check(ip.String(), Equals, "192.168.1.2")
 	c.Check(r.Answer[0].Header().Name, Equals, n)
+
+}
+
+func (s *ServeSuite) TestCname(c *C) {
+	// Cname, two possible results
+
+	results := make(map[string]int)
+
+	for i := 0; i < 10; i++ {
+		r := exchange(c, "www.se.test.example.com.", dns.TypeA)
+		target := r.Answer[0].(*dns.CNAME).Target
+		results[target]++
+	}
+
+	// Two possible results from this cname
+	c.Check(results, HasLen, 2)
 
 }
 
@@ -139,6 +198,12 @@ func (s *ServeSuite) TestServingEDNS(c *C) {
 		c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo-europe.bitnames.com.")
 	}
 
+}
+
+func (s *ServeSuite) BenchmarkServing(c *C) {
+	for i := 0; i < c.N; i++ {
+		exchange(c, "_country.foo.pgeodns.", dns.TypeTXT)
+	}
 }
 
 func exchangeSubnet(c *C, name string, dnstype uint16, ip string) *dns.Msg {

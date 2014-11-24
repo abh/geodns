@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/abh/dns"
 	"io"
 	"io/ioutil"
-	. "launchpad.net/gocheck"
 	"os"
 	"testing"
+
+	"github.com/abh/dns"
+	. "gopkg.in/check.v1"
 )
 
 // Hook up gocheck into the gotest runner.
@@ -41,6 +42,7 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 
 	c.Check(tz.Options.MaxHosts, Equals, 2)
 	c.Check(tz.Options.Contact, Equals, "support.bitnames.com")
+	c.Check(tz.Options.Targeting.String(), Equals, "@ continent country regiongroup region asn ip")
 
 	// Got logging option
 	c.Check(tz.Logging.StatHat, Equals, true)
@@ -59,6 +61,9 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 	c.Check(tz.Labels["www-alias"].
 		firstRR(dns.TypeMF).(*dns.MF).
 		Mf, Equals, "www")
+
+	// The header name should just have a dot-prefix
+	c.Check(tz.Labels[""].Records[dns.TypeNS][0].RR.(*dns.NS).Hdr.Name, Equals, "test.example.com.")
 
 }
 

@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	. "launchpad.net/gocheck"
 	"net/http"
 	"strings"
 	"time"
+	. "gopkg.in/check.v1"
 )
 
 type MonitorSuite struct {
@@ -24,6 +24,9 @@ func (s *MonitorSuite) SetUpSuite(c *C) {
 	*flaghttp = ":8881"
 
 	fmt.Println("Starting http server")
+
+	// TODO: use httptest
+	// https://groups.google.com/forum/?fromgroups=#!topic/golang-nuts/Jk785WB7F8I
 
 	zonesReadDir("dns", s.zones)
 	go httpHandler(s.zones)

@@ -1,0 +1,44 @@
+{
+	"ImportPath": "github.com/abh/geodns",
+	"GoVersion": "go1.3.1",
+	"Deps": [
+		{
+			"ImportPath": "code.google.com/p/gcfg",
+			"Rev": "c2d3050044d05357eaf6c3547249ba57c5e235cb"
+		},
+		{
+			"ImportPath": "code.google.com/p/go.net/websocket",
+			"Comment": "null-163",
+			"Rev": "b39f3d42a398493ea477d6aa63ae43d818d1f78a"
+		},
+		{
+			"ImportPath": "github.com/abh/dns",
+			"Rev": "d8da4d2fa735ac1925a7c52ca3cbaac10ec45aa7"
+		},
+		{
+			"ImportPath": "github.com/abh/errorutil",
+			"Rev": "f9bd360d00b902548fbb80837aef90dca2c8285e"
+		},
+		{
+			"ImportPath": "github.com/abh/geoip",
+			"Rev": "31328e916ea204913000d0089fb328ca037e4bc5"
+		},
+		{
+			"ImportPath": "github.com/rcrowley/go-metrics",
+			"Rev": "794bbe964d82f2d97785dc1eec4529e3ed0c25d9"
+		},
+		{
+			"ImportPath": "github.com/stathat/go",
+			"Rev": "01d012b9ee2ecc107cb28b6dd32d9019ed5c1d77"
+		},
+		{
+			"ImportPath": "gopkg.in/check.v1",
+			"Rev": "871360013c92e1c715c2de6d06b54899468a8a2d"
+		},
+		{
+			"ImportPath": "gopkg.in/fsnotify.v1",
+			"Comment": "v1.0.4",
+			"Rev": "ca50e738d35a862c379baf8fffbc3bfd080b3cff"
+		}
+	]
+}

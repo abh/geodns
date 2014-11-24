@@ -17,6 +17,10 @@ type GeoIP struct {
 	city         *geoip.GeoIP
 	cityLastLoad time.Time
 	hasCity      bool
+
+	asn         *geoip.GeoIP
+	hasAsn      bool
+	asnLastLoad time.Time
 }
 
 var geoIP = new(GeoIP)
@@ -42,6 +46,9 @@ func (g *GeoIP) GetCountryRegion(ip net.IP) (country, continent, regionGroup, re
 	}
 
 	record := geoIP.city.GetRecord(ip.String())
+	if record == nil {
+		return
+	}
 
 	country = record.CountryCode
 	region = record.Region
@@ -54,6 +61,21 @@ func (g *GeoIP) GetCountryRegion(ip net.IP) (country, continent, regionGroup, re
 			regionGroup = countries.CountryRegionGroup(country, region)
 		}
 
+	}
+	return
+}
+
+func (g *GeoIP) GetASN(ip net.IP) (asn string, netmask int) {
+	if g.asn == nil {
+		log.Println("No asn database available")
+		return
+	}
+	name, netmask := g.asn.GetName(ip.String())
+	if len(name) > 0 {
+		index := strings.Index(name, " ")
+		if index > 0 {
+			asn = strings.ToLower(name[:index])
+		}
 	}
 	return
 }
@@ -94,8 +116,26 @@ func (g *GeoIP) setupGeoIPCity() {
 		log.Printf("Could not open city GeoIP database: %s\n", err)
 		return
 	}
-	g.countryLastLoad = time.Now()
+	g.cityLastLoad = time.Now()
 	g.hasCity = true
 	g.city = gi
+
+}
+
+func (g *GeoIP) setupGeoIPASN() {
+	if g.asn != nil {
+		return
+	}
+
+	g.setDirectory()
+
+	gi, err := geoip.OpenType(geoip.GEOIP_ASNUM_EDITION)
+	if gi == nil || err != nil {
+		log.Printf("Could not open ASN GeoIP database: %s\n", err)
+		return
+	}
+	g.asnLastLoad = time.Now()
+	g.hasAsn = true
+	g.asn = gi
 
 }

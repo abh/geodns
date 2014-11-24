@@ -1,5 +1,29 @@
 # GeoDNS Changelog
 
+## 2.4.4
+
+* Fix parsing of 'targeting' option
+* Add server id and ip to _country responses for easier debugging.
+
+## 2.4.3
+
+* Fix GeoIP custom directory bug (in geoip library)
+
+## 2.4.2
+
+* Update EDNS-SUBNET option number (in dns library)
+
+## 2.4.1
+
+* Update dns API to use new CountLabel and SplitDomainName functions
+* Add test for mIXed-caSE queries (fix was in dns library)
+
+## 2.4.0
+
+* Add per-zone targeting configuration
+* Support targeting by region/state with GeoIPCity
+* Don't send backlogged zone counts to stathat when support is enabled
+
 ## 2.3.0, May 7th 2013
 * Fix edns-client-subnet bug in dns library so it
   works with OpenDNS

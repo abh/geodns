@@ -45,7 +45,7 @@
 			</tr>
 
 			<tr>
-				<td>Since start</td>
+				<td>Global queries</td>
 				<td>{{printf "%d"   .Global.Histogram.Min}}</td>
 				<td>{{printf "%.2f" .Global.Histogram.Mean}}</td>
 				<td>{{printf "%.2f" .Global.Histogram.Pct90 }}</td>
@@ -53,17 +53,6 @@
 				<td>{{printf "%.2f" .Global.Histogram.Pct999 }}</td>
 				<td>{{printf "%d"   .Global.Histogram.Max}}</td>
 				<td>{{printf "%.2f" .Global.Histogram.StdDev }}</td>
-			</tr>
-
-			<tr>
-				<td>Recent</td>
-				<td>{{printf "%d"   .Global.HistogramRecent.Min}}</td>
-				<td>{{printf "%.2f" .Global.HistogramRecent.Mean}}</td>
-				<td>{{printf "%.2f" .Global.HistogramRecent.Pct90 }}</td>
-				<td>{{printf "%.2f" .Global.HistogramRecent.Pct99 }}</td>
-				<td>{{printf "%.2f" .Global.HistogramRecent.Pct999 }}</td>
-				<td>{{printf "%d"   .Global.HistogramRecent.Max}}</td>
-				<td>{{printf "%.2f" .Global.HistogramRecent.StdDev }}</td>
 			</tr>
 
 		</table>

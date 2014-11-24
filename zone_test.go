@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/abh/dns"
-	. "launchpad.net/gocheck"
+	. "gopkg.in/check.v1"
 )
 
 func (s *ConfigSuite) TestExampleComZone(c *C) {
@@ -39,11 +39,20 @@ func (s *ConfigSuite) TestExampleComZone(c *C) {
 	c.Check(label.Records[dns.TypeCNAME], HasLen, 1)
 	c.Check(qtype, Equals, dns.TypeCNAME)
 
+	// pretty.Println(ex.Labels[""].Records[dns.TypeNS])
+
 	label, qtype = ex.findLabels("", []string{"@"}, qTypes{dns.TypeNS})
 	Ns := label.Records[dns.TypeNS]
 	c.Check(Ns, HasLen, 2)
-	c.Check(Ns[0].RR.(*dns.NS).Ns, Equals, "ns1.example.net.")
-	c.Check(Ns[1].RR.(*dns.NS).Ns, Equals, "ns2.example.net.")
+	// Test that we get the expected NS records (in any order because
+	// of the configuration format used for this zone)
+	c.Check(Ns[0].RR.(*dns.NS).Ns, Matches, "^ns[12]\\.example\\.net.$")
+	c.Check(Ns[1].RR.(*dns.NS).Ns, Matches, "^ns[12]\\.example\\.net.$")
+
+	label, qtype = ex.findLabels("", []string{"@"}, qTypes{dns.TypeSPF})
+	Spf := label.Records[dns.TypeSPF]
+	c.Check(Spf, HasLen, 1)
+	c.Check(Spf[0].RR.(*dns.SPF).Txt[0], Equals, "v=spf1 ~all")
 
 	label, qtype = ex.findLabels("foo", []string{"@"}, qTypes{dns.TypeTXT})
 	Txt := label.Records[dns.TypeTXT]
@@ -55,6 +64,33 @@ func (s *ConfigSuite) TestExampleComZone(c *C) {
 	c.Check(Txt, HasLen, 2)
 	c.Check(Txt[0].RR.(*dns.TXT).Txt[0], Equals, "w1000")
 	c.Check(Txt[1].RR.(*dns.TXT).Txt[0], Equals, "w1")
+
+	//verify empty labels are created
+	label, qtype = ex.findLabels("a.b.c", []string{"@"}, qTypes{dns.TypeA})
+	c.Check(label.Records[dns.TypeA], HasLen, 1)
+	c.Check(label.Records[dns.TypeA][0].RR.(*dns.A).A.String(), Equals, "192.168.1.7")
+
+	label, qtype = ex.findLabels("b.c", []string{"@"}, qTypes{dns.TypeA})
+	c.Check(label.Records[dns.TypeA], HasLen, 0)
+	c.Check(label.Label, Equals, "b.c")
+
+	label, qtype = ex.findLabels("c", []string{"@"}, qTypes{dns.TypeA})
+	c.Check(label.Records[dns.TypeA], HasLen, 0)
+	c.Check(label.Label, Equals, "c")
+
+	//verify label is created
+	label, qtype = ex.findLabels("three.two.one", []string{"@"}, qTypes{dns.TypeA})
+	c.Check(label.Records[dns.TypeA], HasLen, 1)
+	c.Check(label.Records[dns.TypeA][0].RR.(*dns.A).A.String(), Equals, "192.168.1.5")
+
+	label, qtype = ex.findLabels("two.one", []string{"@"}, qTypes{dns.TypeA})
+	c.Check(label.Records[dns.TypeA], HasLen, 0)
+	c.Check(label.Label, Equals, "two.one")
+
+	//verify label isn't overwritten
+	label, qtype = ex.findLabels("one", []string{"@"}, qTypes{dns.TypeA})
+	c.Check(label.Records[dns.TypeA], HasLen, 1)
+	c.Check(label.Records[dns.TypeA][0].RR.(*dns.A).A.String(), Equals, "192.168.1.6")
 }
 
 func (s *ConfigSuite) TestExampleOrgZone(c *C) {

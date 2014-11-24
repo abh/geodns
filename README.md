@@ -6,7 +6,8 @@ similar services. It supersedes the [pgeodns](http://github.com/abh/pgeodns) ser
 
 ## Installation
 
-If you already have go installed, just run `go get` to install the Go dependencies.
+If you already have go installed, just run `go get` to install the Go
+dependencies. GeoDNS requires Go 1.2 or later.
 
 You will also need the GeoIP C library, on RedHat derived systems
 that's `yum install geoip-devel`.
@@ -148,6 +149,7 @@ A record for users in Europe than anywhere else, use:
             "": {
                 "ns": [ "ns.example.net", "ns2.example.net" ],
                 "txt": "Example zone",
+                "spf": [ { "spf": "v=spf1 ~all", "weight": 1 } ],
                 "mx": { "mx": "mail.example.com", "preference": 10 }
             },
             "mail": { "a": [ ["192.168.0.1", 100], ["192.168.10.1", 50] ] },
@@ -230,7 +232,37 @@ Or with weights
 
     { "txt": "Some text", "weight": 10 }
 
+### SPF
+
+An SPF record is semantically identical to a TXT record with the exception that the label is set to 'spf'. An example of an spf record with weights:
+
+
+    { "spf": "v=spf1 ~all]", "weight": 1 }
+
+An spf record is typically at the root of a zone, and a label can have an array of SPF records, e.g
+
+      "spf": [ { "spf": "v=spf1 ~all", "weight": 1 } , "spf": "v=spf1 10.0.0.1", "weight": 100]
+
+### SRV
+
+An SRV record has four components: the weight, priority, port and target. The keys for these are "srv_weight", "priority", "target" and "port". Note the difference between srv_weight (the weight key for the SRV qtype) and "weight".
+
+An example srv record definition for the _sip._tcp service:
+
+    "_sip._tcp": {
+        "srv": [ { "port": 5060, "srv_weight": 100, "priority": 10, "target": "sipserver.example.com."} ]
+    },
+
+Much like MX records, SRV records can have multiple targets, eg:
+
+    "_http._tcp": {
+        "srv": [
+            { "port": 80, "srv_weight": 10, "priority": 10, "target": "www.example.com."},
+            { "port": 8080, "srv_weight": 10, "priority": 20, "target": "www2.example.com."}
+        ]
+    },
+
 ## License and Copyright
 
-This software is Copyright 2012-2013 Ask Bjørn Hansen. For licensing information
+This software is Copyright 2012-2014 Ask Bjørn Hansen. For licensing information
 please see the file called LICENSE.

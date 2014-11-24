@@ -1,8 +1,8 @@
 package main
 
 import (
-	. "launchpad.net/gocheck"
 	"net"
+	. "gopkg.in/check.v1"
 )
 
 type TargetingSuite struct {
@@ -29,17 +29,18 @@ func (s *TargetingSuite) TestTargetParse(c *C) {
 	c.Check(str, Equals, "@ country")
 	c.Check(err.Error(), Equals, "Unknown targeting option 'foo'")
 
-	tgt, err = parseTargets("@ continent country")
+	tgt, err = parseTargets("@ continent country asn")
 	c.Assert(err, IsNil)
 	str = tgt.String()
-	c.Check(str, Equals, "@ continent country")
+	c.Check(str, Equals, "@ continent country asn")
 }
-func (s *TargetingSuite) TestGetTargets(c *C) {
 
-	ip := net.ParseIP("207.171.7.51")
+func (s *TargetingSuite) TestGetTargets(c *C) {
+	ip := net.ParseIP("207.171.1.1")
 
 	geoIP.setupGeoIPCity()
 	geoIP.setupGeoIPCountry()
+	geoIP.setupGeoIPASN()
 
 	tgt, _ := parseTargets("@ continent country")
 	targets, _ := tgt.GetTargets(ip)
@@ -57,5 +58,14 @@ func (s *TargetingSuite) TestGetTargets(c *C) {
 	tgt, _ = parseTargets("@ continent regiongroup country region ")
 	targets, _ = tgt.GetTargets(ip)
 	c.Check(targets, DeepEquals, []string{"us-ca", "us-west", "us", "north-america", "@"})
+
+	tgt, _ = parseTargets("@ continent regiongroup country region asn ip")
+	targets, _ = tgt.GetTargets(ip)
+	c.Check(targets, DeepEquals, []string{"[207.171.1.1]", "[207.171.1.0]", "as7012", "us-ca", "us-west", "us", "north-america", "@"})
+
+	ip = net.ParseIP("2607:f238:2:0::ff:4")
+	tgt, _ = parseTargets("ip")
+	targets, _ = tgt.GetTargets(ip)
+	c.Check(targets, DeepEquals, []string{"[2607:f238:2::ff:4]", "[2607:f238:2::]"})
 
 }
