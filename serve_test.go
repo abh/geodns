@@ -192,6 +192,7 @@ func (s *ServeSuite) TestServingEDNS(c *C) {
 	c.Log("Testing www.test.example.com from .dk, should match www.europe (a cname)")
 
 	r = exchangeSubnet(c, "www.test.example.com.", dns.TypeA, "194.239.134.0")
+	// www.test from .dk IP address gets at least one answer
 	c.Check(r.Answer, HasLen, 1)
 	if len(r.Answer) > 0 {
 		// EDNS-SUBNET test (request A, respond CNAME)
