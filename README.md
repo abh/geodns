@@ -112,6 +112,8 @@ GeoDNS can post runtime data to [StatHat](http://www.stathat.com/).
 
 ## Country and continent lookups
 
+See zone targeting options below.
+
 ## Weighted records
 
 Most records can have a 'weight' assigned. If any records of a particular type
@@ -131,7 +133,11 @@ As an example, if you configure
 
 with `max_hosts` 2 then .4 will be returned about 4 times more often than .1.
 
-## Configuration format
+## Configuration file
+
+The geodns.conf file ...
+
+## Zone format
 
 In the configuration file the whole zone is a big hash (associative array). At the
 top level you can (optionally) set some options with the keys serial, ttl and max_hosts.
@@ -161,6 +167,25 @@ A record for users in Europe than anywhere else, use:
 The configuration files are automatically reloaded when they're updated. If a file
 can't be read (invalid JSON, for example) the previous configuration for that zone
 will be kept.
+
+## Zone options
+
+* serial
+
+* ttl
+
+* targeting
+
+* max_hosts
+
+## Zone targeting options
+
+@
+
+country
+continent
+
+region and regiongroup
 
 ## Supported record types
 
