@@ -69,11 +69,11 @@ func (g *geodbs) GetASN(ip net.IP) (asn string, netmask int) {
 		log.Println("No asn database available")
 		return
 	}
-	name, netmask := g.asn.db.GetName(ip.String())
-	if len(name) > 0 {
-		index := strings.Index(name, " ")
+	asn, netmask = g.asn.db.GetName(ip.String())
+	if len(asn) > 0 {
+		index := strings.Index(asn, " ")
 		if index > 0 {
-			asn = strings.ToLower(name[:index])
+			asn = strings.ToLower(asn[:index])
 		}
 	}
 	return
