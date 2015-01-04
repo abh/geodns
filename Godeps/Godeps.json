@@ -1,15 +1,10 @@
 {
 	"ImportPath": "github.com/abh/geodns",
-	"GoVersion": "go1.3.1",
+	"GoVersion": "go1.4",
 	"Deps": [
 		{
 			"ImportPath": "code.google.com/p/gcfg",
 			"Rev": "c2d3050044d05357eaf6c3547249ba57c5e235cb"
-		},
-		{
-			"ImportPath": "code.google.com/p/go.net/websocket",
-			"Comment": "null-163",
-			"Rev": "b39f3d42a398493ea477d6aa63ae43d818d1f78a"
 		},
 		{
 			"ImportPath": "github.com/abh/dns",
@@ -30,6 +25,10 @@
 		{
 			"ImportPath": "github.com/stathat/go",
 			"Rev": "01d012b9ee2ecc107cb28b6dd32d9019ed5c1d77"
+		},
+		{
+			"ImportPath": "golang.org/x/net/websocket",
+			"Rev": "cbcac7bb8415db9b6cb4d1ebab1dc9afbd688b97"
 		},
 		{
 			"ImportPath": "gopkg.in/check.v1",
