@@ -2,6 +2,8 @@ package main
 
 import (
 	"net"
+
+	"github.com/abh/geodns/geo"
 	. "gopkg.in/check.v1"
 )
 
@@ -38,18 +40,21 @@ func (s *TargetingSuite) TestTargetParse(c *C) {
 func (s *TargetingSuite) TestGetTargets(c *C) {
 	ip := net.ParseIP("207.171.1.1")
 
-	geoIP.setupGeoIPCity()
-	geoIP.setupGeoIPCountry()
-	geoIP.setupGeoIPASN()
+	if geoIP == nil {
+		geoIP = geo.New()
+	}
+
+	err := geoIP.SetupCity()
+	if err != nil {
+		c.Log("City GeoIP database requred for these tests")
+		return
+	}
+	geoIP.SetupCountry()
+	geoIP.SetupASN()
 
 	tgt, _ := parseTargets("@ continent country")
 	targets, _ := tgt.GetTargets(ip)
 	c.Check(targets, DeepEquals, []string{"us", "north-america", "@"})
-
-	if geoIP.city == nil {
-		c.Log("City GeoIP database requred for these tests")
-		return
-	}
 
 	tgt, _ = parseTargets("@ continent country region ")
 	targets, _ = tgt.GetTargets(ip)

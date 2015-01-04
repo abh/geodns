@@ -16,7 +16,14 @@ import (
 
 	"github.com/abh/dns"
 	"github.com/abh/errorutil"
+	"github.com/abh/geodns/geo"
 )
+
+var geoIP geo.Geotargeter
+
+func init() {
+	geoIP = geo.New()
+}
 
 // Zones maps domain names to zone data
 type Zones map[string]*Zone
@@ -205,14 +212,18 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 
 	//log.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
 
+	if len(Config.GeoIP.Directory) > 0 {
+		geoIP.SetDirectory(Config.GeoIP.Directory)
+	}
+
 	switch {
 	case zone.Options.Targeting >= TargetRegionGroup:
-		geoIP.setupGeoIPCity()
+		geoIP.SetupCity()
 	case zone.Options.Targeting >= TargetContinent:
-		geoIP.setupGeoIPCountry()
+		geoIP.SetupCountry()
 	}
 	if zone.Options.Targeting&TargetASN > 0 {
-		geoIP.setupGeoIPASN()
+		geoIP.SetupASN()
 	}
 
 	return zone, nil
