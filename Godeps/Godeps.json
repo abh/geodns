@@ -16,7 +16,7 @@
 		},
 		{
 			"ImportPath": "github.com/abh/geoip",
-			"Rev": "31328e916ea204913000d0089fb328ca037e4bc5"
+			"Rev": "c66ba539b77a3274ac8515f625a6af867dddf5b8"
 		},
 		{
 			"ImportPath": "github.com/rcrowley/go-metrics",
