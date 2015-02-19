@@ -501,7 +501,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		if strings.Contains(k, ".") {
 			subLabels := strings.Split(k, ".")
 			for i := 1; i < len(subLabels); i++ {
-				subSubLabel := strings.Join(subLabels[i:len(subLabels)], ".")
+				subSubLabel := strings.Join(subLabels[i:], ".")
 				if _, ok := Zone.Labels[subSubLabel]; !ok {
 					Zone.AddLabel(subSubLabel)
 				}
