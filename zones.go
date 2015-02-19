@@ -297,10 +297,11 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				record := new(Record)
 
 				var h dns.RR_Header
-				// log.Println("TTL OPTIONS", Zone.Options.Ttl)
-				h.Ttl = uint32(label.Ttl)
 				h.Class = dns.ClassINET
 				h.Rrtype = dnsType
+
+				// We add the TTL as a last pass because we might not have
+				// processed it yet when we process the record data.
 
 				switch len(label.Label) {
 				case 0:

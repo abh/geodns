@@ -61,7 +61,8 @@
       "alias": "www"
     },
     "www": {
-      "cname": "geo.bitnames.com."
+      "cname": "geo.bitnames.com.",
+      "ttl": 1800
     },
     "www.europe": {
       "cname": "geo-europe.bitnames.com."

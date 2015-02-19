@@ -77,6 +77,7 @@ func (s *ServeSuite) TestServing(c *C) {
 	// CNAMEs
 	r = exchange(c, "www.test.example.com.", dns.TypeA)
 	c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo.bitnames.com.")
+	c.Check(int(r.Answer[0].Header().Ttl), Equals, 1800)
 
 	//SPF
 	r = exchange(c, "test.example.com.", dns.TypeSPF)
