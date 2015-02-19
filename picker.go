@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/abh/dns"
 	"math/rand"
+
+	"github.com/abh/dns"
 )
 
 func (label *Label) Picker(qtype uint16, max int) Records {

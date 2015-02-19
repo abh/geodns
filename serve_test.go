@@ -62,6 +62,7 @@ func (s *ServeSuite) TestServing(c *C) {
 	r = exchange(c, "bar.test.example.com.", dns.TypeA)
 	ip := r.Answer[0].(*dns.A).A
 	c.Check(ip.String(), Equals, "192.168.1.2")
+	c.Check(int(r.Answer[0].Header().Ttl), Equals, 601)
 
 	r = exchange(c, "test.example.com.", dns.TypeSOA)
 	soa := r.Answer[0].(*dns.SOA)
