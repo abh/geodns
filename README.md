@@ -135,12 +135,17 @@ with `max_hosts` 2 then .4 will be returned about 4 times more often than .1.
 
 ## Configuration file
 
-The geodns.conf file ...
+The geodns.conf file allows you to specify a specific directory for the GeoIP
+data files and enable posting metrics to StatHat. See the `geodns.conf.sample`
+file for example configuration.
+
+Most of the configuration is "per zone" and done in the zone .json files.
 
 ## Zone format
 
-In the configuration file the whole zone is a big hash (associative array). At the
-top level you can (optionally) set some options with the keys serial, ttl and max_hosts.
+In the zone configuration file the whole zone is a big hash (associative array).
+At the top level you can (optionally) set some options with the keys serial,
+ttl and max_hosts.
 
 The actual zone data (dns records) is in a hash under the key "data". The keys
 in the hash are hostnames and the value for each hostname is yet another hash
@@ -172,11 +177,23 @@ will be kept.
 
 * serial
 
+GeoDNS doesn't support zone transfers (AXFR), so the serial number is only used
+for debugging and monitoring. The default is the 'last modified' timestamp of
+the zone file.
+
 * ttl
+
+Set the default TTL for the zone (default 120).
 
 * targeting
 
 * max_hosts
+
+
+
+* contact
+
+Set the soa 'contact' field (default is "hostmaster.$domain").
 
 ## Zone targeting options
 
