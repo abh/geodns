@@ -159,7 +159,6 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 		//log.Printf("k: %s v: %#v, T: %T\n", k, v, v)
 
 		switch k {
-
 		case "ttl":
 			zone.Options.Ttl = valueToInt(v)
 		case "serial":
@@ -219,7 +218,6 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 }
 
 func setupZoneData(data map[string]interface{}, Zone *Zone) {
-
 	recordTypes := map[string]uint16{
 		"a":     dns.TypeA,
 		"aaaa":  dns.TypeAAAA,
@@ -233,7 +231,6 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 	}
 
 	for dk, dv_inter := range data {
-
 		dv := dv_inter.(map[string]interface{})
 
 		//log.Printf("K %s V %s TYPE-V %T\n", dk, dv, dv)
@@ -241,7 +238,6 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		label := Zone.AddLabel(dk)
 
 		for rType, rdata := range dv {
-
 			switch rType {
 			case "max_hosts":
 				label.MaxHosts = valueToInt(rdata)
@@ -291,7 +287,6 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 			label.Records[dnsType] = make(Records, len(records[rType]))
 
 			for i := 0; i < len(records[rType]); i++ {
-
 				//log.Printf("RT %T %#v\n", records[rType][i], records[rType][i])
 
 				record := new(Record)
@@ -524,14 +519,13 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 }
 
 func getStringWeight(rec []interface{}) (string, int) {
-
 	str := rec[0].(string)
 	var weight int
-	var err error
 
 	if len(rec) > 1 {
 		switch rec[1].(type) {
 		case string:
+			var err error
 			weight, err = strconv.Atoi(rec[1].(string))
 			if err != nil {
 				panic("Error converting weight to integer")

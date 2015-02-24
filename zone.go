@@ -126,9 +126,7 @@ func (z *Zone) SoaRR() dns.RR {
 // first available qType at each targeting level. Return a Label
 // and the qtype that was "found"
 func (z *Zone) findLabels(s string, targets []string, qts qTypes) (*Label, uint16) {
-
 	for _, target := range targets {
-
 		var name string
 
 		switch target {
@@ -143,9 +141,8 @@ func (z *Zone) findLabels(s string, targets []string, qts qTypes) (*Label, uint1
 		}
 
 		if label, ok := z.Labels[name]; ok {
-
+			var name string
 			for _, qtype := range qts {
-
 				switch qtype {
 				case dns.TypeANY:
 					// short-circuit mostly to avoid subtle bugs later
