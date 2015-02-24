@@ -73,7 +73,7 @@ func NewZone(name string) *Zone {
 	// defaults
 	zone.Options.Ttl = 120
 	zone.Options.MaxHosts = 2
-	zone.Options.Contact = "support.bitnames.com"
+	zone.Options.Contact = "hostmaster." + name
 	zone.Options.Targeting = TargetGlobal + TargetCountry + TargetContinent
 
 	return zone
