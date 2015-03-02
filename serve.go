@@ -148,7 +148,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		var rrs []dns.RR
 		for _, record := range servers {
 			rr := record.RR
-			if rr.Header().Rrtype != qtype && qtype != dns.TypeA {
+			if rr.Header().Rrtype != qtype && qtype != dns.TypeA && qtype != dns.TypeANY {
 				rrs = rrs[:0]
 				break
 			}
