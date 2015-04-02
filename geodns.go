@@ -23,6 +23,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"bufio"
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
@@ -50,6 +51,7 @@ var (
 	flaghttp        = flag.String("http", ":8053", "http listen address (:8053)")
 	flaglog         = flag.Bool("log", false, "be more verbose")
 	flagcpus        = flag.Int("cpus", 1, "Set the maximum number of CPUs to use")
+	flaglogfile     = flag.String("logfile", "", "write output to a log file instead of stderr")
 
 	flagShowVersion = flag.Bool("version", false, "Show dnsconfig version")
 
@@ -68,6 +70,18 @@ func init() {
 
 func main() {
 	flag.Parse()
+
+	if *flaglogfile != "" {
+		f, err := os.OpenFile(*flaglogfile, os.O_WRONLY | os.O_APPEND | os.O_CREATE, 0644)
+		if err != nil {
+			log.Println("Errors reading config", err)
+			os.Exit(2)
+		}
+		defer f.Close()
+		fbuff := bufio.NewWriter(f)
+		defer fbuff.Flush()
+		log.SetOutput(fbuff)
+	}
 
 	if *memprofile != "" {
 		runtime.MemProfileRate = 1024
