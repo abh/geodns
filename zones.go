@@ -60,7 +60,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 			if ok {
 				log.Printf("Reloading %s\n", fileName)
 			} else {
-				logPrintf("Reading new file %s\n", fileName)
+				logDebugf("Reading new file %s\n", fileName)
 			}
 
 			//log.Println("FILE:", i, file, zoneName)

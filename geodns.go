@@ -49,7 +49,7 @@ var (
 	flaginter       = flag.String("interface", "*", "set the listener address")
 	flagport        = flag.String("port", "53", "default port number")
 	flaghttp        = flag.String("http", ":8053", "http listen address (:8053)")
-	flaglog         = flag.Bool("log", false, "be more verbose")
+	flaglog         = flag.Bool("log", false, "more verbose: write debug data to log")
 	flagcpus        = flag.Int("cpus", 1, "Set the maximum number of CPUs to use")
 	flaglogfile     = flag.String("logfile", "", "write output to a log file instead of stderr")
 
@@ -74,7 +74,7 @@ func main() {
 	if *flaglogfile != "" {
 		f, err := os.OpenFile(*flaglogfile, os.O_WRONLY | os.O_APPEND | os.O_CREATE, 0644)
 		if err != nil {
-			log.Println("Errors reading config", err)
+			logError("Error appending to log file", err)
 			os.Exit(2)
 		}
 		defer f.Close()
@@ -107,7 +107,7 @@ func main() {
 
 		err := configReader(configFileName)
 		if err != nil {
-			log.Println("Errors reading config", err)
+			logError("Errors reading config", err)
 			os.Exit(2)
 		}
 
@@ -115,7 +115,7 @@ func main() {
 		setupPgeodnsZone(Zones)
 		err = zonesReadDir(dirName, Zones)
 		if err != nil {
-			log.Println("Errors reading zones", err)
+			logError("Errors reading zones", err)
 			os.Exit(2)
 		}
 		return

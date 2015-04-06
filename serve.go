@@ -24,7 +24,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	qtype := req.Question[0].Qtype
 
-	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
+	logDebugf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
 		dns.TypeToString[qtype], req.MsgHdr.Id, w.RemoteAddr())
 
 	// Global meter
@@ -33,7 +33,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	// Zone meter
 	z.Metrics.Queries.Mark(1)
 
-	logPrintln("Got request", req)
+	logDebug("Got request", req)
 
 	label := getQuestionName(z, req)
 
@@ -58,7 +58,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 					// do stuff with e.Nsid
 				case *dns.EDNS0_SUBNET:
 					z.Metrics.EdnsQueries.Mark(1)
-					logPrintln("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
+					logDebug("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
 					if e.Address != nil {
 						edns = e
 						ip = e.Address
@@ -108,6 +108,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 				m.Ns = append(m.Ns, z.SoaRR())
 			}
 			m.Authoritative = true
+			logDebug("response:", m)
 			w.WriteMsg(m)
 			return
 		}
@@ -134,6 +135,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			}
 
 			m.Authoritative = true
+			logDebug("response:", m)
 			w.WriteMsg(m)
 			return
 		}
@@ -144,6 +146,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 		m.Ns = []dns.RR{z.SoaRR()}
 
+		logDebug("response:", m)
 		w.WriteMsg(m)
 		return
 	}
@@ -162,12 +165,12 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		m.Ns = append(m.Ns, z.SoaRR())
 	}
 
-	logPrintln(m)
+	logDebug("response:", m)
 
 	err := w.WriteMsg(m)
 	if err != nil {
 		// if Pack'ing fails the Write fails. Return SERVFAIL.
-		log.Println("Error writing packet", m)
+		logError(fmt.Sprintf("SERVFAIL; Error writing packet %v", m), err)
 		dns.HandleFailed(w, req)
 	}
 	return

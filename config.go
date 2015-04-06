@@ -54,7 +54,7 @@ func configWatcher(fileName string) {
 				}
 			}
 		case err := <-watcher.Errors:
-			log.Println("fsnotify error:", err)
+			logError("fsnotify error:", err)
 		}
 	}
 
@@ -66,7 +66,7 @@ func configReader(fileName string) error {
 
 	stat, err := os.Stat(fileName)
 	if err != nil {
-		log.Printf("Failed to find config file: %s\n", err)
+		logError("Failed to find config file", err)
 		return err
 	}
 
@@ -82,7 +82,7 @@ func configReader(fileName string) error {
 
 	err = gcfg.ReadFileInto(cfg, fileName)
 	if err != nil {
-		log.Printf("Failed to parse config data: %s\n", err)
+		logError("Failed to parse config data", err)
 		return err
 	}
 

@@ -95,7 +95,7 @@ func (g *GeoIP) setupGeoIPCountry() {
 
 	gi, err := geoip.OpenType(geoip.GEOIP_COUNTRY_EDITION)
 	if gi == nil || err != nil {
-		log.Printf("Could not open country GeoIP database: %s\n", err)
+		logError("Could not open country GeoIP database", err)
 		return
 	}
 	g.countryLastLoad = time.Now()
@@ -113,7 +113,7 @@ func (g *GeoIP) setupGeoIPCity() {
 
 	gi, err := geoip.OpenType(geoip.GEOIP_CITY_EDITION_REV1)
 	if gi == nil || err != nil {
-		log.Printf("Could not open city GeoIP database: %s\n", err)
+		logError("Could not open city GeoIP database", err)
 		return
 	}
 	g.cityLastLoad = time.Now()
@@ -131,7 +131,7 @@ func (g *GeoIP) setupGeoIPASN() {
 
 	gi, err := geoip.OpenType(geoip.GEOIP_ASNUM_EDITION)
 	if gi == nil || err != nil {
-		log.Printf("Could not open ASN GeoIP database: %s\n", err)
+		logError("Could not open ASN GeoIP database", err)
 		return
 	}
 	g.asnLastLoad = time.Now()
