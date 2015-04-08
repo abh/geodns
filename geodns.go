@@ -17,13 +17,13 @@ package main
 */
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"os/signal"
-	"bufio"
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
@@ -72,7 +72,7 @@ func main() {
 	flag.Parse()
 
 	if *flaglogfile != "" {
-		f, err := os.OpenFile(*flaglogfile, os.O_WRONLY | os.O_APPEND | os.O_CREATE, 0644)
+		f, err := os.OpenFile(*flaglogfile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
 			logError("Error appending to log file", err)
 			os.Exit(2)
@@ -152,6 +152,7 @@ func main() {
 	go metrics.Updater()
 
 	go statHatPoster()
+	go StatsDPoster()
 
 	if *flaginter == "*" {
 		addrs, _ := net.InterfaceAddrs()
@@ -175,6 +176,7 @@ func main() {
 
 	go monitor(Zones)
 	go Zones.statHatPoster()
+	go Zones.StatsDPoster()
 
 	setupPgeodnsZone(Zones)
 

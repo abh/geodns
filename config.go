@@ -20,6 +20,11 @@ type AppConfig struct {
 	GeoIP struct {
 		Directory string
 	}
+	StatsD struct {
+		Host string
+		Port int
+		IntervalInSeconds int
+	}
 }
 
 var Config = new(AppConfig)

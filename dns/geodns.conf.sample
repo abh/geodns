@@ -10,3 +10,8 @@
 [stathat]
 ;; Add an API key to send query counts and other metrics to stathat
 ;apikey=abc123
+
+[statsd]
+;host=localhost
+;port=8125
+;intervalinseconds=60
