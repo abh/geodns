@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/abh/dns"
+	"github.com/miekg/dns"
 	"log"
 	"net"
 	"os"

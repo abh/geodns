@@ -14,7 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"time"
-	"github.com/abh/dns"
+	"github.com/miekg/dns"
 	"github.com/gorilla/mux"
 )
 

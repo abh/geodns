@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/abh/dns"
+	"github.com/miekg/dns"
 	"github.com/abh/go-metrics"
 	"strings"
 	"time"

@@ -40,6 +40,7 @@ func CountryRegionGroup(country, region string) string {
 		"us-tx": "us-central",
 		"us-wi": "us-central",
 
+		"us-ae": "us-east",
 		"us-al": "us-east",
 		"us-ct": "us-east",
 		"us-dc": "us-east",
