@@ -35,6 +35,10 @@ var VERSION string = "2.4.4"
 var buildTime string
 var gitVersion string
 
+// Set development with the 'devel' build flag to load
+// templates from disk instead of from the binary.
+var development bool
+
 var serverID string
 var serverIP string
 var serverGroups []string

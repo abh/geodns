@@ -1,5 +1,7 @@
 package main
 
+//go:generate esc -o templates.go templates/
+
 import (
 	"encoding/json"
 	"fmt"
@@ -281,13 +283,13 @@ func StatusServer(zones Zones) func(http.ResponseWriter, *http.Request) {
 			}
 		}
 
-		statusTemplate, err := templates_status_html()
+		statusTemplate, err := FSString(development, "/templates/status.html")
 		if err != nil {
-			log.Println("Could not read template", err)
+			log.Println("Could not read template:", err)
 			w.WriteHeader(500)
 			return
 		}
-		tmpl, err := template.New("status_html").Parse(string(statusTemplate))
+		tmpl, err := template.New("status_html").Parse(statusTemplate)
 
 		if err != nil {
 			str := fmt.Sprintf("Could not parse template: %s", err)
