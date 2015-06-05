@@ -108,6 +108,14 @@ func setupPgeodnsZone(zones Zones) {
 	addHandler(zones, zoneName, Zone)
 }
 
+func setupRootZone() {
+	dns.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {
+		m := new(dns.Msg)
+		m.SetRcode(r, dns.RcodeRefused)
+		w.WriteMsg(m)
+	})
+}
+
 func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 	defer func() {
 		if r := recover(); r != nil {

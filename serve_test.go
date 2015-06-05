@@ -26,6 +26,7 @@ func (s *ServeSuite) SetUpSuite(c *C) {
 
 	Zones := make(Zones)
 	setupPgeodnsZone(Zones)
+	setupRootZone()
 	zonesReadDir("dns", Zones)
 
 	go listenAndServe(PORT)
@@ -157,7 +158,11 @@ func (s *ServeSuite) TestCname(c *C) {
 
 	// Two possible results from this cname
 	c.Check(results, HasLen, 2)
+}
 
+func (s *ServeSuite) TestUnknownDomain(c *C) {
+	r := exchange(c, "no.such.domain.", dns.TypeAAAA)
+	c.Assert(r.Rcode, Equals, dns.RcodeRefused)
 }
 
 func (s *ServeSuite) TestServingAliases(c *C) {

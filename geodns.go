@@ -162,6 +162,7 @@ func main() {
 	go monitor(Zones)
 	go Zones.statHatPoster()
 
+	setupRootZone()
 	setupPgeodnsZone(Zones)
 
 	dirName := *flagconfig
