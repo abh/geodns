@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abh/dns"
+	"github.com/miekg/dns"
 	. "gopkg.in/check.v1"
 )
 

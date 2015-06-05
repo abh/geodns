@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abh/dns"
 	"github.com/abh/errorutil"
+	"github.com/miekg/dns"
 )
 
 // Zones maps domain names to zone data

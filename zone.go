@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abh/dns"
+	"github.com/miekg/dns"
 	"github.com/rcrowley/go-metrics"
 )
 
