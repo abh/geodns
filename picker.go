@@ -3,7 +3,7 @@ package main
 import (
 	"math/rand"
 
-	"github.com/miekg/dns"
+	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 )
 
 func (label *Label) Picker(qtype uint16, max int) Records {

@@ -1,0 +1,29 @@
+#!/usr/bin/env perl
+use strict;
+use v5.12.0;
+use LWP::Simple qw(mirror);
+use File::Basename qw(basename);
+
+my @files = qw(
+  http://geolite.maxmind.com/download/geoip/database/GeoLiteCountry/GeoIP.dat.gz
+  http://geolite.maxmind.com/download/geoip/database/GeoIPv6.dat.gz
+  http://geolite.maxmind.com/download/geoip/database/GeoLiteCity.dat.gz
+  http://geolite.maxmind.com/download/geoip/database/GeoLiteCityv6-beta/GeoLiteCityv6.dat.gz
+  http://download.maxmind.com/download/geoip/database/asnum/GeoIPASNum.dat.gz
+  http://download.maxmind.com/download/geoip/database/asnum/GeoIPASNumv6.dat.gz
+);
+
+for my $url (@files) {
+    my $file       = basename($url);
+    my ($dat_name) = ($file =~ m/(.*)\.gz/);
+    my $rv         = mirror($url, $file);
+    if ($rv == 200) {
+        system("gzip -cd $file > $dat_name");
+    }
+    elsif ($rv == 304) {
+        # already updated
+    }
+    else {
+        say "$url:", $rv;
+    }
+}

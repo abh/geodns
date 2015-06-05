@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/miekg/dns"
-	"github.com/rcrowley/go-metrics"
+	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
+	"github.com/abh/geodns/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
 )
 
 type ZoneOptions struct {

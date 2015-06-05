@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rcrowley/go-metrics"
-	"github.com/stathat/go"
+	"github.com/abh/geodns/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
+	"github.com/abh/geodns/Godeps/_workspace/src/github.com/stathat/go"
 )
 
 func (zs *Zones) statHatPoster() {

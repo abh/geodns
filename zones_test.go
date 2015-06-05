@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/miekg/dns"
-	. "gopkg.in/check.v1"
+	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
+	. "github.com/abh/geodns/Godeps/_workspace/src/gopkg.in/check.v1"
 )
 
 // Hook up gocheck into the gotest runner.

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	. "gopkg.in/check.v1"
+	. "github.com/abh/geodns/Godeps/_workspace/src/gopkg.in/check.v1"
 	"io/ioutil"
 	"net/http"
 	"strings"
