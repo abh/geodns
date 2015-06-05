@@ -1,7 +1,7 @@
 package main
 
 /*
-   Copyright 2012-2014 Ask Bjørn Hansen
+   Copyright 2012-2015 Ask Bjørn Hansen
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import (
 )
 
 // VERSION is the current version of GeoDNS
-var VERSION string = "2.4.4"
+var VERSION string = "2.5.0"
 var buildTime string
 var gitVersion string
 

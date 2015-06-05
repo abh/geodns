@@ -1,34 +1,49 @@
 # GeoDNS Changelog
 
-## 2.4.4
+## 2.5.0 June 5, 2015
+
+* Add resolver ASN and IP targeting (Ewan Chou)
+* Support for SPF records (Afsheen Bigdeli)
+* Support weighted CNAME responses
+* Add /48 subnet targeting for IPv6 ip targeting
+* Don't log metrics to stderr anymore
+* Make TTLs set on individual labels work
+* Return NOERROR for "bar" if "foo.bar" exists (Geoffrey Papilion)
+* Add Illinois to the us-central region group
+* Add benchmark tests (Miek Gieben)
+* Improve documentation
+* Use godep to track code dependencies
+* Don't add a '.' prefix on the record header on apex records
+
+## 2.4.4 October 3, 2013
 
 * Fix parsing of 'targeting' option
 * Add server id and ip to _country responses for easier debugging.
 
-## 2.4.3
+## 2.4.3 October 1, 2013
 
 * Fix GeoIP custom directory bug (in geoip library)
 
-## 2.4.2
+## 2.4.2 September 20, 2013
 
 * Update EDNS-SUBNET option number (in dns library)
 
-## 2.4.1
+## 2.4.1 July 24, 2013
 
 * Update dns API to use new CountLabel and SplitDomainName functions
 * Add test for mIXed-caSE queries (fix was in dns library)
 
-## 2.4.0
+## 2.4.0 June 26, 2013
 
 * Add per-zone targeting configuration
 * Support targeting by region/state with GeoIPCity
 * Don't send backlogged zone counts to stathat when support is enabled
 
-## 2.3.0, May 7th 2013
+## 2.3.0 May 7, 2013
 * Fix edns-client-subnet bug in dns library so it
   works with OpenDNS
 
-## 2.2.8, April 28th 2013
+## 2.2.8 April 28, 2013
 * Support per-zone stats posted to StatHat
 * Support TXT records
 * Don't return NXDOMAIN for A queries to _status and _country
@@ -37,7 +52,7 @@
 * Warn about unknown record types in zone json files
 * Add -version option
 
-## 2.2.7, April 16th 2013
+## 2.2.7 April 16, 2013
 * Count EDNS queries per zone, pretty status page
   * Status page has various per-zone stats
   * Show global query stats, etc
@@ -47,12 +62,12 @@
 * Use numbers instead of strings when appropriate in websocket stream
 * Various refactoring and bug-fixes
 
-## 2.2.6, April 9th 2013
+## 2.2.6 April 9, 2013
 
 * Begin more detailed /status page
 * Make SOA record look more "normal" (cosmetic change only)
 
-## 2.2.5, April 7th 2013
+## 2.2.5 April 7, 2013
 
 * Add StatHat feature
 * Improve error handling for bad zone files
@@ -61,7 +76,7 @@
 * service script: Load identifier from env/ID if it exists
 * Work with latest geoip; use netmask from GeoIP in EDNS-SUBNET replies
 
-## 2.2.4, March 5th 2013
+## 2.2.4 March 5, 2013
 
 * Add licensing information
 * De-configure zones when the .json file is removed
@@ -69,7 +84,7 @@
 * Add -identifier command line option
 * Various tweaks
 
-## 2.2.3, March 1st 2013
+## 2.2.3 March 1, 2013
 
 * Always log when zones are re-read
 * Remove one of the runtime.GC() calls when configs are loaded
@@ -77,11 +92,11 @@
 * Cleanup unused Zones variable in a few places
 * Log when server was started to websocket /monitor interface
 
-## 2.2.2, February 27th 2013
+## 2.2.2 February 27, 2013
 
 * Fix crash when getting unknown RRs in Extra request section
 
-## 2.2.1, February 2013
+## 2.2.1 February 2013
 
 * Beta EDNS-SUBNET support.
 * Allow A/AAAA records without a weight
@@ -91,7 +106,7 @@
 * More tests
 
 
-## 2.2.0, December 2012
+## 2.2.0 December 2012
 
 * Initial EDNS-SUBNET support.
 * Better error messages when parsing invalid JSON.
