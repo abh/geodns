@@ -12,7 +12,7 @@
 		},
 		{
 			"ImportPath": "github.com/abh/geoip",
-			"Rev": "917745c7ac5c2f92c815ed169cc1680474700951"
+			"Rev": "e5f8ea00f476d60a1e539d74211ce24881347d9e"
 		},
 		{
 			"ImportPath": "github.com/miekg/dns",
@@ -20,7 +20,7 @@
 		},
 		{
 			"ImportPath": "github.com/rcrowley/go-metrics",
-			"Rev": "a5cfc242a56ba7fa70b785f678d6214837bf93b9"
+			"Rev": "3e5e593311103d49927c8d2b0fd93ccdfe4a525c"
 		},
 		{
 			"ImportPath": "github.com/stathat/go",
@@ -28,11 +28,11 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/websocket",
-			"Rev": "e562cdb856bcf26549c3d024ec9c8a3d9493fe91"
+			"Rev": "1bc0720082d79ce7ffc6ef6e523d00d46b0dee45"
 		},
 		{
 			"ImportPath": "gopkg.in/check.v1",
-			"Rev": "64131543e7896d5bcc6bd5a76287eb75ea96c673"
+			"Rev": "11d3bc7aa68e238947792f30573146a3231fc0f1"
 		},
 		{
 			"ImportPath": "gopkg.in/fsnotify.v1",

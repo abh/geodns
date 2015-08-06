@@ -2,8 +2,7 @@
 package geoip
 
 /*
-#cgo CFLAGS: -I/opt/local/include -I/usr/local/include -I/usr/include
-#cgo LDFLAGS: -lGeoIP -L/opt/local/lib -L/usr/local/lib -L/usr/lib
+#cgo pkg-config: geoip  
 #include <stdio.h>
 #include <errno.h>
 #include <GeoIP.h>
