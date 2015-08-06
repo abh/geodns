@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/abh/geodns",
-	"GoVersion": "go1.4",
+	"GoVersion": "go1.4.2",
 	"Deps": [
 		{
 			"ImportPath": "code.google.com/p/gcfg",
@@ -16,7 +16,7 @@
 		},
 		{
 			"ImportPath": "github.com/miekg/dns",
-			"Rev": "bb1103f648f811d2018d4bedcb2d4b2bce34a0f1"
+			"Rev": "8fdd5c33f834fe1c16ede39b38a6bc822d32d07f"
 		},
 		{
 			"ImportPath": "github.com/rcrowley/go-metrics",
