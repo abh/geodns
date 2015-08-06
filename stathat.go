@@ -23,10 +23,8 @@ func (zs *Zones) statHatPoster() {
 	lastEdnsCounts := map[string]int64{}
 
 	for name, zone := range *zs {
-		if zone.Logging.StatHat == true {
-			lastCounts[name] = zone.Metrics.Queries.Count()
-			lastEdnsCounts[name] = zone.Metrics.EdnsQueries.Count()
-		}
+		lastCounts[name] = zone.Metrics.Queries.Count()
+		lastEdnsCounts[name] = zone.Metrics.EdnsQueries.Count()
 	}
 
 	for {
