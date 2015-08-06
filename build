@@ -5,5 +5,4 @@ BUILDTIME=`TZ=UTC date "+%Y-%m-%dT%H:%MZ"`
 echo $REVISION > REVISION
 go build \
   -ldflags "-X main.gitVersion $REVISION -X main.buildTime $BUILDTIME" \
-  -v && \
-go install
+  -v
