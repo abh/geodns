@@ -2,16 +2,14 @@ package main
 
 import (
 	"sort"
+	"sync"
 )
 
 type zoneLabelStats struct {
 	pos     int
 	rotated bool
 	log     []string
-	in      chan string
-	out     chan []string
-	reset   chan bool
-	close   chan bool
+	mu      sync.Mutex
 }
 
 type labelStats []labelStat
@@ -30,48 +28,31 @@ type labelStat struct {
 
 func NewZoneLabelStats(size int) *zoneLabelStats {
 	zs := &zoneLabelStats{
-		log:   make([]string, size),
-		in:    make(chan string, 100),
-		out:   make(chan []string),
-		reset: make(chan bool),
-		close: make(chan bool),
+		log: make([]string, size),
 	}
-	go zs.receiver()
 	return zs
 }
 
-func (zs *zoneLabelStats) receiver() {
-
-	for {
-		select {
-		case new := <-zs.in:
-			zs.add(new)
-		case zs.out <- zs.log:
-		case <-zs.reset:
-			zs.pos = 0
-			zs.log = make([]string, len(zs.log))
-			zs.rotated = false
-		case <-zs.close:
-			close(zs.in)
-			return
-		}
-	}
-
-}
-
 func (zs *zoneLabelStats) Close() {
-	zs.close <- true
+	zs.log = []string{}
 }
 
 func (zs *zoneLabelStats) Reset() {
-	zs.reset <- true
+	zs.mu.Lock()
+	defer zs.mu.Unlock()
+	zs.pos = 0
+	zs.log = make([]string, len(zs.log))
+	zs.rotated = false
 }
 
 func (zs *zoneLabelStats) Add(l string) {
-	zs.in <- l
+	zs.add(l)
 }
 
 func (zs *zoneLabelStats) add(l string) {
+	zs.mu.Lock()
+	defer zs.mu.Unlock()
+
 	zs.log[zs.pos] = l
 	zs.pos++
 	if zs.pos+1 > len(zs.log) {
@@ -100,10 +81,11 @@ func (zs *zoneLabelStats) TopCounts(n int) labelStats {
 }
 
 func (zs *zoneLabelStats) Counts() map[string]int {
-	log := (<-zs.out)
+	zs.mu.Lock()
+	defer zs.mu.Unlock()
 
 	counts := make(map[string]int)
-	for i, l := range log {
+	for i, l := range zs.log {
 		if zs.rotated == false && i >= zs.pos {
 			break
 		}

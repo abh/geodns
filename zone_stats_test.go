@@ -23,7 +23,7 @@ func (s *ZoneStatsSuite) TestZoneStats(c *C) {
 	c.Check(co["foo"], Equals, 1)
 	zs.Add("foo")
 	co = zs.Counts()
-	//	close
+
 	c.Check(co["abc"], Equals, 1)
 	c.Check(co["foo"], Equals, 2)
 	zs.Close()
