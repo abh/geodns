@@ -3,6 +3,7 @@ package main
 import (
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
@@ -206,6 +207,18 @@ func (s *ServeSuite) TestServingEDNS(c *C) {
 		c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo-europe.bitnames.com.")
 	}
 
+}
+
+func (s *ServeSuite) TestServeRace(c *C) {
+	wg := sync.WaitGroup{}
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			s.TestServing(c)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
 
 func (s *ServeSuite) BenchmarkServing(c *C) {
