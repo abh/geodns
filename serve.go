@@ -151,7 +151,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	if servers := labels.Picker(labelQtype, labels.MaxHosts); servers != nil {
 		var rrs []dns.RR
 		for _, record := range servers {
-			rr := record.RR
+			rr := dns.Copy(record.RR)
 			rr.Header().Name = req.Question[0].Name
 			rrs = append(rrs, rr)
 		}
