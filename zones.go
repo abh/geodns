@@ -57,7 +57,9 @@ func zonesReadDir(dirName string, zones Zones) error {
 
 	for _, file := range dir {
 		fileName := file.Name()
-		if !strings.HasSuffix(strings.ToLower(fileName), ".json") {
+		if !strings.HasSuffix(strings.ToLower(fileName), ".json") ||
+			strings.HasPrefix(path.Base(fileName), ".") ||
+			file.IsDir() {
 			continue
 		}
 
