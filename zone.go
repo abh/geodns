@@ -93,8 +93,12 @@ func (z *Zone) SetupMetrics(old *Zone) {
 func (z *Zone) Close() {
 	metrics.Unregister(z.Origin + " queries")
 	metrics.Unregister(z.Origin + " EDNS queries")
-	z.Metrics.LabelStats.Close()
-	z.Metrics.ClientStats.Close()
+	if z.Metrics.LabelStats != nil {
+		z.Metrics.LabelStats.Close()
+	}
+	if z.Metrics.ClientStats != nil {
+		z.Metrics.ClientStats.Close()
+	}
 }
 
 func (l *Label) firstRR(dnsType uint16) dns.RR {
