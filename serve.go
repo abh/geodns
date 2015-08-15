@@ -72,7 +72,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		ip = net.ParseIP(realIp)
 	}
 
-	targets, netmask := z.Options.Targeting.GetTargets(ip)
+	targets, netmask, location := z.Options.Targeting.GetTargets(ip, z.HasClosest)
 
 	m := new(dns.Msg)
 	m.SetReply(req)
@@ -122,9 +122,14 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 					ip.String(),
 				}
 
-				targets, netmask := z.Options.Targeting.GetTargets(ip)
+				targets, netmask, location := z.Options.Targeting.GetTargets(ip, z.HasClosest)
 				txt = append(txt, strings.Join(targets, " "))
 				txt = append(txt, fmt.Sprintf("/%d", netmask), serverID, serverIP)
+				if location != nil {
+					txt = append(txt, fmt.Sprintf("(%.3f,%.3f)", location.latitude, location.longitude))
+				} else {
+					txt = append(txt, "(?,?)")
+				}
 
 				m.Answer = []dns.RR{&dns.TXT{Hdr: h,
 					Txt: txt,
@@ -148,7 +153,11 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		return
 	}
 
-	if servers := labels.Picker(labelQtype, labels.MaxHosts); servers != nil {
+	if !labels.Closest {
+		location = nil
+	}
+
+	if servers := labels.Picker(labelQtype, labels.MaxHosts, location); servers != nil {
 		var rrs []dns.RR
 		for _, record := range servers {
 			rr := dns.Copy(record.RR)

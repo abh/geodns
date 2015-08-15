@@ -13,6 +13,7 @@ type ZoneOptions struct {
 	MaxHosts  int
 	Contact   string
 	Targeting TargetOptions
+	Closest   bool
 }
 
 type ZoneLogging struct {
@@ -23,6 +24,7 @@ type ZoneLogging struct {
 type Record struct {
 	RR     dns.RR
 	Weight int
+	Loc    *Location
 }
 
 type Records []Record
@@ -40,6 +42,7 @@ type Label struct {
 	Ttl      int
 	Records  map[uint16]Records
 	Weight   map[uint16]int
+	Closest  bool
 }
 
 type labels map[string]*Label
@@ -58,6 +61,7 @@ type Zone struct {
 	Options    ZoneOptions
 	Logging    *ZoneLogging
 	Metrics    ZoneMetrics
+	HasClosest bool
 }
 
 type qTypes []uint16
@@ -119,6 +123,7 @@ func (z *Zone) AddLabel(k string) *Label {
 	label.Label = k
 	label.Ttl = z.Options.Ttl
 	label.MaxHosts = z.Options.MaxHosts
+	label.Closest = z.Options.Closest
 
 	label.Records = make(map[uint16]Records)
 	label.Weight = make(map[uint16]int)
@@ -175,4 +180,28 @@ func (z *Zone) findLabels(s string, targets []string, qts qTypes) (*Label, uint1
 	}
 
 	return z.Labels[s], 0
+}
+
+// Find the locations of all the A records within a zone. If we were being really clever
+// here we could use LOC records too. But for the time being we'll just use GeoIP
+
+func (z *Zone) SetLocations() {
+	qtypes := []uint16{dns.TypeA}
+	for _, label := range z.Labels {
+		if label.Closest {
+			for _, qtype := range qtypes {
+				if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
+					for i := range label.Records[qtype] {
+						label.Records[qtype][i].Loc = nil
+						rr := label.Records[qtype][i].RR
+						if a, ok := rr.(*dns.A); ok {
+							ip := a.A
+							_, _, _, _, _, location := geoIP.GetCountryRegion(ip)
+							label.Records[qtype][i].Loc = location
+						}
+					}
+				}
+			}
+		}
+	}
 }
