@@ -214,6 +214,11 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 			zone.Options.Contact = v.(string)
 		case "max_hosts":
 			zone.Options.MaxHosts = valueToInt(v)
+		case "closest":
+			zone.Options.Closest = v.(bool)
+			if zone.Options.Closest {
+				zone.HasClosest = true
+			}
 		case "targeting":
 			zone.Options.Targeting, err = parseTargets(v.(string))
 			if err != nil {
@@ -252,13 +257,17 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 	//log.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
 
 	switch {
-	case zone.Options.Targeting >= TargetRegionGroup:
+	case zone.Options.Targeting >= TargetRegionGroup || zone.HasClosest:
 		geoIP.setupGeoIPCity()
 	case zone.Options.Targeting >= TargetContinent:
 		geoIP.setupGeoIPCountry()
 	}
 	if zone.Options.Targeting&TargetASN > 0 {
 		geoIP.setupGeoIPASN()
+	}
+
+	if zone.HasClosest {
+		zone.SetLocations()
 	}
 
 	return zone, nil
@@ -288,6 +297,12 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 			switch rType {
 			case "max_hosts":
 				label.MaxHosts = valueToInt(rdata)
+				continue
+			case "closest":
+				label.Closest = rdata.(bool)
+				if label.Closest {
+					Zone.HasClosest = true
+				}
 				continue
 			case "ttl":
 				label.Ttl = valueToInt(rdata)

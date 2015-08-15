@@ -3,7 +3,9 @@ package main
 import (
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/abh/geoip"
 	"github.com/abh/geodns/countries"
+	"github.com/golang/geo/s2"
 	"log"
+	"math"
 	"net"
 	"strings"
 	"time"
@@ -23,6 +25,27 @@ type GeoIP struct {
 	asnLastLoad time.Time
 }
 
+const MAX_DISTANCE = 360
+
+type Location struct {
+	latitude  float64
+	longitude float64
+}
+
+func (l *Location) MaxDistance() float64 {
+	return MAX_DISTANCE
+}
+
+func (l *Location) Distance(to *Location) float64 {
+	if to == nil {
+		return MAX_DISTANCE
+	}
+	ll1 := s2.LatLngFromDegrees(l.latitude, l.longitude)
+	ll2 := s2.LatLngFromDegrees(to.latitude, to.longitude)
+	angle := ll1.Distance(ll2)
+	return math.Abs(angle.Degrees())
+}
+
 var geoIP = new(GeoIP)
 
 func (g *GeoIP) GetCountry(ip net.IP) (country, continent string, netmask int) {
@@ -38,7 +61,7 @@ func (g *GeoIP) GetCountry(ip net.IP) (country, continent string, netmask int) {
 	return
 }
 
-func (g *GeoIP) GetCountryRegion(ip net.IP) (country, continent, regionGroup, region string, netmask int) {
+func (g *GeoIP) GetCountryRegion(ip net.IP) (country, continent, regionGroup, region string, netmask int, location *Location) {
 	if g.city == nil {
 		log.Println("No city database available")
 		country, continent, netmask = g.GetCountry(ip)
@@ -49,6 +72,8 @@ func (g *GeoIP) GetCountryRegion(ip net.IP) (country, continent, regionGroup, re
 	if record == nil {
 		return
 	}
+
+	location = &Location{float64(record.Latitude), float64(record.Longitude)}
 
 	country = record.CountryCode
 	region = record.Region

@@ -24,20 +24,19 @@ func init() {
 	cidr48Mask = net.CIDRMask(48, 128)
 }
 
-func (t TargetOptions) GetTargets(ip net.IP) ([]string, int) {
+func (t TargetOptions) GetTargets(ip net.IP, hasClosest bool) ([]string, int, *Location) {
 
 	targets := make([]string, 0)
 
 	var country, continent, region, regionGroup, asn string
 	var netmask int
+	var location *Location
 
 	if t&TargetASN > 0 {
 		asn, netmask = geoIP.GetASN(ip)
 	}
-
-	if t&TargetRegion > 0 || t&TargetRegionGroup > 0 {
-		country, continent, regionGroup, region, netmask = geoIP.GetCountryRegion(ip)
-
+	if t&TargetRegion > 0 || t&TargetRegionGroup > 0 || hasClosest {
+		country, continent, regionGroup, region, netmask, location = geoIP.GetCountryRegion(ip)
 	} else if t&TargetCountry > 0 || t&TargetContinent > 0 {
 		country, continent, netmask = geoIP.GetCountry(ip)
 	}
@@ -80,7 +79,7 @@ func (t TargetOptions) GetTargets(ip net.IP) ([]string, int) {
 	if t&TargetGlobal > 0 {
 		targets = append(targets, "@")
 	}
-	return targets, netmask
+	return targets, netmask, location
 }
 
 func (t TargetOptions) String() string {
