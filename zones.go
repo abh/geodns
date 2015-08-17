@@ -39,8 +39,16 @@ func zonesReader(dirName string, zones Zones) {
 
 func addHandler(zones Zones, name string, config *Zone) {
 	oldZone := zones[name]
+	// across the recconfiguration keep a reference to all healthchecks to ensure
+	// the global map doesn't get destroyed
+	healthTestRunner.refAllGlobalHealthChecks(name, true)
+	defer healthTestRunner.refAllGlobalHealthChecks(name, false)
+	if oldZone != nil {
+		oldZone.StartStopHealthChecks(false, nil)
+	}
 	config.SetupMetrics(oldZone)
 	zones[name] = config
+	config.StartStopHealthChecks(true, oldZone)
 	dns.HandleFunc(name, setupServerFunc(config))
 }
 
@@ -306,6 +314,9 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				continue
 			case "ttl":
 				label.Ttl = valueToInt(rdata)
+				continue
+			case "test":
+				Zone.newHealthTest(label, rdata)
 				continue
 			}
 
