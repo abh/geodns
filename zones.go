@@ -32,8 +32,12 @@ func zonesReader(dirName string, zones Zones) {
 
 func addHandler(zones Zones, name string, config *Zone) {
 	oldZone := zones[name]
+	if oldZone != nil {
+		oldZone.StartStopHealthChecks(false, nil)
+	}
 	config.SetupMetrics(oldZone)
 	zones[name] = config
+	config.StartStopHealthChecks(true, oldZone)
 	dns.HandleFunc(name, setupServerFunc(config))
 }
 
@@ -268,6 +272,9 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				continue
 			case "ttl":
 				label.Ttl = valueToInt(rdata)
+				continue
+			case "test":
+				Zone.newHealthTest(label, rdata)
 				continue
 			}
 

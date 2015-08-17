@@ -25,6 +25,7 @@ type Record struct {
 	RR     dns.RR
 	Weight int
 	Loc    *Location
+	Test   *HealthTest
 }
 
 type Records []Record
@@ -43,6 +44,7 @@ type Label struct {
 	Records  map[uint16]Records
 	Weight   map[uint16]int
 	Closest  bool
+	Test     *HealthTest
 }
 
 type labels map[string]*Label
@@ -102,6 +104,7 @@ func (z *Zone) SetupMetrics(old *Zone) {
 }
 
 func (z *Zone) Close() {
+	z.StartStopHealthChecks(false, nil)
 	metrics.Unregister(z.Origin + " queries")
 	metrics.Unregister(z.Origin + " EDNS queries")
 	if z.Metrics.LabelStats != nil {

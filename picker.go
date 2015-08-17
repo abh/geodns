@@ -26,20 +26,34 @@ func (label *Label) Picker(qtype uint16, max int, location *Location) Records {
 
 	if labelRR := label.Records[qtype]; labelRR != nil {
 
-		// not "balanced", just return all
-		if label.Weight[qtype] == 0 {
-			return labelRR
-		}
-
-		rrCount := len(labelRR)
-		if max > rrCount {
-			max = rrCount
-		}
+		sum := label.Weight[qtype]
 
 		servers := make([]Record, len(labelRR))
 		copy(servers, labelRR)
+
+		if label.Test != nil {
+			// Remove any unhealthy servers
+			tmpServers := servers[:0]
+			sum = 0
+			for i, s := range servers {
+				if servers[i].Test == nil || servers[i].Test.isHealthy() {
+					tmpServers = append(tmpServers, s)
+					sum += s.Weight
+				}
+			}
+			servers = tmpServers
+		}
+
+		// not "balanced", just return all
+		if label.Weight[qtype] == 0 {
+			return servers
+		}
+
+		rrCount := len(servers)
+		if max > rrCount {
+			max = rrCount
+		}
 		result := make([]Record, max)
-		sum := label.Weight[qtype]
 
 		// Find the distance to each server, and find the servers that are
 		// closer to the querier than the max'th furthest server, or within
