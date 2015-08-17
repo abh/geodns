@@ -25,6 +25,16 @@ type AppConfig struct {
 		User     string
 		Password string
 	}
+	Nodeping struct {
+		Token string
+	}
+	Pingdom struct {
+		Username     string
+		Password     string
+		AccountEmail string
+		AppKey       string
+		StateMap     string
+	}
 }
 
 var Config = new(AppConfig)
