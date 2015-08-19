@@ -80,12 +80,19 @@ func NewZone(name string) *Zone {
 func (z *Zone) SetupMetrics(old *Zone) {
 	if old != nil {
 		z.Metrics = old.Metrics
-	} else {
+	}
+	if z.Metrics.Queries == nil {
 		z.Metrics.Queries = metrics.NewMeter()
-		z.Metrics.EdnsQueries = metrics.NewMeter()
 		metrics.Register(z.Origin+" queries", z.Metrics.Queries)
+	}
+	if z.Metrics.EdnsQueries == nil {
+		z.Metrics.EdnsQueries = metrics.NewMeter()
 		metrics.Register(z.Origin+" EDNS queries", z.Metrics.EdnsQueries)
+	}
+	if z.Metrics.LabelStats == nil {
 		z.Metrics.LabelStats = NewZoneLabelStats(10000)
+	}
+	if z.Metrics.ClientStats == nil {
 		z.Metrics.ClientStats = NewZoneLabelStats(10000)
 	}
 }
