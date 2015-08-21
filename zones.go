@@ -58,7 +58,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 
 		if zone, ok := zones[zoneName]; !ok || file.ModTime().After(zone.LastRead) {
 			if ok {
-				log.Printf("Reloading %s\n", fileName)
+				logPrintf("Reloading %s\n", fileName)
 			} else {
 				logPrintf("Reading new file %s\n", fileName)
 			}
@@ -66,13 +66,8 @@ func zonesReadDir(dirName string, zones Zones) error {
 			//log.Println("FILE:", i, file, zoneName)
 			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
 			if config == nil || err != nil {
-				log.Println("Caught an error", err)
-				if config == nil {
-					config = new(Zone)
-				}
-				config.LastRead = file.ModTime()
-				zones[zoneName] = config
-				parseErr = err
+				parseErr = fmt.Errorf("Error reading zone '%s': %s", zoneName, err)
+				log.Println(parseErr.Error())
 				continue
 			}
 			config.LastRead = file.ModTime()

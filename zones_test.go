@@ -88,11 +88,18 @@ func (s *ConfigSuite) TestRemoveConfig(c *C) {
 		c.Fail()
 	}
 
+	err = ioutil.WriteFile(dir+"/invalid.example.org.json", []byte("not-json"), 0644)
+	if err != nil {
+		c.Log(err)
+		c.Fail()
+	}
+
 	zonesReadDir(dir, s.zones)
 	c.Check(s.zones["test.example.org"].Origin, Equals, "test.example.org")
 	c.Check(s.zones["test2.example.org"].Origin, Equals, "test2.example.org")
 
 	os.Remove(dir + "/test2.example.org.json")
+	os.Remove(dir + "/invalid.example.org.json")
 
 	zonesReadDir(dir, s.zones)
 	c.Check(s.zones["test.example.org"].Origin, Equals, "test.example.org")
