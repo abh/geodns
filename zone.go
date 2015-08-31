@@ -2,7 +2,6 @@ package main
 
 import (
 	"strings"
-	"time"
 
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
@@ -58,7 +57,6 @@ type Zone struct {
 	LabelCount int
 	Options    ZoneOptions
 	Logging    *ZoneLogging
-	LastRead   time.Time
 	Metrics    ZoneMetrics
 }
 

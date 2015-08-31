@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 	. "github.com/abh/geodns/Godeps/_workspace/src/gopkg.in/check.v1"
@@ -21,6 +22,7 @@ var _ = Suite(&ConfigSuite{})
 
 func (s *ConfigSuite) SetUpSuite(c *C) {
 	s.zones = make(Zones)
+	lastRead = map[string]time.Time{}
 	zonesReadDir("dns", s.zones)
 }
 
