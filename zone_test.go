@@ -6,7 +6,10 @@ import (
 )
 
 func (s *ConfigSuite) TestExampleComZone(c *C) {
-	ex := s.zones["test.example.com"]
+	ex, ok := s.zones["test.example.com"]
+
+	c.Check(ok, Equals, true)
+	c.Check(ex, NotNil)
 
 	// test.example.com was loaded
 	c.Assert(ex.Labels, NotNil)
