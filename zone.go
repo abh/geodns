@@ -2,7 +2,6 @@ package main
 
 import (
 	"strings"
-	"time"
 
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
@@ -58,7 +57,6 @@ type Zone struct {
 	LabelCount int
 	Options    ZoneOptions
 	Logging    *ZoneLogging
-	LastRead   time.Time
 	Metrics    ZoneMetrics
 }
 
@@ -82,12 +80,19 @@ func NewZone(name string) *Zone {
 func (z *Zone) SetupMetrics(old *Zone) {
 	if old != nil {
 		z.Metrics = old.Metrics
-	} else {
+	}
+	if z.Metrics.Queries == nil {
 		z.Metrics.Queries = metrics.NewMeter()
-		z.Metrics.EdnsQueries = metrics.NewMeter()
 		metrics.Register(z.Origin+" queries", z.Metrics.Queries)
+	}
+	if z.Metrics.EdnsQueries == nil {
+		z.Metrics.EdnsQueries = metrics.NewMeter()
 		metrics.Register(z.Origin+" EDNS queries", z.Metrics.EdnsQueries)
+	}
+	if z.Metrics.LabelStats == nil {
 		z.Metrics.LabelStats = NewZoneLabelStats(10000)
+	}
+	if z.Metrics.ClientStats == nil {
 		z.Metrics.ClientStats = NewZoneLabelStats(10000)
 	}
 }
@@ -95,8 +100,12 @@ func (z *Zone) SetupMetrics(old *Zone) {
 func (z *Zone) Close() {
 	metrics.Unregister(z.Origin + " queries")
 	metrics.Unregister(z.Origin + " EDNS queries")
-	z.Metrics.LabelStats.Close()
-	z.Metrics.ClientStats.Close()
+	if z.Metrics.LabelStats != nil {
+		z.Metrics.LabelStats.Close()
+	}
+	if z.Metrics.ClientStats != nil {
+		z.Metrics.ClientStats.Close()
+	}
 }
 
 func (l *Label) firstRR(dnsType uint16) dns.RR {

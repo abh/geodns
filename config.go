@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/abh/geodns/Godeps/_workspace/src/code.google.com/p/gcfg"
@@ -23,6 +24,25 @@ type AppConfig struct {
 }
 
 var Config = new(AppConfig)
+var cfgMutex sync.RWMutex
+
+func (conf *AppConfig) HasStatHat() bool {
+	cfgMutex.RLock()
+	defer cfgMutex.RUnlock()
+	return conf.Flags.HasStatHat
+}
+
+func (conf *AppConfig) StatHatApiKey() string {
+	cfgMutex.RLock()
+	defer cfgMutex.RUnlock()
+	return conf.StatHat.ApiKey
+}
+
+func (conf *AppConfig) GeoIPDirectory() string {
+	cfgMutex.RLock()
+	defer cfgMutex.RUnlock()
+	return conf.GeoIP.Directory
+}
 
 func configWatcher(fileName string) {
 
@@ -91,7 +111,9 @@ func configReader(fileName string) error {
 	// log.Println("STATHAT APIKEY:", cfg.StatHat.ApiKey)
 	// log.Println("STATHAT FLAG  :", cfg.Flags.HasStatHat)
 
-	Config = cfg
+	cfgMutex.Lock()
+	*Config = *cfg // shallow copy to prevent race conditions in referring to Config.foo()
+	cfgMutex.Unlock()
 
 	return nil
 }

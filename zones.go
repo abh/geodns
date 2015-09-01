@@ -21,6 +21,8 @@ import (
 // Zones maps domain names to zone data
 type Zones map[string]*Zone
 
+var lastRead = map[string]time.Time{}
+
 func zonesReader(dirName string, zones Zones) {
 	for {
 		zonesReadDir(dirName, zones)
@@ -48,7 +50,9 @@ func zonesReadDir(dirName string, zones Zones) error {
 
 	for _, file := range dir {
 		fileName := file.Name()
-		if !strings.HasSuffix(strings.ToLower(fileName), ".json") {
+		if !strings.HasSuffix(strings.ToLower(fileName), ".json") ||
+			strings.HasPrefix(path.Base(fileName), ".") ||
+			file.IsDir() {
 			continue
 		}
 
@@ -56,12 +60,14 @@ func zonesReadDir(dirName string, zones Zones) error {
 
 		seenZones[zoneName] = true
 
-		if zone, ok := zones[zoneName]; !ok || file.ModTime().After(zone.LastRead) {
+		if _, ok := lastRead[zoneName]; !ok || file.ModTime().After(lastRead[zoneName]) {
 			if ok {
 				logPrintf("Reloading %s\n", fileName)
 			} else {
 				logPrintf("Reading new file %s\n", fileName)
 			}
+
+			lastRead[zoneName] = file.ModTime()
 
 			//log.Println("FILE:", i, file, zoneName)
 			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
@@ -70,7 +76,6 @@ func zonesReadDir(dirName string, zones Zones) error {
 				log.Println(parseErr.Error())
 				continue
 			}
-			config.LastRead = file.ModTime()
 
 			addHandler(zones, zoneName, config)
 		}
@@ -84,6 +89,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 			continue
 		}
 		log.Println("Removing zone", zone.Origin)
+		delete(lastRead, zoneName)
 		zone.Close()
 		dns.HandleRemove(zoneName)
 		delete(zones, zoneName)
