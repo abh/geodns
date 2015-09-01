@@ -141,8 +141,6 @@ func main() {
 	metrics := NewMetrics()
 	go metrics.Updater()
 
-	go statHatPoster()
-
 	if *flaginter == "*" {
 		addrs, _ := net.InterfaceAddrs()
 		ips := make([]string, 0)
@@ -160,6 +158,8 @@ func main() {
 	}
 
 	inter := getInterfaces()
+
+	go statHatPoster()
 
 	Zones := make(Zones)
 
