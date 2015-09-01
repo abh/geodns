@@ -2,7 +2,6 @@ package main
 
 import (
 	"strings"
-	"time"
 
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
@@ -58,7 +57,6 @@ type Zone struct {
 	LabelCount int
 	Options    ZoneOptions
 	Logging    *ZoneLogging
-	LastRead   time.Time
 	Metrics    ZoneMetrics
 }
 
@@ -95,8 +93,12 @@ func (z *Zone) SetupMetrics(old *Zone) {
 func (z *Zone) Close() {
 	metrics.Unregister(z.Origin + " queries")
 	metrics.Unregister(z.Origin + " EDNS queries")
-	z.Metrics.LabelStats.Close()
-	z.Metrics.ClientStats.Close()
+	if z.Metrics.LabelStats != nil {
+		z.Metrics.LabelStats.Close()
+	}
+	if z.Metrics.ClientStats != nil {
+		z.Metrics.ClientStats.Close()
+	}
 }
 
 func (l *Label) firstRR(dnsType uint16) dns.RR {

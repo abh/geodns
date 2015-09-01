@@ -81,8 +81,9 @@ func (g *GeoIP) GetASN(ip net.IP) (asn string, netmask int) {
 }
 
 func (g *GeoIP) setDirectory() {
-	if len(Config.GeoIP.Directory) > 0 {
-		geoip.SetCustomDirectory(Config.GeoIP.Directory)
+	directory := Config.GeoIPDirectory()
+	if len(directory) > 0 {
+		geoip.SetCustomDirectory(directory)
 	}
 }
 
