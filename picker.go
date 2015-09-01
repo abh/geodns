@@ -36,7 +36,7 @@ func (label *Label) Picker(qtype uint16, max int, location *Location) Records {
 			tmpServers := servers[:0]
 			sum = 0
 			for i, s := range servers {
-				if servers[i].Test == nil || servers[i].Test.isHealthy() {
+				if servers[i].Test == nil || healthTestRunner.isHealthy(servers[i].Test) {
 					tmpServers = append(tmpServers, s)
 					sum += s.Weight
 				}

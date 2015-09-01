@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 	"math/rand"
 	"net"
@@ -15,6 +16,7 @@ var (
 
 type HealthTester interface {
 	Test(ht *HealthTest) bool
+	String() string
 }
 
 type TcpHealthTester struct {
@@ -41,6 +43,20 @@ type HealthTest struct {
 	closing      chan chan error
 	health       chan bool
 	tester       *HealthTester
+}
+
+type HealthTestRunnerEntry struct {
+	HealthTest
+	references map[string]bool
+}
+
+type HealthTestRunner struct {
+	entries    map[string]HealthTestRunnerEntry
+	entryMutex sync.RWMutex
+}
+
+var healthTestRunner = &HealthTestRunner{
+	entries: make(map[string]HealthTestRunnerEntry),
 }
 
 func defaultHealthTestParameters() HealthTestParameters {
@@ -73,6 +89,11 @@ func newHealthTest(ipAddress net.IP, htp HealthTestParameters, tester *HealthTes
 	return &ht
 }
 
+// Format the health test as a string - used to compare two tests and as an index for the hash
+func (ht *HealthTest) String() string {
+	return fmt.Sprintf("%s/%v/%b/%T/%s", ht.ipAddress.String(), ht.HealthTestParameters, ht.healthy, ht.tester, (*ht.tester).String())
+}
+
 // safe copy function that copies the parameters but not (e.g.) the
 // mutex
 func (ht *HealthTest) copy(ipAddress net.IP) *HealthTest {
@@ -93,11 +114,13 @@ func (ht *HealthTest) run() {
 			pollDelay = nextPoll.Sub(now)
 		}
 		var startPoll <-chan time.Time
+		var closingPoll <-chan chan error
 		if pollStart.IsZero() {
+			closingPoll = ht.closing
 			startPoll = time.After(pollDelay)
 		}
 		select {
-		case errc := <-ht.closing:
+		case errc := <-closingPoll: // don't close while we are polling or we send to a closed channel
 			errc <- nil
 			return
 		case <-startPoll:
@@ -171,6 +194,55 @@ func (ht *HealthTest) setHealthy(h bool) {
 	}
 }
 
+func (htr *HealthTestRunner) addTest(ht *HealthTest, ref string) {
+	key := ht.String()
+	htr.entryMutex.Lock()
+	defer htr.entryMutex.Unlock()
+	if t, ok := htr.entries[key]; ok {
+		// we already have an instance of this test running. Record we are using it
+		t.references[ref] = true
+	} else {
+		// a test that isn't running. Record we are using it and start the test
+		t := HealthTestRunnerEntry{
+			HealthTest: *ht.copy(ht.ipAddress),
+			references: make(map[string]bool),
+		}
+		// we know it is not started, so no need for the mutex
+		t.healthy = ht.healthy
+		t.references[ref] = true
+		t.start()
+		htr.entries[key] = t
+	}
+}
+
+func (htr *HealthTestRunner) removeTest(ht *HealthTest, ref string) {
+	key := ht.String()
+	htr.entryMutex.Lock()
+	defer htr.entryMutex.Unlock()
+	if t, ok := htr.entries[key]; ok {
+		delete(t.references, ref)
+		// record the last state of health
+		ht.healthyMutex.Lock()
+		ht.healthy = t.isHealthy()
+		ht.healthyMutex.Unlock()
+		if len(t.references) == 0 {
+			// no more references, delete the test
+			t.stop()
+			delete(htr.entries, key)
+		}
+	}
+}
+
+func (htr *HealthTestRunner) isHealthy(ht *HealthTest) bool {
+	key := ht.String()
+	htr.entryMutex.RLock()
+	defer htr.entryMutex.RUnlock()
+	if t, ok := htr.entries[key]; ok {
+		return t.isHealthy()
+	}
+	return ht.isHealthy()
+}
+
 func (t TcpHealthTester) Test(ht *HealthTest) bool {
 	if conn, err := net.DialTimeout("tcp", net.JoinHostPort(ht.ipAddress.String(), strconv.Itoa(t.port)), ht.timeout); err != nil {
 		return false
@@ -178,6 +250,10 @@ func (t TcpHealthTester) Test(ht *HealthTest) bool {
 		conn.Close()
 	}
 	return true
+}
+
+func (t TcpHealthTester) String() string {
+	return fmt.Sprintf("%d", t.port)
 }
 
 func (t NtpHealthTester) Test(ht *HealthTest) bool {
@@ -215,6 +291,10 @@ func (t NtpHealthTester) Test(ht *HealthTest) bool {
 	}
 
 	return true
+}
+
+func (t NtpHealthTester) String() string {
+	return fmt.Sprintf("%d", t.maxStratum)
 }
 
 func (z *Zone) newHealthTest(l *Label, data interface{}) {
@@ -286,10 +366,11 @@ func (z *Zone) StartStopHealthChecks(start bool, oldZone *Zone) {
 						continue
 					}
 					var test *HealthTest
+					ref := fmt.Sprintf("%s/%s/%d/%d", z.Origin, labelName, qtype, i)
 					if start {
 						if test = label.Records[qtype][i].Test; test != nil {
 							// stop any old test
-							test.stop()
+							healthTestRunner.removeTest(test, ref)
 						} else {
 							if ltest := label.Test; ltest != nil {
 								test = ltest.copy(ip)
@@ -331,11 +412,11 @@ func (z *Zone) StartStopHealthChecks(start bool, oldZone *Zone) {
 									}
 								}
 							}
-							test.start()
+							healthTestRunner.addTest(test, ref)
 						}
 					} else {
 						if test = label.Records[qtype][i].Test; test != nil {
-							test.stop()
+							healthTestRunner.removeTest(test, ref)
 						}
 					}
 				}
