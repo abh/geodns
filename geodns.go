@@ -54,6 +54,7 @@ var (
 	flaghttp        = flag.String("http", ":8053", "http listen address (:8053)")
 	flaglog         = flag.Bool("log", false, "be more verbose")
 	flagcpus        = flag.Int("cpus", 1, "Set the maximum number of CPUs to use")
+	flagLogFile     = flag.String("logfile", "", "log to file")
 
 	flagShowVersion = flag.Bool("version", false, "Show dnsconfig version")
 
@@ -80,6 +81,10 @@ func main() {
 	if *flagShowVersion {
 		fmt.Println("geodns", VERSION, buildTime)
 		os.Exit(0)
+	}
+
+	if len(*flagLogFile) > 0 {
+		logToFileOpen(*flagLogFile)
 	}
 
 	if len(*flagidentifier) > 0 {
@@ -190,5 +195,5 @@ func main() {
 		pprof.WriteHeapProfile(f)
 		f.Close()
 	}
-
+	logToFileClose()
 }
