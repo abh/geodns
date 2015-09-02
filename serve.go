@@ -72,7 +72,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		ip = net.ParseIP(realIp)
 	}
 
-	targets, netmask := z.Options.Targeting.GetTargets(ip)
+	targets, netmask, location := z.Options.Targeting.GetTargets(ip, z.HasClosest)
 
 	m := new(dns.Msg)
 	m.SetReply(req)
@@ -112,6 +112,20 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			return
 		}
 
+		if firstLabel == "_health" {
+			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
+				baseLabel := strings.Join((strings.Split(label, "."))[1:], ".")
+				m.Answer = z.healthRR(label+"."+z.Origin+".", baseLabel)
+				m.Authoritative = true
+				w.WriteMsg(m)
+				return
+			}
+			m.Ns = append(m.Ns, z.SoaRR())
+			m.Authoritative = true
+			w.WriteMsg(m)
+			return
+		}
+
 		if firstLabel == "_country" {
 			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
 				h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
@@ -122,9 +136,14 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 					ip.String(),
 				}
 
-				targets, netmask := z.Options.Targeting.GetTargets(ip)
+				targets, netmask, location := z.Options.Targeting.GetTargets(ip, z.HasClosest)
 				txt = append(txt, strings.Join(targets, " "))
 				txt = append(txt, fmt.Sprintf("/%d", netmask), serverID, serverIP)
+				if location != nil {
+					txt = append(txt, fmt.Sprintf("(%.3f,%.3f)", location.latitude, location.longitude))
+				} else {
+					txt = append(txt, "(?,?)")
+				}
 
 				m.Answer = []dns.RR{&dns.TXT{Hdr: h,
 					Txt: txt,
@@ -148,7 +167,11 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		return
 	}
 
-	if servers := labels.Picker(labelQtype, labels.MaxHosts); servers != nil {
+	if !labels.Closest {
+		location = nil
+	}
+
+	if servers := labels.Picker(labelQtype, labels.MaxHosts, location); servers != nil {
 		var rrs []dns.RR
 		for _, record := range servers {
 			rr := dns.Copy(record.RR)
@@ -190,6 +213,31 @@ func statusRR(label string) []dns.RR {
 	status["qps1"] = fmt.Sprintf("%.4f", qCounter.Rate1())
 
 	js, err := json.Marshal(status)
+
+	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
+}
+
+func (z *Zone) healthRR(label string, baseLabel string) []dns.RR {
+	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
+	h.Name = label
+
+	health := make(map[string]map[string]bool)
+
+	if l, ok := z.Labels[baseLabel]; ok {
+		for qt, records := range l.Records {
+			if qts, ok := dns.TypeToString[qt]; ok {
+				hmap := make(map[string]bool)
+				for _, record := range records {
+					if record.Test != nil {
+						hmap[(*record.Test).ipAddress.String()] = (*record.Test).isHealthy()
+					}
+				}
+				health[qts] = hmap
+			}
+		}
+	}
+
+	js, _ := json.Marshal(health)
 
 	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
 }

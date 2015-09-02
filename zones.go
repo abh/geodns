@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -21,6 +23,13 @@ import (
 // Zones maps domain names to zone data
 type Zones map[string]*Zone
 
+type ZoneReadRecord struct {
+	time time.Time
+	hash string
+}
+
+var lastRead = map[string]*ZoneReadRecord{}
+
 func zonesReader(dirName string, zones Zones) {
 	for {
 		zonesReadDir(dirName, zones)
@@ -30,8 +39,12 @@ func zonesReader(dirName string, zones Zones) {
 
 func addHandler(zones Zones, name string, config *Zone) {
 	oldZone := zones[name]
+	if oldZone != nil {
+		oldZone.StartStopHealthChecks(false, nil)
+	}
 	config.SetupMetrics(oldZone)
 	zones[name] = config
+	config.StartStopHealthChecks(true, oldZone)
 	dns.HandleFunc(name, setupServerFunc(config))
 }
 
@@ -48,7 +61,9 @@ func zonesReadDir(dirName string, zones Zones) error {
 
 	for _, file := range dir {
 		fileName := file.Name()
-		if !strings.HasSuffix(strings.ToLower(fileName), ".json") {
+		if !strings.HasSuffix(strings.ToLower(fileName), ".json") ||
+			strings.HasPrefix(path.Base(fileName), ".") ||
+			file.IsDir() {
 			continue
 		}
 
@@ -56,21 +71,53 @@ func zonesReadDir(dirName string, zones Zones) error {
 
 		seenZones[zoneName] = true
 
-		if zone, ok := zones[zoneName]; !ok || file.ModTime().After(zone.LastRead) {
+		if _, ok := lastRead[zoneName]; !ok || file.ModTime().After(lastRead[zoneName].time) {
+			modTime := file.ModTime()
 			if ok {
 				logPrintf("Reloading %s\n", fileName)
+				lastRead[zoneName].time = modTime
 			} else {
 				logPrintf("Reading new file %s\n", fileName)
+				lastRead[zoneName] = &ZoneReadRecord{time: modTime}
 			}
 
-			//log.Println("FILE:", i, file, zoneName)
-			config, err := readZoneFile(zoneName, path.Join(dirName, fileName))
+			filename := path.Join(dirName, fileName)
+
+			// Check the sha256 of the file has not changed. It's worth an explanation of
+			// why there isn't a TOCTOU race here. Conceivably after checking whether the
+			// SHA has changed, the contents then change again before we actually load
+			// the JSON. This can occur in two situations:
+			//
+			// 1. The SHA has not changed when we read the file for the SHA, but then
+			//    changes before we process the JSON
+			//
+			// 2. The SHA has changed when we read the file for the SHA, but then changes
+			//    again before we process the JSON
+			//
+			// In circumstance (1) we won't reread the file the first time, but the subsequent
+			// change should alter the mtime again, causing us to reread it. This reflects
+			// the fact there were actually two changes.
+			//
+			// In circumstance (2) we have already reread the file once, and then when the
+			// contents are changed the mtime changes again
+			//
+			// Provided files are replaced atomically, this should be OK. If files are not
+			// replaced atomically we have other problems (e.g. partial reads).
+
+			sha256 := sha256File(filename)
+			if lastRead[zoneName].hash == sha256 {
+				logPrintf("Skipping new file %s as hash is unchanged\n", filename)
+				continue
+			}
+
+			config, err := readZoneFile(zoneName, filename)
 			if config == nil || err != nil {
 				parseErr = fmt.Errorf("Error reading zone '%s': %s", zoneName, err)
 				log.Println(parseErr.Error())
 				continue
 			}
-			config.LastRead = file.ModTime()
+
+			(lastRead[zoneName]).hash = sha256
 
 			addHandler(zones, zoneName, config)
 		}
@@ -84,6 +131,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 			continue
 		}
 		log.Println("Removing zone", zone.Origin)
+		delete(lastRead, zoneName)
 		zone.Close()
 		dns.HandleRemove(zoneName)
 		delete(zones, zoneName)
@@ -170,6 +218,11 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 			zone.Options.Contact = v.(string)
 		case "max_hosts":
 			zone.Options.MaxHosts = valueToInt(v)
+		case "closest":
+			zone.Options.Closest = v.(bool)
+			if zone.Options.Closest {
+				zone.HasClosest = true
+			}
 		case "targeting":
 			zone.Options.Targeting, err = parseTargets(v.(string))
 			if err != nil {
@@ -208,13 +261,17 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 	//log.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
 
 	switch {
-	case zone.Options.Targeting >= TargetRegionGroup:
+	case zone.Options.Targeting >= TargetRegionGroup || zone.HasClosest:
 		geoIP.setupGeoIPCity()
 	case zone.Options.Targeting >= TargetContinent:
 		geoIP.setupGeoIPCountry()
 	}
 	if zone.Options.Targeting&TargetASN > 0 {
 		geoIP.setupGeoIPASN()
+	}
+
+	if zone.HasClosest {
+		zone.SetLocations()
 	}
 
 	return zone, nil
@@ -245,8 +302,17 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 			case "max_hosts":
 				label.MaxHosts = valueToInt(rdata)
 				continue
+			case "closest":
+				label.Closest = rdata.(bool)
+				if label.Closest {
+					Zone.HasClosest = true
+				}
+				continue
 			case "ttl":
 				label.Ttl = valueToInt(rdata)
+				continue
+			case "test":
+				Zone.newHealthTest(label, rdata)
 				continue
 			}
 
@@ -645,4 +711,14 @@ func valueToInt(v interface{}) (rv int) {
 
 func zoneNameFromFile(fileName string) string {
 	return fileName[0:strings.LastIndex(fileName, ".")]
+}
+
+func sha256File(fn string) string {
+	if data, err := ioutil.ReadFile(fn); err != nil {
+		return ""
+	} else {
+		hasher := sha256.New()
+		hasher.Write(data)
+		return hex.EncodeToString(hasher.Sum(nil))
+	}
 }

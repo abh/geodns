@@ -2,7 +2,6 @@ package main
 
 import (
 	"strings"
-	"time"
 
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
@@ -14,6 +13,7 @@ type ZoneOptions struct {
 	MaxHosts  int
 	Contact   string
 	Targeting TargetOptions
+	Closest   bool
 }
 
 type ZoneLogging struct {
@@ -24,6 +24,8 @@ type ZoneLogging struct {
 type Record struct {
 	RR     dns.RR
 	Weight int
+	Loc    *Location
+	Test   *HealthTest
 }
 
 type Records []Record
@@ -41,6 +43,8 @@ type Label struct {
 	Ttl      int
 	Records  map[uint16]Records
 	Weight   map[uint16]int
+	Closest  bool
+	Test     *HealthTest
 }
 
 type labels map[string]*Label
@@ -58,8 +62,8 @@ type Zone struct {
 	LabelCount int
 	Options    ZoneOptions
 	Logging    *ZoneLogging
-	LastRead   time.Time
 	Metrics    ZoneMetrics
+	HasClosest bool
 }
 
 type qTypes []uint16
@@ -82,21 +86,33 @@ func NewZone(name string) *Zone {
 func (z *Zone) SetupMetrics(old *Zone) {
 	if old != nil {
 		z.Metrics = old.Metrics
-	} else {
+	}
+	if z.Metrics.Queries == nil {
 		z.Metrics.Queries = metrics.NewMeter()
-		z.Metrics.EdnsQueries = metrics.NewMeter()
 		metrics.Register(z.Origin+" queries", z.Metrics.Queries)
+	}
+	if z.Metrics.EdnsQueries == nil {
+		z.Metrics.EdnsQueries = metrics.NewMeter()
 		metrics.Register(z.Origin+" EDNS queries", z.Metrics.EdnsQueries)
+	}
+	if z.Metrics.LabelStats == nil {
 		z.Metrics.LabelStats = NewZoneLabelStats(10000)
+	}
+	if z.Metrics.ClientStats == nil {
 		z.Metrics.ClientStats = NewZoneLabelStats(10000)
 	}
 }
 
 func (z *Zone) Close() {
+	z.StartStopHealthChecks(false, nil)
 	metrics.Unregister(z.Origin + " queries")
 	metrics.Unregister(z.Origin + " EDNS queries")
-	z.Metrics.LabelStats.Close()
-	z.Metrics.ClientStats.Close()
+	if z.Metrics.LabelStats != nil {
+		z.Metrics.LabelStats.Close()
+	}
+	if z.Metrics.ClientStats != nil {
+		z.Metrics.ClientStats.Close()
+	}
 }
 
 func (l *Label) firstRR(dnsType uint16) dns.RR {
@@ -110,6 +126,7 @@ func (z *Zone) AddLabel(k string) *Label {
 	label.Label = k
 	label.Ttl = z.Options.Ttl
 	label.MaxHosts = z.Options.MaxHosts
+	label.Closest = z.Options.Closest
 
 	label.Records = make(map[uint16]Records)
 	label.Weight = make(map[uint16]int)
@@ -166,4 +183,28 @@ func (z *Zone) findLabels(s string, targets []string, qts qTypes) (*Label, uint1
 	}
 
 	return z.Labels[s], 0
+}
+
+// Find the locations of all the A records within a zone. If we were being really clever
+// here we could use LOC records too. But for the time being we'll just use GeoIP
+
+func (z *Zone) SetLocations() {
+	qtypes := []uint16{dns.TypeA}
+	for _, label := range z.Labels {
+		if label.Closest {
+			for _, qtype := range qtypes {
+				if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
+					for i := range label.Records[qtype] {
+						label.Records[qtype][i].Loc = nil
+						rr := label.Records[qtype][i].RR
+						if a, ok := rr.(*dns.A); ok {
+							ip := a.A
+							_, _, _, _, _, location := geoIP.GetCountryRegion(ip)
+							label.Records[qtype][i].Loc = location
+						}
+					}
+				}
+			}
+		}
+	}
 }

@@ -54,6 +54,7 @@ var (
 	flaghttp        = flag.String("http", ":8053", "http listen address (:8053)")
 	flaglog         = flag.Bool("log", false, "be more verbose")
 	flagcpus        = flag.Int("cpus", 1, "Set the maximum number of CPUs to use")
+	flagLogTo       = flag.String("logto", "", "log to file")
 
 	flagShowVersion = flag.Bool("version", false, "Show dnsconfig version")
 
@@ -80,6 +81,10 @@ func main() {
 	if *flagShowVersion {
 		fmt.Println("geodns", VERSION, buildTime)
 		os.Exit(0)
+	}
+
+	if flagLogTo != nil && *flagLogTo != "" {
+		logToFile(*flagLogTo)
 	}
 
 	if len(*flagidentifier) > 0 {
@@ -141,8 +146,6 @@ func main() {
 	metrics := NewMetrics()
 	go metrics.Updater()
 
-	go statHatPoster()
-
 	if *flaginter == "*" {
 		addrs, _ := net.InterfaceAddrs()
 		ips := make([]string, 0)
@@ -160,6 +163,8 @@ func main() {
 	}
 
 	inter := getInterfaces()
+
+	go statHatPoster()
 
 	Zones := make(Zones)
 
@@ -190,5 +195,5 @@ func main() {
 		pprof.WriteHeapProfile(f)
 		f.Close()
 	}
-
+	logClose()
 }

@@ -21,6 +21,7 @@ var _ = Suite(&ConfigSuite{})
 
 func (s *ConfigSuite) SetUpSuite(c *C) {
 	s.zones = make(Zones)
+	lastRead = map[string]*ZoneReadRecord{}
 	zonesReadDir("dns", s.zones)
 }
 
