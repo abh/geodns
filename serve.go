@@ -123,6 +123,20 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 			return
 		}
 
+		if permitDebug && firstLabel == "_health" {
+			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
+				baseLabel := strings.Join((strings.Split(label, "."))[1:], ".")
+				m.Answer = z.healthRR(label+"."+z.Origin+".", baseLabel)
+				m.Authoritative = true
+				w.WriteMsg(m)
+				return
+			}
+			m.Ns = append(m.Ns, z.SoaRR())
+			m.Authoritative = true
+			w.WriteMsg(m)
+			return
+		}
+
 		if firstLabel == "_country" {
 			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
 				h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
@@ -210,6 +224,31 @@ func statusRR(label string) []dns.RR {
 	status["qps1"] = fmt.Sprintf("%.4f", qCounter.Rate1())
 
 	js, err := json.Marshal(status)
+
+	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
+}
+
+func (z *Zone) healthRR(label string, baseLabel string) []dns.RR {
+	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
+	h.Name = label
+
+	health := make(map[string]map[string]bool)
+
+	if l, ok := z.Labels[baseLabel]; ok {
+		for qt, records := range l.Records {
+			if qts, ok := dns.TypeToString[qt]; ok {
+				hmap := make(map[string]bool)
+				for _, record := range records {
+					if record.Test != nil {
+						hmap[(*record.Test).ipAddress.String()] = healthTestRunner.isHealthy(record.Test)
+					}
+				}
+				health[qts] = hmap
+			}
+		}
+	}
+
+	js, _ := json.Marshal(health)
 
 	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
 }
