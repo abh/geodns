@@ -51,15 +51,16 @@ var (
 var timeStarted = time.Now()
 
 var (
-	flagconfig      = flag.String("config", "./dns/", "directory of zone files")
-	flagcheckconfig = flag.Bool("checkconfig", false, "check configuration and exit")
-	flagidentifier  = flag.String("identifier", "", "identifier (hostname, pop name or similar)")
-	flaginter       = flag.String("interface", "*", "set the listener address")
-	flagport        = flag.String("port", "53", "default port number")
-	flaghttp        = flag.String("http", ":8053", "http listen address (:8053)")
-	flaglog         = flag.Bool("log", false, "be more verbose")
-	flagcpus        = flag.Int("cpus", 1, "Set the maximum number of CPUs to use")
-	flagLogFile     = flag.String("logfile", "", "log to file")
+	flagconfig       = flag.String("config", "./dns/", "directory of zone files")
+	flagcheckconfig  = flag.Bool("checkconfig", false, "check configuration and exit")
+	flagidentifier   = flag.String("identifier", "", "identifier (hostname, pop name or similar)")
+	flaginter        = flag.String("interface", "*", "set the listener address")
+	flagport         = flag.String("port", "53", "default port number")
+	flaghttp         = flag.String("http", ":8053", "http listen address (:8053)")
+	flaglog          = flag.Bool("log", false, "be more verbose")
+	flagcpus         = flag.Int("cpus", 1, "Set the maximum number of CPUs to use")
+	flagLogFile      = flag.String("logfile", "", "log to file")
+	flagPrivateDebug = flag.Bool("privatedebug", false, "Make debugging queries accepted only on loopback")
 
 	flagShowVersion = flag.Bool("version", false, "Show dnsconfig version")
 
