@@ -41,6 +41,9 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	realIp, _, _ := net.SplitHostPort(w.RemoteAddr().String())
 
+	realIpIp := net.ParseIP(realIp)
+	permitDebug := !*flagPrivateDebug || (realIpIp != nil && realIpIp.IsLoopback())
+
 	z.Metrics.ClientStats.Add(realIp)
 
 	var ip net.IP // EDNS or real IP
@@ -101,7 +104,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 		firstLabel := (strings.Split(label, "."))[0]
 
-		if firstLabel == "_status" {
+		if permitDebug && firstLabel == "_status" {
 			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
 				m.Answer = statusRR(label + "." + z.Origin + ".")
 			} else {
