@@ -126,7 +126,7 @@ func (z *Zone) AddLabel(k string) *Label {
 	z.Labels[k] = new(Label)
 	label := z.Labels[k]
 	label.Label = k
-	label.Ttl = z.Options.Ttl
+	label.Ttl = 0 // replaced later
 	label.MaxHosts = z.Options.MaxHosts
 
 	label.Records = make(map[uint16]Records)
