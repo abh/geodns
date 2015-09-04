@@ -442,9 +442,6 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				case dns.TypeNS:
 					rec := records[rType][i]
-					if h.Ttl < 86400 {
-						h.Ttl = 86400
-					}
 
 					var ns string
 
@@ -551,10 +548,19 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				}
 			}
 		}
-		if Zone.Labels[k].Ttl > 0 {
-			for _, records := range Zone.Labels[k].Records {
-				for _, r := range records {
-					r.RR.Header().Ttl = uint32(Zone.Labels[k].Ttl)
+		for _, records := range Zone.Labels[k].Records {
+			for _, r := range records {
+				var defaultTtl uint32 = 86400
+				if r.RR.Header().Rrtype != dns.TypeNS {
+					// NS records have special treatment. If they are not specified, they default to 86400 rather than
+					// defaulting to the zone ttl option. The label TTL option always works though
+					defaultTtl = uint32(Zone.Options.Ttl)
+				}
+				if Zone.Labels[k].Ttl > 0 {
+					defaultTtl = uint32(Zone.Labels[k].Ttl)
+				}
+				if r.RR.Header().Ttl == 0 {
+					r.RR.Header().Ttl = defaultTtl
 				}
 			}
 		}
