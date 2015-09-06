@@ -7,7 +7,7 @@ similar services. It supersedes the [pgeodns](http://github.com/abh/pgeodns) ser
 ## Installation
 
 If you already have go installed, just run `go get` to install the Go
-dependencies. GeoDNS requires Go 1.2 or later.
+dependencies. GeoDNS requires Go 1.4 or later.
 
 You will also need the GeoIP C library, on RedHat derived systems
 that's `yum install geoip-devel`.
