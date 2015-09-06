@@ -21,6 +21,10 @@ type AppConfig struct {
 	GeoIP struct {
 		Directory string
 	}
+	HTTP struct {
+		User     string
+		Password string
+	}
 }
 
 var Config = new(AppConfig)

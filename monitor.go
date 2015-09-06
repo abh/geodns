@@ -380,6 +380,42 @@ func StatusHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
+type basicauth struct {
+	h http.Handler
+}
+
+func (b *basicauth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	// don't request passwords for the websocket interface (for now)
+	// because 'wscat' doesn't support that.
+	if r.RequestURI == "/monitor" {
+		b.h.ServeHTTP(w, r)
+		return
+	}
+
+	cfgMutex.RLock()
+	user := Config.HTTP.User
+	password := Config.HTTP.Password
+	cfgMutex.RUnlock()
+
+	if len(user) == 0 {
+		b.h.ServeHTTP(w, r)
+		return
+	}
+
+	ruser, rpass, ok := r.BasicAuth()
+	if ok {
+		if ruser == user && rpass == password {
+			b.h.ServeHTTP(w, r)
+			return
+		}
+	}
+
+	w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm=%q`, "GeoDNS Status"))
+	http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+	return
+}
+
 func httpHandler(zones Zones) {
 	http.Handle("/monitor", websocket.Handler(wsHandler))
 	http.HandleFunc("/status", StatusHandler(zones))
@@ -388,5 +424,5 @@ func httpHandler(zones Zones) {
 
 	log.Println("Starting HTTP interface on", *flaghttp)
 
-	log.Fatal(http.ListenAndServe(*flaghttp, nil))
+	log.Fatal(http.ListenAndServe(*flaghttp, &basicauth{h: http.DefaultServeMux}))
 }
