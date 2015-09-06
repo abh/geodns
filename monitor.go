@@ -255,7 +255,7 @@ type histogramData struct {
 	StdDev float64
 }
 
-func setupHistogramData(met *metrics.StandardHistogram, dat *histogramData) {
+func setupHistogramData(met metrics.Histogram, dat *histogramData) {
 	dat.Max = met.Max()
 	dat.Min = met.Min()
 	dat.Mean = met.Mean()
@@ -266,22 +266,58 @@ func setupHistogramData(met *metrics.StandardHistogram, dat *histogramData) {
 	dat.Pct999 = percentiles[2]
 }
 
-func StatusServer(zones Zones, asJson bool) func(http.ResponseWriter, *http.Request) {
+func topParam(req *http.Request, def int) int {
+	req.ParseForm()
+
+	topOption := def
+	topParam := req.Form["top"]
+
+	if len(topParam) > 0 {
+		var err error
+		topOption, err = strconv.Atoi(topParam[0])
+		if err != nil {
+			topOption = def
+		}
+	}
+
+	return topOption
+}
+
+func StatusJSONHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+
+		type statusData struct {
+			Version  string
+			Uptime   int64
+			Platform string
+			Metrics  metrics.Registry
+		}
+
+		uptime := int64(time.Since(timeStarted).Seconds())
+
+		status := statusData{
+			Version:  VERSION,
+			Uptime:   uptime,
+			Platform: runtime.GOARCH + "-" + runtime.GOOS,
+			Metrics:  metrics.DefaultRegistry,
+		}
+
+		b, err := json.Marshal(status)
+		if err != nil {
+			http.Error(w, "Error encoding JSON", 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
+		return
+	}
+}
+
+func StatusHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, req *http.Request) {
 
-		req.ParseForm()
-
-		topOption := 10
-		topParam := req.Form["top"]
-
-		if len(topParam) > 0 {
-			var err error
-			topOption, err = strconv.Atoi(topParam[0])
-			if err != nil {
-				topOption = 10
-			}
-		}
+		topOption := topParam(req, 10)
 
 		rates := make(Rates, 0)
 
@@ -302,7 +338,7 @@ func StatusServer(zones Zones, asJson bool) func(http.ResponseWriter, *http.Requ
 			Uptime   DayDuration
 			Platform string
 			Global   struct {
-				Queries         *metrics.StandardMeter
+				Queries         metrics.Meter
 				Histogram       histogramData
 				HistogramRecent histogramData
 			}
@@ -319,21 +355,9 @@ func StatusServer(zones Zones, asJson bool) func(http.ResponseWriter, *http.Requ
 			TopOption: topOption,
 		}
 
-		status.Global.Queries = metrics.Get("queries").(*metrics.StandardMeter)
+		status.Global.Queries = metrics.Get("queries").(*metrics.StandardMeter).Snapshot()
 
-		setupHistogramData(metrics.Get("queries-histogram").(*metrics.StandardHistogram), &status.Global.Histogram)
-
-		if asJson {
-			b, err := json.Marshal(status)
-			if err != nil {
-				log.Println("json marshal error", err)
-				http.Error(w, "Error encoding JSON", 500)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(b)
-			return
-		}
+		setupHistogramData(metrics.Get("queries-histogram").(*metrics.StandardHistogram).Snapshot(), &status.Global.Histogram)
 
 		statusTemplate, err := FSString(development, "/templates/status.html")
 		if err != nil {
@@ -358,8 +382,8 @@ func StatusServer(zones Zones, asJson bool) func(http.ResponseWriter, *http.Requ
 
 func httpHandler(zones Zones) {
 	http.Handle("/monitor", websocket.Handler(wsHandler))
-	http.HandleFunc("/status", StatusServer(zones, false))
-	http.HandleFunc("/status.json", StatusServer(zones, true))
+	http.HandleFunc("/status", StatusHandler(zones))
+	http.HandleFunc("/status.json", StatusJSONHandler(zones))
 	http.HandleFunc("/", MainServer)
 
 	log.Println("Starting HTTP interface on", *flaghttp)
