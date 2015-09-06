@@ -1,2 +1,2 @@
 #!/bin/sh
-exec setuidgid nobody multilog t s20000000 n5 /var/log/geodns
+exec setuidgid nobody multilog s20000000 n5 /var/log/geodns
