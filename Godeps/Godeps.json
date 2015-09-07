@@ -19,6 +19,10 @@
 			"Rev": "8fdd5c33f834fe1c16ede39b38a6bc822d32d07f"
 		},
 		{
+			"ImportPath": "github.com/pborman/uuid",
+			"Rev": "cccd189d45f7ac3368a0d127efb7f4d08ae0b655"
+		},
+		{
 			"ImportPath": "github.com/rcrowley/go-metrics",
 			"Rev": "3e5e593311103d49927c8d2b0fd93ccdfe4a525c"
 		},
