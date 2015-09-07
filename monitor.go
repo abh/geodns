@@ -155,25 +155,7 @@ func initialStatus() string {
 	return string(message)
 }
 
-func logStatus() {
-	log.Println(initialStatus())
-
-	qCounter := metrics.Get("queries").(metrics.Meter)
-	lastQueryCount := qCounter.Count()
-
-	for {
-		current := qCounter.Count()
-		newQueries := current - lastQueryCount
-		lastQueryCount = current
-
-		log.Println("goroutines", runtime.NumGoroutine(), "queries", newQueries)
-
-		time.Sleep(60 * time.Second)
-	}
-}
-
 func monitor(zones Zones) {
-	go logStatus()
 
 	if len(*flaghttp) == 0 {
 		return
