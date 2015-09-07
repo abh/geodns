@@ -47,6 +47,7 @@ type labels map[string]*Label
 type ZoneMetrics struct {
 	Queries     metrics.Meter
 	EdnsQueries metrics.Meter
+	Registry    metrics.Registry
 	LabelStats  *zoneLabelStats
 	ClientStats *zoneLabelStats
 }
@@ -81,13 +82,16 @@ func (z *Zone) SetupMetrics(old *Zone) {
 	if old != nil {
 		z.Metrics = old.Metrics
 	}
+	if z.Metrics.Registry == nil {
+		z.Metrics.Registry = metrics.NewRegistry()
+	}
 	if z.Metrics.Queries == nil {
 		z.Metrics.Queries = metrics.NewMeter()
-		metrics.Register(z.Origin+" queries", z.Metrics.Queries)
+		z.Metrics.Registry.Register("queries", z.Metrics.Queries)
 	}
 	if z.Metrics.EdnsQueries == nil {
 		z.Metrics.EdnsQueries = metrics.NewMeter()
-		metrics.Register(z.Origin+" EDNS queries", z.Metrics.EdnsQueries)
+		z.Metrics.Registry.Register("queries-edns", z.Metrics.EdnsQueries)
 	}
 	if z.Metrics.LabelStats == nil {
 		z.Metrics.LabelStats = NewZoneLabelStats(10000)
@@ -98,8 +102,7 @@ func (z *Zone) SetupMetrics(old *Zone) {
 }
 
 func (z *Zone) Close() {
-	metrics.Unregister(z.Origin + " queries")
-	metrics.Unregister(z.Origin + " EDNS queries")
+	z.Metrics.Registry.UnregisterAll()
 	if z.Metrics.LabelStats != nil {
 		z.Metrics.LabelStats.Close()
 	}

@@ -286,11 +286,18 @@ func topParam(req *http.Request, def int) int {
 func StatusJSONHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 
+		zonemetrics := make(map[string]metrics.Registry)
+
+		for name, zone := range zones {
+			zonemetrics[name] = zone.Metrics.Registry
+		}
+
 		type statusData struct {
 			Version  string
 			Uptime   int64
 			Platform string
-			Metrics  metrics.Registry
+			Metrics  map[string]metrics.Registry
+			Global   metrics.Registry
 		}
 
 		uptime := int64(time.Since(timeStarted).Seconds())
@@ -299,7 +306,8 @@ func StatusJSONHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
 			Version:  VERSION,
 			Uptime:   uptime,
 			Platform: runtime.GOARCH + "-" + runtime.GOOS,
-			Metrics:  metrics.DefaultRegistry,
+			Metrics:  zonemetrics,
+			Global:   metrics.DefaultRegistry,
 		}
 
 		b, err := json.Marshal(status)
