@@ -271,15 +271,20 @@ func StatusJSONHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
 		zonemetrics := make(map[string]metrics.Registry)
 
 		for name, zone := range zones {
+			zone.Lock()
 			zonemetrics[name] = zone.Metrics.Registry
+			zone.Unlock()
 		}
 
 		type statusData struct {
 			Version  string
 			Uptime   int64
 			Platform string
-			Metrics  map[string]metrics.Registry
+			Zones    map[string]metrics.Registry
 			Global   metrics.Registry
+			ID       string
+			IP       string
+			Groups   []string
 		}
 
 		uptime := int64(time.Since(timeStarted).Seconds())
@@ -288,8 +293,11 @@ func StatusJSONHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
 			Version:  VERSION,
 			Uptime:   uptime,
 			Platform: runtime.GOARCH + "-" + runtime.GOOS,
-			Metrics:  zonemetrics,
+			Zones:    zonemetrics,
 			Global:   metrics.DefaultRegistry,
+			ID:       serverID,
+			IP:       serverIP,
+			Groups:   serverGroups,
 		}
 
 		b, err := json.Marshal(status)

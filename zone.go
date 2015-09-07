@@ -2,6 +2,7 @@ package main
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
@@ -59,6 +60,8 @@ type Zone struct {
 	Options    ZoneOptions
 	Logging    *ZoneLogging
 	Metrics    ZoneMetrics
+
+	sync.RWMutex
 }
 
 type qTypes []uint16
@@ -79,6 +82,9 @@ func NewZone(name string) *Zone {
 }
 
 func (z *Zone) SetupMetrics(old *Zone) {
+	z.Lock()
+	defer z.Unlock()
+
 	if old != nil {
 		z.Metrics = old.Metrics
 	}
