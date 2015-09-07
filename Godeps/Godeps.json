@@ -24,7 +24,7 @@
 		},
 		{
 			"ImportPath": "github.com/rcrowley/go-metrics",
-			"Rev": "3e5e593311103d49927c8d2b0fd93ccdfe4a525c"
+			"Rev": "1ce93efbc8f9c568886b2ef85ce305b2217b3de3"
 		},
 		{
 			"ImportPath": "github.com/stathat/go",
@@ -32,7 +32,7 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/websocket",
-			"Rev": "1bc0720082d79ce7ffc6ef6e523d00d46b0dee45"
+			"Rev": "db8e4de5b2d6653f66aea53094624468caad15d2"
 		},
 		{
 			"ImportPath": "gopkg.in/check.v1",
