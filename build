@@ -1,5 +1,4 @@
 #!/bin/sh
-#go get -v
 REVISION=`git rev-parse --short=5  HEAD`
 BUILDTIME=`TZ=UTC date "+%Y-%m-%dT%H:%MZ"`
 echo $REVISION > REVISION

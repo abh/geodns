@@ -25,6 +25,7 @@ type statusStreamMsgStart struct {
 	Version  string   `json:"v"`
 	ID       string   `json:"id"`
 	IP       string   `json:"ip"`
+	UUID     string   `json:"uuid"`
 	Uptime   int      `json:"up"`
 	Started  int      `json:"started"`
 	Groups   []string `json:"groups"`
@@ -140,6 +141,7 @@ func initialStatus() string {
 	status.Version = VERSION
 	status.ID = serverID
 	status.IP = serverIP
+	status.UUID = serverUUID
 	if len(serverGroups) > 0 {
 		status.Groups = serverGroups
 	}
@@ -284,6 +286,7 @@ func StatusJSONHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
 			Global   metrics.Registry
 			ID       string
 			IP       string
+			UUID     string
 			Groups   []string
 		}
 
@@ -297,6 +300,7 @@ func StatusJSONHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
 			Global:   metrics.DefaultRegistry,
 			ID:       serverID,
 			IP:       serverIP,
+			UUID:     serverUUID,
 			Groups:   serverGroups,
 		}
 

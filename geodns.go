@@ -28,6 +28,8 @@ import (
 	"runtime/pprof"
 	"strings"
 	"time"
+
+	"github.com/pborman/uuid"
 )
 
 // VERSION is the current version of GeoDNS
@@ -39,9 +41,12 @@ var gitVersion string
 // templates from disk instead of from the binary.
 var development bool
 
-var serverID string
-var serverIP string
-var serverGroups []string
+var (
+	serverID     string
+	serverIP     string
+	serverGroups []string
+	serverUUID   = uuid.New()
+)
 
 var timeStarted = time.Now()
 
