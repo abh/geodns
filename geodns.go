@@ -84,7 +84,12 @@ func main() {
 	}
 
 	if *flagShowVersion {
-		fmt.Println("geodns", VERSION, buildTime)
+		extra := []string{}
+		if len(buildTime) > 0 {
+			extra = append(extra, buildTime)
+		}
+		extra = append(extra, runtime.Version())
+		fmt.Printf("geodns %s (%s)\n", VERSION, strings.Join(extra, ", "))
 		os.Exit(0)
 	}
 
@@ -127,7 +132,7 @@ func main() {
 		runtime.GOMAXPROCS(*flagcpus)
 	}
 
-	log.Printf("Starting geodns %s\n", VERSION)
+	log.Printf("Starting geodns %s (%s)\n", VERSION, runtime.Version())
 
 	if *cpuprofile != "" {
 		prof, err := os.Create(*cpuprofile)

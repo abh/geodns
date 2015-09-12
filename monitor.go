@@ -21,14 +21,15 @@ import (
 
 // Initial status message on websocket
 type statusStreamMsgStart struct {
-	Hostname string   `json:"h,omitemty"`
-	Version  string   `json:"v"`
-	ID       string   `json:"id"`
-	IP       string   `json:"ip"`
-	UUID     string   `json:"uuid"`
-	Uptime   int      `json:"up"`
-	Started  int      `json:"started"`
-	Groups   []string `json:"groups"`
+	Hostname  string   `json:"h,omitemty"`
+	Version   string   `json:"v"`
+	GoVersion string   `json:"gov"`
+	ID        string   `json:"id"`
+	IP        string   `json:"ip"`
+	UUID      string   `json:"uuid"`
+	Uptime    int      `json:"up"`
+	Started   int      `json:"started"`
+	Groups    []string `json:"groups"`
 }
 
 // Update message on websocket
@@ -142,6 +143,7 @@ func initialStatus() string {
 	status.ID = serverID
 	status.IP = serverIP
 	status.UUID = serverUUID
+	status.GoVersion = runtime.Version()
 	if len(serverGroups) > 0 {
 		status.Groups = serverGroups
 	}
@@ -279,29 +281,31 @@ func StatusJSONHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
 		}
 
 		type statusData struct {
-			Version  string
-			Uptime   int64
-			Platform string
-			Zones    map[string]metrics.Registry
-			Global   metrics.Registry
-			ID       string
-			IP       string
-			UUID     string
-			Groups   []string
+			Version   string
+			GoVersion string
+			Uptime    int64
+			Platform  string
+			Zones     map[string]metrics.Registry
+			Global    metrics.Registry
+			ID        string
+			IP        string
+			UUID      string
+			Groups    []string
 		}
 
 		uptime := int64(time.Since(timeStarted).Seconds())
 
 		status := statusData{
-			Version:  VERSION,
-			Uptime:   uptime,
-			Platform: runtime.GOARCH + "-" + runtime.GOOS,
-			Zones:    zonemetrics,
-			Global:   metrics.DefaultRegistry,
-			ID:       serverID,
-			IP:       serverIP,
-			UUID:     serverUUID,
-			Groups:   serverGroups,
+			Version:   VERSION,
+			GoVersion: runtime.Version(),
+			Uptime:    uptime,
+			Platform:  runtime.GOARCH + "-" + runtime.GOOS,
+			Zones:     zonemetrics,
+			Global:    metrics.DefaultRegistry,
+			ID:        serverID,
+			IP:        serverIP,
+			UUID:      serverUUID,
+			Groups:    serverGroups,
 		}
 
 		b, err := json.Marshal(status)
