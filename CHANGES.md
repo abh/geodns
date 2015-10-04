@@ -1,5 +1,34 @@
 # GeoDNS Changelog
 
+## 2.6.0 October 4, 2015
+
+Leif Johansson:
+* Start new /status.json statistics end-point
+
+Alex Bligh:
+* Add ability to log to file.
+* Add option to make debugging queries private.
+* Fix race referencing config and other configuration system improvements.
+* Fix crash on removal of zonefile with invalid JSON (Issue #69)
+* Fix issue #74 - crash on reenabling previously invalid zone
+
+Ask Bjørn Hansen:
+* Fix critical data race in serve.go (and other rare races)
+* Optionally require basic authentication for http interface
+* Fix weighted CNAMEs (only return one)
+* Make /status.json dump all metrics from go-metrics
+* Update godeps (including miekg/dns)
+* StatHat bugfix when the configuration changed at runtime
+* ./build should just build, not install
+* Fix crash when removing an invalid zone file
+* Don't double timestamps when running under supervise
+* Require Go 1.4+
+* Internal improvements to metrics collection
+* Remove every minute logging of goroutine and query count
+* Add per-instance UUID to parsable status outputs (experimental)
+* Report Go version as part of the version reporting
+* Minor optimizations
+
 ## 2.5.0 June 5, 2015
 
 * Add resolver ASN and IP targeting (Ewan Chou)
