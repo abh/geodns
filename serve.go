@@ -43,9 +43,11 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	var realIP net.IP
 
 	if addr, ok := w.RemoteAddr().(*net.UDPAddr); ok {
-		realIP = addr.IP
+		realIP = make(net.IP, len(addr.IP))
+		copy(realIP, addr.IP)
 	} else if addr, ok := w.RemoteAddr().(*net.TCPAddr); ok {
-		realIP = addr.IP
+		realIP = make(net.IP, len(addr.IP))
+		copy(realIP, addr.IP)
 	}
 
 	z.Metrics.ClientStats.Add(realIP.String())
