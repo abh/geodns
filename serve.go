@@ -39,12 +39,18 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	z.Metrics.LabelStats.Add(label)
 
-	realIp, _, _ := net.SplitHostPort(w.RemoteAddr().String())
+	// IP that's talking to us (not EDNS CLIENT SUBNET)
+	var realIP net.IP
 
-	realIpIp := net.ParseIP(realIp)
-	permitDebug := !*flagPrivateDebug || (realIpIp != nil && realIpIp.IsLoopback())
+	if addr, ok := w.RemoteAddr().(*net.UDPAddr); ok {
+		realIP = addr.IP
+	} else if addr, ok := w.RemoteAddr().(*net.TCPAddr); ok {
+		realIP = addr.IP
+	}
 
-	z.Metrics.ClientStats.Add(realIp)
+	permitDebug := !*flagPrivateDebug || (realIP != nil && realIP.IsLoopback())
+
+	z.Metrics.ClientStats.Add(realIP.String())
 
 	var ip net.IP // EDNS or real IP
 	var edns *dns.EDNS0_SUBNET
@@ -72,7 +78,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 
 	if len(ip) == 0 { // no edns subnet
-		ip = net.ParseIP(realIp)
+		ip = realIP
 	}
 
 	targets, netmask := z.Options.Targeting.GetTargets(ip)
