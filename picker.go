@@ -31,6 +31,10 @@ func (label *Label) Picker(qtype uint16, max int) Records {
 			return labelRR
 		}
 
+		if qtype == dns.TypeCNAME || qtype == dns.TypeMF {
+			max = 1
+		}
+
 		rrCount := len(labelRR)
 		if max > rrCount {
 			max = rrCount

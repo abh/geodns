@@ -152,6 +152,8 @@ func (s *ServeSuite) TestCname(c *C) {
 
 	for i := 0; i < 10; i++ {
 		r := exchange(c, "www.se.test.example.com.", dns.TypeA)
+		// only return one CNAME even if there are multiple options
+		c.Check(r.Answer, HasLen, 1)
 		target := r.Answer[0].(*dns.CNAME).Target
 		results[target]++
 	}
