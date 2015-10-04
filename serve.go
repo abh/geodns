@@ -24,8 +24,8 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 
 	qtype := req.Question[0].Qtype
 
-	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
-		dns.TypeToString[qtype], req.MsgHdr.Id, w.RemoteAddr())
+	logPrintf("[zone %s] incoming  %s %s (id %d) from %s\n", z.Origin, req.Question[0].Name,
+		dns.TypeToString[qtype], req.Id, w.RemoteAddr())
 
 	// Global meter
 	metrics.Get("queries").(metrics.Meter).Mark(1)

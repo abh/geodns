@@ -4,7 +4,6 @@ import (
 	"net"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 	. "github.com/abh/geodns/Godeps/_workspace/src/gopkg.in/check.v1"
@@ -30,9 +29,9 @@ func (s *ServeSuite) SetUpSuite(c *C) {
 	setupRootZone()
 	zonesReadDir("dns", Zones)
 
-	go listenAndServe(PORT)
-
-	time.Sleep(200 * time.Millisecond)
+	// listenAndServe returns after listning on udp + tcp, so just
+	// wait for it before continuing
+	listenAndServe(PORT)
 }
 
 func (s *ServeSuite) TestServing(c *C) {
@@ -258,9 +257,10 @@ func exchange(c *C, name string, dnstype uint16) *dns.Msg {
 
 func dorequest(c *C, msg *dns.Msg) *dns.Msg {
 	cli := new(dns.Client)
+	// cli.ReadTimeout = 2 * time.Second
 	r, _, err := cli.Exchange(msg, "127.0.0.1"+PORT)
 	if err != nil {
-		c.Log("err", err)
+		c.Logf("request err '%s': %s", msg.String(), err)
 		c.Fail()
 	}
 	return r
