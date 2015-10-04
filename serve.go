@@ -48,8 +48,6 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		realIP = addr.IP
 	}
 
-	permitDebug := !*flagPrivateDebug || (realIP != nil && realIP.IsLoopback())
-
 	z.Metrics.ClientStats.Add(realIP.String())
 
 	var ip net.IP // EDNS or real IP
@@ -107,6 +105,8 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 
 	if labels == nil {
+
+		permitDebug := !*flagPrivateDebug || (realIP != nil && realIP.IsLoopback())
 
 		firstLabel := (strings.Split(label, "."))[0]
 
