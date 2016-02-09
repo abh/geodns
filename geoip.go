@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/abh/geodns/Godeps/_workspace/src/github.com/abh/geoip"
-	"github.com/abh/geodns/countries"
 	"log"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/abh/geodns/Godeps/_workspace/src/github.com/abh/geoip"
+	"github.com/abh/geodns/countries"
 )
 
 type GeoIP struct {
@@ -19,8 +20,8 @@ type GeoIP struct {
 	hasCity      bool
 
 	asn         *geoip.GeoIP
-	hasAsn      bool
 	asnLastLoad time.Time
+	hasAsn      bool
 }
 
 var geoIP = new(GeoIP)
@@ -100,7 +101,7 @@ func (g *GeoIP) setupGeoIPCountry() {
 		return
 	}
 	g.countryLastLoad = time.Now()
-	g.hasCity = true
+	g.hasCountry = true
 	g.country = gi
 
 }
