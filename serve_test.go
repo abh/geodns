@@ -4,6 +4,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 	. "github.com/abh/geodns/Godeps/_workspace/src/gopkg.in/check.v1"
@@ -32,6 +33,9 @@ func (s *ServeSuite) SetUpSuite(c *C) {
 	// listenAndServe returns after listning on udp + tcp, so just
 	// wait for it before continuing
 	listenAndServe(PORT)
+
+	// ensure service has properly started before we query it
+	time.Sleep(200 * time.Millisecond)
 }
 
 func (s *ServeSuite) TestServing(c *C) {
