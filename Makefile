@@ -6,3 +6,6 @@ templates.go: templates/*.html monitor.go
 
 devel:
 	go build -tags devel
+
+bench:
+	go test -check.b -check.bmem

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math/rand"
 	"net"
 	"strings"
 	"sync"
@@ -222,9 +223,25 @@ func (s *ServeSuite) TestServeRace(c *C) {
 	wg.Wait()
 }
 
-func (s *ServeSuite) BenchmarkServing(c *C) {
+func (s *ServeSuite) BenchmarkServingCountryDebug(c *C) {
 	for i := 0; i < c.N; i++ {
 		exchange(c, "_country.foo.pgeodns.", dns.TypeTXT)
+	}
+}
+
+func (s *ServeSuite) BenchmarkServing(c *C) {
+
+	// a deterministic seed is the default anyway, but let's be explicit we want it here.
+	rnd := rand.NewSource(1)
+
+	testNames := []string{"foo.test.example.com.", "one.test.example.com.",
+		"weight.test.example.com.", "three.two.one.test.example.com.",
+		"bar.test.example.com.", "0-alias.test.example.com.",
+	}
+
+	for i := 0; i < c.N; i++ {
+		name := testNames[rnd.Int63()%int64(len(testNames))]
+		exchange(c, name, dns.TypeA)
 	}
 }
 
