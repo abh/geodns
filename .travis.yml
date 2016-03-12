@@ -2,6 +2,7 @@ language: go
 go:
   - 1.4
   - 1.5
+  - 1.6
   - tip
 before_install:
   - sudo apt-get install libgeoip-dev bzr
