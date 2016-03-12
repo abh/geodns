@@ -24,7 +24,7 @@
 		},
 		{
 			"ImportPath": "github.com/rcrowley/go-metrics",
-			"Rev": "1ce93efbc8f9c568886b2ef85ce305b2217b3de3"
+			"Rev": "eeba7bd0dd01ace6e690fa833b3f22aaec29af43"
 		},
 		{
 			"ImportPath": "github.com/stathat/go",
