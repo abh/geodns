@@ -171,6 +171,17 @@ func TestSignVerify(t *testing.T) {
 	srv.Weight = 800
 	srv.Target = "web1.miek.nl."
 
+	hinfo := &HINFO{
+		Hdr: RR_Header{
+			Name:   "miek.nl.",
+			Rrtype: TypeHINFO,
+			Class:  ClassINET,
+			Ttl:    3789,
+		},
+		Cpu: "X",
+		Os:  "Y",
+	}
+
 	// With this key
 	key := new(DNSKEY)
 	key.Hdr.Rrtype = TypeDNSKEY
@@ -194,12 +205,12 @@ func TestSignVerify(t *testing.T) {
 	sig.SignerName = key.Hdr.Name
 	sig.Algorithm = RSASHA256
 
-	for _, r := range []RR{soa, soa1, srv} {
-		if sig.Sign(privkey.(*rsa.PrivateKey), []RR{r}) != nil {
-			t.Error("failure to sign the record")
+	for _, r := range []RR{soa, soa1, srv, hinfo} {
+		if err := sig.Sign(privkey.(*rsa.PrivateKey), []RR{r}); err != nil {
+			t.Error("failure to sign the record:", err)
 			continue
 		}
-		if sig.Verify(key, []RR{r}) != nil {
+		if err := sig.Verify(key, []RR{r}); err != nil {
 			t.Error("failure to validate")
 			continue
 		}
@@ -451,7 +462,7 @@ PrivateKey: WURgWHCcYIYUPWgeLmiPY2DJJk02vgrmTfitxgqcL4vwW7BOrbawVmVe0d9V94SR`
 	}
 
 	if err := sig.Verify(eckey.(*DNSKEY), []RR{a}); err != nil {
-		t.Fatalf("Failure to validate:\n%s\n%s\n%s\n\n%s\n\n%v",
+		t.Fatalf("failure to validate:\n%s\n%s\n%s\n\n%s\n\n%v",
 			eckey.(*DNSKEY).String(),
 			a.String(),
 			sig.String(),
@@ -500,7 +511,7 @@ func TestSignVerifyECDSA2(t *testing.T) {
 
 	err = sig.Verify(key, []RR{srv})
 	if err != nil {
-		t.Logf("Failure to validate:\n%s\n%s\n%s\n\n%s\n\n%v",
+		t.Logf("failure to validate:\n%s\n%s\n%s\n\n%s\n\n%v",
 			key.String(),
 			srv.String(),
 			sig.String(),
@@ -554,7 +565,7 @@ PrivateKey: GU6SnQ/Ou+xC5RumuIUIuJZteXT2z0O/ok1s38Et6mQ=`
 		t.Fatal(err)
 	}
 	if err = rrRRSIG.(*RRSIG).Verify(rrDNSKEY.(*DNSKEY), []RR{rrA}); err != nil {
-		t.Errorf("Failure to validate the spec RRSIG: %v", err)
+		t.Errorf("failure to validate the spec RRSIG: %v", err)
 	}
 
 	ourRRSIG := &RRSIG{
@@ -573,7 +584,7 @@ PrivateKey: GU6SnQ/Ou+xC5RumuIUIuJZteXT2z0O/ok1s38Et6mQ=`
 	}
 
 	if err = ourRRSIG.Verify(rrDNSKEY.(*DNSKEY), []RR{rrA}); err != nil {
-		t.Errorf("Failure to validate our RRSIG: %v", err)
+		t.Errorf("failure to validate our RRSIG: %v", err)
 	}
 
 	// Signatures are randomized
@@ -630,7 +641,7 @@ PrivateKey: WURgWHCcYIYUPWgeLmiPY2DJJk02vgrmTfitxgqcL4vwW7BOrbawVmVe0d9V94SR`
 		t.Fatal(err)
 	}
 	if err = rrRRSIG.(*RRSIG).Verify(rrDNSKEY.(*DNSKEY), []RR{rrA}); err != nil {
-		t.Errorf("Failure to validate the spec RRSIG: %v", err)
+		t.Errorf("failure to validate the spec RRSIG: %v", err)
 	}
 
 	ourRRSIG := &RRSIG{
@@ -649,7 +660,7 @@ PrivateKey: WURgWHCcYIYUPWgeLmiPY2DJJk02vgrmTfitxgqcL4vwW7BOrbawVmVe0d9V94SR`
 	}
 
 	if err = ourRRSIG.Verify(rrDNSKEY.(*DNSKEY), []RR{rrA}); err != nil {
-		t.Errorf("Failure to validate our RRSIG: %v", err)
+		t.Errorf("failure to validate our RRSIG: %v", err)
 	}
 
 	// Signatures are randomized

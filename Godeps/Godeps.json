@@ -16,7 +16,7 @@
 		},
 		{
 			"ImportPath": "github.com/miekg/dns",
-			"Rev": "8395762c3490507cf5a27405fcd0e3d3dc547109"
+			"Rev": "b9171237b0642de1d8e8004f16869970e065f46b"
 		},
 		{
 			"ImportPath": "github.com/pborman/uuid",
