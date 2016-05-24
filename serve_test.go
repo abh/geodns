@@ -31,7 +31,7 @@ func (s *ServeSuite) SetUpSuite(c *C) {
 	setupRootZone()
 	zonesReadDir("dns", Zones)
 
-	// listenAndServe returns after listning on udp + tcp, so just
+	// listenAndServe returns after listening on udp + tcp, so just
 	// wait for it before continuing
 	listenAndServe(PORT)
 
@@ -130,6 +130,14 @@ func (s *ServeSuite) TestServing(c *C) {
 	r = exchange(c, "one.test.example.com.", dns.TypeA)
 	ip = r.Answer[0].(*dns.A).A
 	c.Check(ip.String(), Equals, "192.168.1.6")
+
+	// PTR
+	r = exchange(c, "2.1.168.192.IN-ADDR.ARPA.", dns.TypePTR)
+	c.Check(r.Answer, HasLen, 1)
+	// NOERROR for PTR request
+	c.Check(r.Rcode, Equals, dns.RcodeSuccess)
+	name := r.Answer[0].(*dns.PTR).Ptr
+	c.Check(name, Equals, "bar.example.com.")
 }
 
 func (s *ServeSuite) TestServingMixedCase(c *C) {
