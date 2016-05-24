@@ -49,6 +49,10 @@ To test the responses run
 
 `dig -t a test.example.com @127.1 -p 5053`
 
+or
+
+`dig -t ptr 2.1.168.192.IN-ADDR.ARPA. @127.1 -p 5053`
+
 The binary can be moved to /usr/local/bin, /opt/geodns/ or wherever you find appropriate.
 
 ### Command options
