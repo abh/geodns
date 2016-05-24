@@ -275,6 +275,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		"txt":   dns.TypeTXT,
 		"spf":   dns.TypeSPF,
 		"srv":   dns.TypeSRV,
+		"ptr":   dns.TypePTR,
 	}
 
 	for dk, dv_inter := range data {
@@ -353,13 +354,16 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				}
 
 				switch dnsType {
-				case dns.TypeA, dns.TypeAAAA:
+				case dns.TypeA, dns.TypeAAAA, dns.TypePTR:
 
 					str, weight := getStringWeight(records[rType][i].([]interface{}))
 					ip := str
 					record.Weight = weight
 
 					switch dnsType {
+					case dns.TypePTR:
+						record.RR = &dns.PTR{Hdr: h, Ptr: ip}
+						break
 					case dns.TypeA:
 						if x := net.ParseIP(ip); x != nil {
 							record.RR = &dns.A{Hdr: h, A: x}
