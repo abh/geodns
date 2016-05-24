@@ -53,6 +53,10 @@ or
 
 `dig -t ptr 2.1.168.192.IN-ADDR.ARPA. @127.1 -p 5053`
 
+or more simply put
+
+`dig -x 192.168.1.2 @127.1 -p 5053`
+
 The binary can be moved to /usr/local/bin, /opt/geodns/ or wherever you find appropriate.
 
 ### Command options
