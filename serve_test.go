@@ -31,7 +31,7 @@ func (s *ServeSuite) SetUpSuite(c *C) {
 	setupRootZone()
 	zonesReadDir("dns", Zones)
 
-	// listenAndServe returns after listning on udp + tcp, so just
+	// listenAndServe returns after listening on udp + tcp, so just
 	// wait for it before continuing
 	listenAndServe(PORT)
 
