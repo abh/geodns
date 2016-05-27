@@ -41,7 +41,56 @@ func addHandler(zones Zones, name string, config *Zone) {
 	oldZone := zones[name]
 	config.SetupMetrics(oldZone)
 	zones[name] = config
+	log.Println("Setting up handler for zone", name)
 	dns.HandleFunc(name, setupServerFunc(config))
+}
+
+// this helper function was extracted from https://github.com/StalkR/dns-reverse-proxy
+// which is covered by the Apache 2.0 licence
+func isTransfer(req *dns.Msg) bool {
+	for _, q := range req.Question {
+		switch q.Qtype {
+		case dns.TypeIXFR, dns.TypeAXFR:
+			return true
+		}
+	}
+	return false
+}
+
+// proxy forwards the query to some external DNS and returns the answer
+// this function was extracted from https://github.com/StalkR/dns-reverse-proxy
+// which is covered by the Apache 2.0 licence
+func proxy(w dns.ResponseWriter, req *dns.Msg) {
+
+	transport := "udp"
+	if _, ok := w.RemoteAddr().(*net.TCPAddr); ok {
+		transport = "tcp"
+	}
+
+	if isTransfer(req) {
+		if transport != "tcp" {
+			dns.HandleFailed(w, req)
+			return
+		}
+		t := new(dns.Transfer)
+		c, err := t.In(req, *flagForwarder)
+		if err != nil {
+			dns.HandleFailed(w, req)
+			return
+		}
+		if err = t.Out(w, req, c); err != nil {
+			dns.HandleFailed(w, req)
+			return
+		}
+		return
+	}
+	c := &dns.Client{Net: transport}
+	resp, _, err := c.Exchange(req, *flagForwarder)
+	if err != nil {
+		dns.HandleFailed(w, req)
+		return
+	}
+	w.WriteMsg(resp)
 }
 
 func zonesReadDir(dirName string, zones Zones) error {
@@ -118,7 +167,6 @@ func zonesReadDir(dirName string, zones Zones) error {
 			addHandler(zones, zoneName, config)
 		}
 	}
-
 	for zoneName, zone := range zones {
 		if zoneName == "pgeodns" {
 			continue

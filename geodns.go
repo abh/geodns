@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 	"github.com/abh/geodns/Godeps/_workspace/src/github.com/pborman/uuid"
 )
 
@@ -61,6 +62,7 @@ var (
 	flagcpus         = flag.Int("cpus", 1, "Set the maximum number of CPUs to use")
 	flagLogFile      = flag.String("logfile", "", "log to file")
 	flagPrivateDebug = flag.Bool("privatedebug", false, "Make debugging queries accepted only on loopback")
+	flagForwarder    = flag.String("forwarder", "", "forwarder address in the form ip:port defaults to ''")
 
 	flagShowVersion = flag.Bool("version", false, "Show dnsconfig version")
 
@@ -187,6 +189,12 @@ func main() {
 
 	dirName := *flagconfig
 	go zonesReader(dirName, Zones)
+
+	if *flagForwarder != "" {
+		log.Println("Activating forwarder", *flagForwarder)
+		// forward all zone requests we are not aware of...
+		dns.HandleFunc(".", proxy)
+	}
 
 	for _, host := range inter {
 		go listenAndServe(host)
