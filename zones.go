@@ -41,7 +41,6 @@ func addHandler(zones Zones, name string, config *Zone) {
 	oldZone := zones[name]
 	config.SetupMetrics(oldZone)
 	zones[name] = config
-	log.Println("Setting up handler for zone", name)
 	dns.HandleFunc(name, setupServerFunc(config))
 }
 
