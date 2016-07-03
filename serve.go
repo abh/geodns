@@ -170,6 +170,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	}
 
 	if len(m.Answer) == 0 {
+		// Return a SOA so the NOERROR answer gets cached
 		m.Ns = append(m.Ns, z.SoaRR())
 	}
 
