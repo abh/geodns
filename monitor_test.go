@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	. "github.com/abh/geodns/Godeps/_workspace/src/gopkg.in/check.v1"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	. "gopkg.in/check.v1"
 )
 
 type MonitorSuite struct {

@@ -29,7 +29,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abh/geodns/Godeps/_workspace/src/github.com/pborman/uuid"
+	"github.com/pborman/uuid"
 )
 
 // VERSION is the current version of GeoDNS

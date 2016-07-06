@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abh/geodns/Godeps/_workspace/src/code.google.com/p/gcfg"
-	"github.com/abh/geodns/Godeps/_workspace/src/gopkg.in/fsnotify.v1"
+	"gopkg.in/fsnotify.v1"
+	"gopkg.in/gcfg.v1"
 )
 
 type AppConfig struct {

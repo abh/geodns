@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
-	"github.com/abh/geodns/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
+	"github.com/miekg/dns"
+	"github.com/rcrowley/go-metrics"
 )
 
 func getQuestionName(z *Zone, req *dns.Msg) string {

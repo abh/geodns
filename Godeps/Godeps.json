@@ -1,11 +1,8 @@
 {
 	"ImportPath": "github.com/abh/geodns",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v74",
 	"Deps": [
-		{
-			"ImportPath": "code.google.com/p/gcfg",
-			"Rev": "c2d3050044d05357eaf6c3547249ba57c5e235cb"
-		},
 		{
 			"ImportPath": "github.com/abh/errorutil",
 			"Rev": "f9bd360d00b902548fbb80837aef90dca2c8285e"
@@ -42,6 +39,25 @@
 			"ImportPath": "gopkg.in/fsnotify.v1",
 			"Comment": "v1.2.0",
 			"Rev": "96c060f6a6b7e0d6f75fddd10efeaca3e5d1bcb0"
+		},
+		{
+			"ImportPath": "gopkg.in/gcfg.v1",
+			"Rev": "083575c3955c85df16fe9590cceab64d03f5eb6e"
+		},
+		{
+			"ImportPath": "gopkg.in/gcfg.v1/scanner",
+			"Comment": "v1.0.0",
+			"Rev": "083575c3955c85df16fe9590cceab64d03f5eb6e"
+		},
+		{
+			"ImportPath": "gopkg.in/gcfg.v1/token",
+			"Comment": "v1.0.0",
+			"Rev": "083575c3955c85df16fe9590cceab64d03f5eb6e"
+		},
+		{
+			"ImportPath": "gopkg.in/gcfg.v1/types",
+			"Comment": "v1.0.0",
+			"Rev": "083575c3955c85df16fe9590cceab64d03f5eb6e"
 		}
 	]
 }
