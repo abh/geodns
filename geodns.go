@@ -94,6 +94,8 @@ func main() {
 		os.Exit(0)
 	}
 
+	srv := Server{}
+
 	if len(*flagLogFile) > 0 {
 		logToFileOpen(*flagLogFile)
 	}
@@ -118,8 +120,8 @@ func main() {
 		}
 
 		Zones := make(Zones)
-		setupPgeodnsZone(Zones)
-		err = zonesReadDir(dirName, Zones)
+		srv.setupPgeodnsZone(Zones)
+		err = srv.zonesReadDir(dirName, Zones)
 		if err != nil {
 			log.Println("Errors reading zones", err)
 			os.Exit(2)
@@ -182,14 +184,14 @@ func main() {
 	go monitor(Zones)
 	go Zones.statHatPoster()
 
-	setupRootZone()
-	setupPgeodnsZone(Zones)
+	srv.setupRootZone()
+	srv.setupPgeodnsZone(Zones)
 
 	dirName := *flagconfig
-	go zonesReader(dirName, Zones)
+	go srv.zonesReader(dirName, Zones)
 
 	for _, host := range inter {
-		go listenAndServe(host)
+		go srv.listenAndServe(host)
 	}
 
 	terminate := make(chan os.Signal)

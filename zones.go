@@ -30,21 +30,7 @@ type ZoneReadRecord struct {
 
 var lastRead = map[string]*ZoneReadRecord{}
 
-func zonesReader(dirName string, zones Zones) {
-	for {
-		zonesReadDir(dirName, zones)
-		time.Sleep(5 * time.Second)
-	}
-}
-
-func addHandler(zones Zones, name string, config *Zone) {
-	oldZone := zones[name]
-	config.SetupMetrics(oldZone)
-	zones[name] = config
-	dns.HandleFunc(name, setupServerFunc(config))
-}
-
-func zonesReadDir(dirName string, zones Zones) error {
+func (srv *Server) zonesReadDir(dirName string, zones Zones) error {
 	dir, err := ioutil.ReadDir(dirName)
 	if err != nil {
 		log.Println("Could not read", dirName, ":", err)
@@ -115,7 +101,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 
 			(lastRead[zoneName]).hash = sha256
 
-			addHandler(zones, zoneName, config)
+			srv.addHandler(zones, zoneName, config)
 		}
 	}
 
@@ -136,7 +122,7 @@ func zonesReadDir(dirName string, zones Zones) error {
 	return parseErr
 }
 
-func setupPgeodnsZone(zones Zones) {
+func (srv *Server) setupPgeodnsZone(zones Zones) {
 	zoneName := "pgeodns"
 	Zone := NewZone(zoneName)
 	label := new(Label)
@@ -144,10 +130,10 @@ func setupPgeodnsZone(zones Zones) {
 	label.Weight = make(map[uint16]int)
 	Zone.Labels[""] = label
 	setupSOA(Zone)
-	addHandler(zones, zoneName, Zone)
+	srv.addHandler(zones, zoneName, Zone)
 }
 
-func setupRootZone() {
+func (srv *Server) setupRootZone() {
 	dns.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {
 		m := new(dns.Msg)
 		m.SetRcode(r, dns.RcodeRefused)

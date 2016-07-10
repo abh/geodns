@@ -29,7 +29,8 @@ func (s *MonitorSuite) SetUpSuite(c *C) {
 	// TODO: use httptest
 	// https://groups.google.com/forum/?fromgroups=#!topic/golang-nuts/Jk785WB7F8I
 
-	zonesReadDir("dns", s.zones)
+	srv := Server{}
+	srv.zonesReadDir("dns", s.zones)
 	go httpHandler(s.zones)
 	time.Sleep(500 * time.Millisecond)
 }

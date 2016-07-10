@@ -26,14 +26,16 @@ func (s *ServeSuite) SetUpSuite(c *C) {
 	metrics := NewMetrics()
 	go metrics.Updater()
 
+	srv := Server{}
+
 	Zones := make(Zones)
-	setupPgeodnsZone(Zones)
-	setupRootZone()
-	zonesReadDir("dns", Zones)
+	srv.setupPgeodnsZone(Zones)
+	srv.setupRootZone()
+	srv.zonesReadDir("dns", Zones)
 
 	// listenAndServe returns after listening on udp + tcp, so just
 	// wait for it before continuing
-	listenAndServe(PORT)
+	srv.listenAndServe(PORT)
 
 	// ensure service has properly started before we query it
 	time.Sleep(200 * time.Millisecond)

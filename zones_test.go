@@ -14,6 +14,7 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 type ConfigSuite struct {
+	srv   *Server
 	zones Zones
 }
 
@@ -22,7 +23,8 @@ var _ = Suite(&ConfigSuite{})
 func (s *ConfigSuite) SetUpSuite(c *C) {
 	s.zones = make(Zones)
 	lastRead = map[string]*ZoneReadRecord{}
-	zonesReadDir("dns", s.zones)
+	s.srv = &Server{}
+	s.srv.zonesReadDir("dns", s.zones)
 }
 
 func (s *ConfigSuite) TestReadConfigs(c *C) {
@@ -70,7 +72,7 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 
 func (s *ConfigSuite) TestRemoveConfig(c *C) {
 	// restore the dns.Mux
-	defer zonesReadDir("dns", s.zones)
+	defer s.srv.zonesReadDir("dns", s.zones)
 
 	dir, err := ioutil.TempDir("", "geodns-test.")
 	if err != nil {
@@ -95,14 +97,14 @@ func (s *ConfigSuite) TestRemoveConfig(c *C) {
 		c.Fail()
 	}
 
-	zonesReadDir(dir, s.zones)
+	s.srv.zonesReadDir(dir, s.zones)
 	c.Check(s.zones["test.example.org"].Origin, Equals, "test.example.org")
 	c.Check(s.zones["test2.example.org"].Origin, Equals, "test2.example.org")
 
 	os.Remove(dir + "/test2.example.org.json")
 	os.Remove(dir + "/invalid.example.org.json")
 
-	zonesReadDir(dir, s.zones)
+	s.srv.zonesReadDir(dir, s.zones)
 	c.Check(s.zones["test.example.org"].Origin, Equals, "test.example.org")
 	_, ok := s.zones["test2.example.org"]
 	c.Check(ok, Equals, false)

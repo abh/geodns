@@ -205,27 +205,3 @@ func statusRR(label string) []dns.RR {
 
 	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
 }
-
-func setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {
-	return func(w dns.ResponseWriter, r *dns.Msg) {
-		serve(w, r, Zone)
-	}
-}
-
-func listenAndServe(ip string) {
-
-	prots := []string{"udp", "tcp"}
-
-	for _, prot := range prots {
-		go func(p string) {
-			server := &dns.Server{Addr: ip, Net: p}
-
-			log.Printf("Opening on %s %s", ip, p)
-			if err := server.ListenAndServe(); err != nil {
-				log.Fatalf("geodns: failed to setup %s %s: %s", ip, p, err)
-			}
-			log.Fatalf("geodns: ListenAndServe unexpectedly returned")
-		}(prot)
-	}
-
-}
