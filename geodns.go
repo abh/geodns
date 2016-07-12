@@ -33,7 +33,7 @@ import (
 )
 
 // VERSION is the current version of GeoDNS
-var VERSION string = "2.6.0"
+var VERSION string = "2.7.0"
 var buildTime string
 var gitVersion string
 
@@ -95,6 +95,7 @@ func main() {
 	}
 
 	srv := Server{}
+	srv.SetQueryLogger("log/queries.log")
 
 	if len(*flagLogFile) > 0 {
 		logToFileOpen(*flagLogFile)

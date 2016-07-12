@@ -251,3 +251,14 @@ var CountryContinent = map[string]string{
 	"zm": "africa",
 	"zw": "africa",
 }
+
+var ContinentCountries = map[string][]string{}
+
+func init() {
+	for cc, co := range CountryContinent {
+		if _, ok := ContinentCountries[co]; !ok {
+			ContinentCountries[co] = []string{}
+		}
+		ContinentCountries[co] = append(ContinentCountries[co], cc)
+	}
+}

@@ -3,14 +3,30 @@ package main
 import (
 	"log"
 	"time"
-)
-import "github.com/miekg/dns"
 
-type Server struct{}
+	"github.com/abh/geodns/querylog"
+	"github.com/miekg/dns"
+)
+
+type Server struct {
+	queryLogger querylog.QueryLogger
+}
+
+func NewServer() *Server {
+	return &Server{}
+}
+
+// Setup the QueryLogger. For now it only supports writing to a file (and all
+// zones get logged to the same file).
+func (srv *Server) SetQueryLogger(file string) error {
+	var err error
+	srv.queryLogger, err = querylog.NewFileLogger(file)
+	return err
+}
 
 func (srv *Server) setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {
 	return func(w dns.ResponseWriter, r *dns.Msg) {
-		serve(w, r, Zone)
+		srv.serve(w, r, Zone)
 	}
 }
 
