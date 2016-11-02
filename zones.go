@@ -563,6 +563,16 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 			}
 		}
 	}
+	// do this again for GlobLabels
+	for _, label := range Zone.GlobLabels {
+		if label.Ttl > 0 {
+			for _, records := range label.Records {
+				for _, r := range records {
+					r.RR.Header().Ttl = uint32(label.Ttl)
+				}
+			}
+		}
+	}
 
 	setupSOA(Zone)
 

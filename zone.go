@@ -1,11 +1,13 @@
 package main
 
 import (
+	"sort"
 	"strings"
 	"sync"
 
 	"github.com/miekg/dns"
 	"github.com/rcrowley/go-metrics"
+	glob "github.com/ryanuber/go-glob"
 )
 
 type ZoneOptions struct {
@@ -44,6 +46,13 @@ type Label struct {
 }
 
 type labels map[string]*Label
+type globLabels []*Label
+
+func (l globLabels) Len() int      { return len(l) }
+func (l globLabels) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
+func (l globLabels) Less(i, j int) bool {
+	return len(strings.Replace(l[i].Label, "*", "", -1)) < len(strings.Replace(l[j].Label, "*", "", -1))
+}
 
 type ZoneMetrics struct {
 	Queries     metrics.Meter
@@ -55,6 +64,7 @@ type ZoneMetrics struct {
 
 type Zone struct {
 	Origin     string
+	GlobLabels globLabels
 	Labels     labels
 	LabelCount int
 	Options    ZoneOptions
@@ -123,14 +133,20 @@ func (l *Label) firstRR(dnsType uint16) dns.RR {
 
 func (z *Zone) AddLabel(k string) *Label {
 	k = strings.ToLower(k)
-	z.Labels[k] = new(Label)
-	label := z.Labels[k]
-	label.Label = k
-	label.Ttl = z.Options.Ttl
-	label.MaxHosts = z.Options.MaxHosts
+	label := &Label{
+		Label:    k,
+		Ttl:      z.Options.Ttl,
+		MaxHosts: z.Options.MaxHosts,
+		Records:  make(map[uint16]Records),
+		Weight:   make(map[uint16]int),
+	}
 
-	label.Records = make(map[uint16]Records)
-	label.Weight = make(map[uint16]int)
+	if !strings.Contains(k, "*") {
+		z.Labels[k] = label
+	} else {
+		z.GlobLabels = append(z.GlobLabels, label)
+		sort.Sort(sort.Reverse(z.GlobLabels))
+	}
 
 	return label
 }
@@ -181,6 +197,58 @@ func (z *Zone) findLabels(s string, targets []string, qts qTypes) (*Label, uint1
 				}
 			}
 		}
+	}
+	// check against each glob label
+	var found bool
+	for n, label := range z.GlobLabels {
+		if found {
+			break
+		}
+		for _, target := range targets { // iterate again
+			var name string
+
+			switch target {
+			case "@":
+				name = s
+			default:
+				if len(s) > 0 {
+					name = s + "." + target
+				} else {
+					name = target
+				}
+			}
+			if _, ok := z.Labels[s]; !ok && glob.Glob(z.GlobLabels[n].Label, name) {
+				found = true
+				for _, qtype := range qts {
+					switch qtype {
+					case dns.TypeANY:
+						// short-circuit mostly to avoid subtle bugs later
+						// to be correct we should run through all the selectors and
+						// pick types not already picked
+						return z.GlobLabels[n], qtype
+					case dns.TypeMF:
+						if label.Records[dns.TypeMF] != nil {
+							name = label.firstRR(dns.TypeMF).(*dns.MF).Mf
+							// TODO: need to avoid loops here somehow
+							return z.findLabels(name, targets, qts)
+						}
+					default:
+						// return the label if it has the right record
+						if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
+							return label, qtype
+						}
+					}
+				}
+
+			}
+
+		}
+	} // glob
+	if found {
+		// we need to return NOERROR if there is at least one label
+		// otherwise geodns will return NXDOMAIN, which will be cached by other dns servers
+		// so they will return nothing for any consequent query
+		return new(Label), 0
 	}
 
 	return z.Labels[s], 0
