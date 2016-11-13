@@ -25,6 +25,11 @@ type AppConfig struct {
 		User     string
 		Password string
 	}
+	QueryLog struct {
+		Path    string
+		MaxSize int
+		Keep    int
+	}
 }
 
 var Config = new(AppConfig)
@@ -49,8 +54,6 @@ func (conf *AppConfig) GeoIPDirectory() string {
 }
 
 func configWatcher(fileName string) {
-
-	configReader(fileName)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {

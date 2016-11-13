@@ -29,13 +29,12 @@ type FileLogger struct {
 	logger lumberjack.Logger
 }
 
-func NewFileLogger(filename string) (*FileLogger, error) {
+func NewFileLogger(filename string, maxsize int, keep int) (*FileLogger, error) {
 	fl := &FileLogger{}
 	fl.logger = lumberjack.Logger{
 		Filename:   filename,
-		MaxSize:    500, // megabytes
-		MaxBackups: 3,
-		MaxAge:     28, //days
+		MaxSize:    maxsize, // megabytes
+		MaxBackups: keep,
 	}
 	return fl, nil
 }

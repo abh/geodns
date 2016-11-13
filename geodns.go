@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/abh/geodns/querylog"
 	"github.com/pborman/uuid"
 )
 
@@ -95,7 +96,6 @@ func main() {
 	}
 
 	srv := Server{}
-	srv.SetQueryLogger("log/queries.log")
 
 	if len(*flagLogFile) > 0 {
 		logToFileOpen(*flagLogFile)
@@ -155,10 +155,22 @@ func main() {
 		}()
 	}
 
+	// load geodns.conf config
+	configReader(configFileName)
+
+	// load (and re-load) zone data
 	go configWatcher(configFileName)
 
 	metrics := NewMetrics()
 	go metrics.Updater()
+
+	if qlc := Config.QueryLog; len(qlc.Path) > 0 {
+		ql, err := querylog.NewFileLogger(qlc.Path, qlc.MaxSize, qlc.Keep)
+		if err != nil {
+			log.Fatalf("Could not start file query logger: %s", err)
+		}
+		srv.SetQueryLogger(ql)
+	}
 
 	if *flaginter == "*" {
 		addrs, _ := net.InterfaceAddrs()
