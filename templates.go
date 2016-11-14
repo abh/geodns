@@ -155,7 +155,9 @@ func FSByte(useLocal bool, name string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return ioutil.ReadAll(f)
+		b, err := ioutil.ReadAll(f)
+		f.Close()
+		return b, err
 	}
 	f, err := _escStatic.prepare(name)
 	if err != nil {
@@ -191,20 +193,20 @@ var _escData = map[string]*_escFile{
 		size:    3181,
 		modtime: 1442049075,
 		compressed: `
-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
+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
 `,
 	},
 
