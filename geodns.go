@@ -53,6 +53,7 @@ var timeStarted = time.Now()
 
 var (
 	flagconfig       = flag.String("config", "./dns/", "directory of zone files")
+	flagconfigfile   = flag.String("configfile", "geodns.conf", "filename of config file (in 'config' directory)")
 	flagcheckconfig  = flag.Bool("checkconfig", false, "check configuration and exit")
 	flagidentifier   = flag.String("identifier", "", "identifier (hostname, pop name or similar)")
 	flaginter        = flag.String("interface", "*", "set the listener address")
@@ -109,7 +110,13 @@ func main() {
 		}
 	}
 
-	configFileName := filepath.Clean(*flagconfig + "/geodns.conf")
+	var configFileName string
+
+	if filepath.IsAbs(*flagconfigfile) {
+		configFileName = *flagconfigfile
+	} else {
+		configFileName = filepath.Clean(filepath.Join(*flagconfig, *flagconfigfile))
+	}
 
 	if *flagcheckconfig {
 		dirName := *flagconfig
