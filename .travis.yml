@@ -1,20 +1,22 @@
 language: go
 go:
-  - 1.4
-  - 1.5
+  - 1.5.4
+  - 1.6.2
   - tip
+
+env:
+  global:
+  - GO15VENDOREXPERIMENT='1'
+
 before_install:
   - sudo apt-get install libgeoip-dev bzr
+
 install:
   - mkdir -p $TRAVIS_BUILD_DIR/db
   - curl -s http://geodns.bitnames.com/geoip/GeoLiteCity.dat.gz | gzip -cd > $TRAVIS_BUILD_DIR/db/GeoIPCity.dat
   - curl -s http://download.maxmind.com/download/geoip/database/asnum/GeoIPASNum.dat.gz | gzip -cd > $TRAVIS_BUILD_DIR/db/GeoIPASNum.dat
   - echo [geodns] >> dns/geodns.conf
   - echo Directory=$TRAVIS_BUILD_DIR/db >> dns/geodns.conf
-  - go get github.com/abh/dns
-  - go get github.com/abh/geoip
-  - go get gopkg.in/check.v1
-  - go get -v
   - go build -v
   - go install
 

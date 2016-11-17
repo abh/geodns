@@ -49,6 +49,14 @@ To test the responses run
 
 `dig -t a test.example.com @127.1 -p 5053`
 
+or
+
+`dig -t ptr 2.1.168.192.IN-ADDR.ARPA. @127.1 -p 5053`
+
+or more simply put
+
+`dig -x 192.168.1.2 @127.1 -p 5053`
+
 The binary can be moved to /usr/local/bin, /opt/geodns/ or wherever you find appropriate.
 
 ### Command options
@@ -136,10 +144,13 @@ with `max_hosts` 2 then .4 will be returned about 4 times more often than .1.
 ## Configuration file
 
 The geodns.conf file allows you to specify a specific directory for the GeoIP
-data files and enable posting metrics to StatHat. See the `geodns.conf.sample`
-file for example configuration.
+data files and other options. See the `geodns.conf.sample` file for example
+configuration.
+
+The global configuration file is not reloaded at runtime.
 
 Most of the configuration is "per zone" and done in the zone .json files.
+The zone configuration files are automatically reloaded when they change.
 
 ## Zone format
 

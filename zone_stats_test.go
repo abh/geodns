@@ -1,7 +1,7 @@
 package main
 
 import (
-	. "github.com/abh/geodns/Godeps/_workspace/src/gopkg.in/check.v1"
+	. "gopkg.in/check.v1"
 )
 
 type ZoneStatsSuite struct {

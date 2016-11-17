@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
 	"log"
 	"math/rand"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/miekg/dns"
 )
 
 var (

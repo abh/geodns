@@ -29,11 +29,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abh/geodns/Godeps/_workspace/src/github.com/pborman/uuid"
+	"github.com/abh/geodns/querylog"
+	"github.com/pborman/uuid"
 )
 
 // VERSION is the current version of GeoDNS
-var VERSION string = "2.6.0"
+var VERSION string = "2.7.0"
 var buildTime string
 var gitVersion string
 
@@ -52,6 +53,7 @@ var timeStarted = time.Now()
 
 var (
 	flagconfig       = flag.String("config", "./dns/", "directory of zone files")
+	flagconfigfile   = flag.String("configfile", "geodns.conf", "filename of config file (in 'config' directory)")
 	flagcheckconfig  = flag.Bool("checkconfig", false, "check configuration and exit")
 	flagidentifier   = flag.String("identifier", "", "identifier (hostname, pop name or similar)")
 	flaginter        = flag.String("interface", "*", "set the listener address")
@@ -94,6 +96,8 @@ func main() {
 		os.Exit(0)
 	}
 
+	srv := Server{}
+
 	if len(*flagLogFile) > 0 {
 		logToFileOpen(*flagLogFile)
 	}
@@ -106,7 +110,13 @@ func main() {
 		}
 	}
 
-	configFileName := filepath.Clean(*flagconfig + "/geodns.conf")
+	var configFileName string
+
+	if filepath.IsAbs(*flagconfigfile) {
+		configFileName = *flagconfigfile
+	} else {
+		configFileName = filepath.Clean(filepath.Join(*flagconfig, *flagconfigfile))
+	}
 
 	if *flagcheckconfig {
 		dirName := *flagconfig
@@ -118,8 +128,8 @@ func main() {
 		}
 
 		Zones := make(Zones)
-		setupPgeodnsZone(Zones)
-		err = zonesReadDir(dirName, Zones)
+		srv.setupPgeodnsZone(Zones)
+		err = srv.zonesReadDir(dirName, Zones)
 		if err != nil {
 			log.Println("Errors reading zones", err)
 			os.Exit(2)
@@ -152,10 +162,22 @@ func main() {
 		}()
 	}
 
+	// load geodns.conf config
+	configReader(configFileName)
+
+	// load (and re-load) zone data
 	go configWatcher(configFileName)
 
 	metrics := NewMetrics()
 	go metrics.Updater()
+
+	if qlc := Config.QueryLog; len(qlc.Path) > 0 {
+		ql, err := querylog.NewFileLogger(qlc.Path, qlc.MaxSize, qlc.Keep)
+		if err != nil {
+			log.Fatalf("Could not start file query logger: %s", err)
+		}
+		srv.SetQueryLogger(ql)
+	}
 
 	if *flaginter == "*" {
 		addrs, _ := net.InterfaceAddrs()
@@ -182,14 +204,14 @@ func main() {
 	go monitor(Zones)
 	go Zones.statHatPoster()
 
-	setupRootZone()
-	setupPgeodnsZone(Zones)
+	srv.setupRootZone()
+	srv.setupPgeodnsZone(Zones)
 
 	dirName := *flagconfig
-	go zonesReader(dirName, Zones)
+	go srv.zonesReader(dirName, Zones)
 
 	for _, host := range inter {
-		go listenAndServe(host)
+		go srv.listenAndServe(host)
 	}
 
 	terminate := make(chan os.Signal)

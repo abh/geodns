@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abh/geodns/Godeps/_workspace/src/code.google.com/p/gcfg"
-	"github.com/abh/geodns/Godeps/_workspace/src/gopkg.in/fsnotify.v1"
+	"gopkg.in/fsnotify.v1"
+	"gopkg.in/gcfg.v1"
 )
 
 type AppConfig struct {
@@ -24,6 +24,11 @@ type AppConfig struct {
 	HTTP struct {
 		User     string
 		Password string
+	}
+	QueryLog struct {
+		Path    string
+		MaxSize int
+		Keep    int
 	}
 	Nodeping struct {
 		Token string
@@ -59,8 +64,6 @@ func (conf *AppConfig) GeoIPDirectory() string {
 }
 
 func configWatcher(fileName string) {
-
-	configReader(fileName)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/base64"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -19,14 +20,20 @@ type _escStaticFS struct{}
 
 var _escStatic _escStaticFS
 
+type _escDirectory struct {
+	fs   http.FileSystem
+	name string
+}
+
 type _escFile struct {
 	compressed string
 	size       int64
+	modtime    int64
 	local      string
 	isDir      bool
 
-	data []byte
 	once sync.Once
+	data []byte
 	name string
 }
 
@@ -50,7 +57,8 @@ func (_escStaticFS) prepare(name string) (*_escFile, error) {
 			return
 		}
 		var gr *gzip.Reader
-		gr, err = gzip.NewReader(bytes.NewBufferString(f.compressed))
+		b64 := base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(f.compressed))
+		gr, err = gzip.NewReader(b64)
 		if err != nil {
 			return
 		}
@@ -68,6 +76,10 @@ func (fs _escStaticFS) Open(name string) (http.File, error) {
 		return nil, err
 	}
 	return f.File()
+}
+
+func (dir _escDirectory) Open(name string) (http.File, error) {
+	return dir.fs.Open(dir.name + name)
 }
 
 func (f *_escFile) File() (http.File, error) {
@@ -106,7 +118,7 @@ func (f *_escFile) Mode() os.FileMode {
 }
 
 func (f *_escFile) ModTime() time.Time {
-	return time.Time{}
+	return time.Unix(f.modtime, 0)
 }
 
 func (f *_escFile) IsDir() bool {
@@ -126,6 +138,15 @@ func FS(useLocal bool) http.FileSystem {
 	return _escStatic
 }
 
+// Dir returns a http.Filesystem for the embedded assets on a given prefix dir.
+// If useLocal is true, the filesystem's contents are instead used.
+func Dir(useLocal bool, name string) http.FileSystem {
+	if useLocal {
+		return _escDirectory{fs: _escLocal, name: name}
+	}
+	return _escDirectory{fs: _escStatic, name: name}
+}
+
 // FSByte returns the named file from the embedded assets. If useLocal is
 // true, the filesystem's contents are instead used.
 func FSByte(useLocal bool, name string) ([]byte, error) {
@@ -134,7 +155,9 @@ func FSByte(useLocal bool, name string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return ioutil.ReadAll(f)
+		b, err := ioutil.ReadAll(f)
+		f.Close()
+		return b, err
 	}
 	f, err := _escStatic.prepare(name)
 	if err != nil {
@@ -166,18 +189,25 @@ func FSMustString(useLocal bool, name string) string {
 var _escData = map[string]*_escFile{
 
 	"/templates/status.html": {
-		local: "templates/status.html",
-		size:  3181,
-		compressed: "" +
-			"\x1f\x8b\b\x00\x00\tn\x88\x00\xff\xb4WMS\xeb6\x14]'\xbfB\xe3)\xbb\"\x13Jf\x1a\xeax\x03\f]4\x14\x9a\xb6\x8b\xb7S\xac\x9b\xd8\xf3\x1c)OR\b\xbcL\xfe\xfb\xbb\x92?b;&\x04\xbfa\x83\xe5#\x9d+\x9d{O\xaeL\x10\x9be\x1a\x0610\x1e\x06&1)\x84\xf7 o\x1f\xa6d\xbb%\xf4\u007fP:\x91\x82" +
-			"\xecv\x81\x9fM\xf6\x834\x11_I\xac`>\xf6|_\x80\xe1\x82љ\x94F\x1b\xc5V\x11\x174\x92K\xdfl\x12c@\x9d\x97\x13\xfe%\xfd\x8d\x0e\xfcHk\xbf\xc4\xceq\xe5,\x11\xc0\xe92A\x9a\xd6\x1eQ\x90\x8e=m^S\xd01\x80\xf1N\xdd\xcf\x01\x1bf\xa2\xb8\xd8\b\xd4:\x05&\xf6\xbb\x1d\xddĽ\x85\xfd\x9e\xe1\xf4\xbb\x14" +
-			" \xd8\x12~űM\v(\xb2%s)\xcc\xf9\x06\x92El\xae\xc9L\xa6\xfc\x0f\xb2\xeb\a~N\vf\x92\xbf\x86\xfd~\xc0\x93g\x12\xa5L\xeb\xb1\x17!\x83\xa18\xe5ىx\x10ާr\xc6\xd2\xc0\xc7a}\xa5\x92\x1b\xbb\xa6W\xc5\xf4\x8a\x89\xdf\x1d\xda\v\f\x9b\xa5PLd/\xee/&W\xe1\xe9\x80篸#\a\xa1\x81#" +
-			"\xafgy\xca=q\xc0\vv\"\xe6\x92d\xa2\xbc\xfc@D\x1bf4\x96\x97\x97\xab\xc3\x01\xc1\\ա\xe1!4h\xc1&\x98\xf2\x12\xc1\x81r\x12jg\t\x9f֠\x12hl\xb9ݮT\"̜xg\xf4r\xee\x11\x9a\x9d\x8e\xe6\x8b\xe9?\xcc\xc0\xc0\xd9\xf0\x83\xa4a\x17Ҡ\x13ˊ\xaf\xf02\xf9\xeei\xeb\xf3\xb9\xc5\xfc3\xd1" +
-			"F.\x14[6\xf2:9Z!\x87\x8c.\xce\x1a\xc0\xe8\x00\xa0Mh\xc2^\xea\xc0\xd4\xf0[x~\xaf\xf6\xb9羽c\x01\xee\x11R\xa6\xb8\x94FQ̩u\xa9\x90\xeaU9\x91\xf5\x18\x99\xd1\x05\xe9\xc6\x1bu\xe5\x1d%\xbe\x95\x13\xf6\xf2\xf1ݲb\x91\x03\xb3\xd6\xdd\x1a\xf8ؑ\xda:\xd3\xd5Ou\xa6\xc2\x10\x15+\x17.\xfeo" +
-			"e\x92%\xec\x0f\xe5\xc4\xd0\f\xa5\xb7\xecujP\xd8b\u007f\xec\xf2'\xf6v\xc8ǔ\x99\xb9T\xcbf\xd0\x02o\tv\x98\x81\xf2\x89\xcd\xfb\v\xde\x0f:k\xe3\x9d\x12\xe0\xce\x1a\x988\xc4}\xe2l\xe4\xfa\xed\xda\xc0\x1e\x19戮,j\xc1\xac\xb7\xc9\xd3\xe34G\xb2\x1a\xe2\xc5\xfd\x8b\x91\xab\xbf1kxu_\x8f\t\xfd\xb7x\xdb\xed" +
-			"\xec\xb4bb\x01\xe8%\xa7\x84X\xcc&\xb0\xdaV\xf2:a2ej\v>\x1e\x16\xb3\xc5\xed\xe8\xd9\x1c>\xe0\xa0\xcc_ᠠ(\xc9A\xa7o\xf5\xe6\x04\xb0\xa6\x91~\xabџ\xcc\x19v\xe0\f\xba\x90j\xfd\xa4E\xf4\x9d\xfdx\xfa\x88\xf2;.t\x17\xf5Mީb\x0e\xf6\xebJl̈́u_$\xd7\xc2hg\xbd\x82\xfb\x17\x9b" +
-			"A:\xb5\x9f\x1a֍7ق\x8aM\x9d\v\x91\x9b\xccK:B\xbdVc֝\x19\xbaк\xf9+.l^\x8bָG\xf3\x10W\xd6\xcb.J\xae&o\x11\xee\x94-\x17\xfav\v\x82\xdbx\xc5 W\x9d&Д}\xe3\xb0Su\xe7\x01N\x15\x9e\x05?\xa2\xbc\x1aﳤ\xf7\xcbѾo\xee\xdbf\xf6a\x8c\xdd\xd2\xfe\x97\xd1" +
-			"\xff\x11\x00\x00\xff\xff\xb0\x9dR\xc9m\f\x00\x00",
+		local:   "templates/status.html",
+		size:    3181,
+		modtime: 1442049075,
+		compressed: `
+H4sIAAAJbogA/7RXTY/bNhA9W7+CEJpbl4rSGKhTWpdskB7qdFO3PfRGiWOLqES65HidreD/XpD6sCxr
+Ha+KXCzpkW/IN/M0lFmOZZGwHLhIGEosIPkI+v7TmlQVoX+CsVIrcjyyqB4MWCHV3yQ3sFmGUaQAheI0
+1RotGr7LhKKZLiM8SEQwd91A9Ib+QOMoszbqsLtMl6lUIGgpFc2sDYmBYhlafCrA5gAY3rqeBw4cs7xd
+CMy+AK5Oq11dxD8lwQwF/VcrULyE71FQlxYwpCIbrfDuAHKb4zuS6kL8RI4BixoaS7V4SoKACflIsoJb
+uwwzrZBLBSZ0A3mcfCx0ygsW5fFgptEHN2fWx+yOqx89OmPI0wLagfrB/96l2ggwIJrHTCsByoIIk2Dm
+eMZfZwxFy5Zqo0ktKmw2RCxytCxC0c1OYlJKdQ7NL6F4BFsBPyEsclsY7iX5vAcjYbBkVe2MVLgh4Sv6
+ZhMSWu+ONpPpbxwh9jZ8IWk+hRRPYjnxPV4t319dfb5tMX+WFvXW8HKQ19XVCnlk8frVAFhcAHQIrfiX
+c2CN4h4ev1b7xnP/fMUCIiSkS3Enja6kurUuPdJ5VW5kPWS4eE2m8RZTeVeJz+WEf3n5anWxyIVZz93K
+IiEfxzrT2//VmVpD9KzcuviPHcoSTpvyYmiN0nv+tEYj1fa07e4Vez7kQ8Fxo005DNriI8EuM9Bd8zj5
+SyvnXNfGJyXA75VhnrAI8/rO99s9wgmZN4jtTRrBnLfJ54d1g9Q1rCryHerdrzt0R/e7JaG/t0/Hoxs2
+XG2BEOqVEIe5BPbbSlMnQTJduIIv5+1oezqGLoefeAld/loHsbYkF51+1JsrQCMz+1yjv5kzn8CJp5DO
++smI6A/u4+klyj8IZaeoH/JuFXOx3lTiaCac+zK9V2i99VruLzyFYu0+NZwb39cTejb1LqwqIjcd/Xis
+3+wLY547M/Gh7fAtbm1+Fm1wjjYh3jov+yiNmqZF+F2OHOhVBUq4eO1No7qQMJT93mO36m4C3Cq8Dn5F
+eT/et5IedHenvnlqm/WHMYv8v4zgvwAAAP//sJ1SyW0MAAA=
+`,
 	},
 
 	"/": {

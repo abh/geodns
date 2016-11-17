@@ -1,11 +1,8 @@
 {
 	"ImportPath": "github.com/abh/geodns",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v74",
 	"Deps": [
-		{
-			"ImportPath": "code.google.com/p/gcfg",
-			"Rev": "c2d3050044d05357eaf6c3547249ba57c5e235cb"
-		},
 		{
 			"ImportPath": "github.com/abh/errorutil",
 			"Rev": "f9bd360d00b902548fbb80837aef90dca2c8285e"
@@ -16,7 +13,7 @@
 		},
 		{
 			"ImportPath": "github.com/miekg/dns",
-			"Rev": "8395762c3490507cf5a27405fcd0e3d3dc547109"
+			"Rev": "b9171237b0642de1d8e8004f16869970e065f46b"
 		},
 		{
 			"ImportPath": "github.com/pborman/uuid",
@@ -24,7 +21,7 @@
 		},
 		{
 			"ImportPath": "github.com/rcrowley/go-metrics",
-			"Rev": "1ce93efbc8f9c568886b2ef85ce305b2217b3de3"
+			"Rev": "eeba7bd0dd01ace6e690fa833b3f22aaec29af43"
 		},
 		{
 			"ImportPath": "github.com/stathat/go",
@@ -42,6 +39,30 @@
 			"ImportPath": "gopkg.in/fsnotify.v1",
 			"Comment": "v1.2.0",
 			"Rev": "96c060f6a6b7e0d6f75fddd10efeaca3e5d1bcb0"
+		},
+		{
+			"ImportPath": "gopkg.in/gcfg.v1",
+			"Rev": "083575c3955c85df16fe9590cceab64d03f5eb6e"
+		},
+		{
+			"ImportPath": "gopkg.in/gcfg.v1/scanner",
+			"Comment": "v1.0.0",
+			"Rev": "083575c3955c85df16fe9590cceab64d03f5eb6e"
+		},
+		{
+			"ImportPath": "gopkg.in/gcfg.v1/token",
+			"Comment": "v1.0.0",
+			"Rev": "083575c3955c85df16fe9590cceab64d03f5eb6e"
+		},
+		{
+			"ImportPath": "gopkg.in/gcfg.v1/types",
+			"Comment": "v1.0.0",
+			"Rev": "083575c3955c85df16fe9590cceab64d03f5eb6e"
+		},
+		{
+			"ImportPath": "gopkg.in/natefinch/lumberjack.v2",
+			"Comment": "v1.0-21-g514cbda",
+			"Rev": "514cbda263a734ae8caac038dadf05f8f3f9f738"
 		}
 	]
 }

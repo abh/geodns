@@ -1,12 +1,14 @@
 package main
 
 import (
+	"math/rand"
 	"net"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/abh/geodns/Godeps/_workspace/src/github.com/miekg/dns"
-	. "github.com/abh/geodns/Godeps/_workspace/src/gopkg.in/check.v1"
+	"github.com/miekg/dns"
+	. "gopkg.in/check.v1"
 )
 
 const (
@@ -24,14 +26,19 @@ func (s *ServeSuite) SetUpSuite(c *C) {
 	metrics := NewMetrics()
 	go metrics.Updater()
 
-	Zones := make(Zones)
-	setupPgeodnsZone(Zones)
-	setupRootZone()
-	zonesReadDir("dns", Zones)
+	srv := Server{}
 
-	// listenAndServe returns after listning on udp + tcp, so just
+	Zones := make(Zones)
+	srv.setupPgeodnsZone(Zones)
+	srv.setupRootZone()
+	srv.zonesReadDir("dns", Zones)
+
+	// listenAndServe returns after listening on udp + tcp, so just
 	// wait for it before continuing
-	listenAndServe(PORT)
+	srv.listenAndServe(PORT)
+
+	// ensure service has properly started before we query it
+	time.Sleep(200 * time.Millisecond)
 }
 
 func (s *ServeSuite) TestServing(c *C) {
@@ -125,6 +132,14 @@ func (s *ServeSuite) TestServing(c *C) {
 	r = exchange(c, "one.test.example.com.", dns.TypeA)
 	ip = r.Answer[0].(*dns.A).A
 	c.Check(ip.String(), Equals, "192.168.1.6")
+
+	// PTR
+	r = exchange(c, "2.1.168.192.IN-ADDR.ARPA.", dns.TypePTR)
+	c.Check(r.Answer, HasLen, 1)
+	// NOERROR for PTR request
+	c.Check(r.Rcode, Equals, dns.RcodeSuccess)
+	name := r.Answer[0].(*dns.PTR).Ptr
+	c.Check(name, Equals, "bar.example.com.")
 }
 
 func (s *ServeSuite) TestServingMixedCase(c *C) {
@@ -222,9 +237,25 @@ func (s *ServeSuite) TestServeRace(c *C) {
 	wg.Wait()
 }
 
-func (s *ServeSuite) BenchmarkServing(c *C) {
+func (s *ServeSuite) BenchmarkServingCountryDebug(c *C) {
 	for i := 0; i < c.N; i++ {
 		exchange(c, "_country.foo.pgeodns.", dns.TypeTXT)
+	}
+}
+
+func (s *ServeSuite) BenchmarkServing(c *C) {
+
+	// a deterministic seed is the default anyway, but let's be explicit we want it here.
+	rnd := rand.NewSource(1)
+
+	testNames := []string{"foo.test.example.com.", "one.test.example.com.",
+		"weight.test.example.com.", "three.two.one.test.example.com.",
+		"bar.test.example.com.", "0-alias.test.example.com.",
+	}
+
+	for i := 0; i < c.N; i++ {
+		name := testNames[rnd.Int63()%int64(len(testNames))]
+		exchange(c, name, dns.TypeA)
 	}
 }
 

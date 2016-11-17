@@ -1,0 +1,20 @@
+{ "serial": 3,
+  "ttl":    600,
+  "max_hosts": 2,
+  "origin": "1.168.192.IN-ADDR.ARPA.",
+  "logging": {
+    "stathat": true,
+    "stathat_api": "abc-test"
+  },
+  "targeting": "country continent @ regiongroup region ip asn",
+  "contact": "support.bitnames.com",
+  "data" : {
+    "":  {
+      "ns": { "ns1.example.net.": null, "ns2.example.net.": null }
+    },
+    "2": {
+        "ptr": [ [ "bar.example.com." ] ],
+        "ttl": "601"
+    }
+  }
+}

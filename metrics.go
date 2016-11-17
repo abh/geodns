@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"time"
 
-	metrics "github.com/abh/geodns/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 type ServerMetrics struct {

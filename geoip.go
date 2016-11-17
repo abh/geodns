@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/abh/geodns/Godeps/_workspace/src/github.com/abh/geoip"
 	"github.com/abh/geodns/countries"
+	"github.com/abh/geoip"
 	"github.com/golang/geo/s2"
 	"log"
 	"math"
