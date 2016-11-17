@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/abh/geodns",
 	"GoVersion": "go1.7",
-	"GodepVersion": "v74",
+	"GodepVersion": "v75",
 	"Deps": [
 		{
 			"ImportPath": "github.com/abh/errorutil",
@@ -10,6 +10,26 @@
 		{
 			"ImportPath": "github.com/abh/geoip",
 			"Rev": "e5f8ea00f476d60a1e539d74211ce24881347d9e"
+		},
+		{
+			"ImportPath": "github.com/golang/geo/r1",
+			"Rev": "0c31b84d978c2b31eab2ba8c6c6e820d8ce3acff"
+		},
+		{
+			"ImportPath": "github.com/golang/geo/r2",
+			"Rev": "0c31b84d978c2b31eab2ba8c6c6e820d8ce3acff"
+		},
+		{
+			"ImportPath": "github.com/golang/geo/r3",
+			"Rev": "0c31b84d978c2b31eab2ba8c6c6e820d8ce3acff"
+		},
+		{
+			"ImportPath": "github.com/golang/geo/s1",
+			"Rev": "0c31b84d978c2b31eab2ba8c6c6e820d8ce3acff"
+		},
+		{
+			"ImportPath": "github.com/golang/geo/s2",
+			"Rev": "0c31b84d978c2b31eab2ba8c6c6e820d8ce3acff"
 		},
 		{
 			"ImportPath": "github.com/miekg/dns",
