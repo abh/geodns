@@ -20,12 +20,15 @@ if [ -e env/ID ]; then
   fi
 fi
 
-
 CONFIG=dns
 if [ -e env/CONFIG ]; then
   CONFIG=`head -1 env/CONFIG`
 fi
 
+if [ -e env/ARGS ]; then
+  XARGS=`cat env/ARGS`
+fi
+
 ulimit -n 64000
 
-exec softlimit -d500000000 ./geodns $INTERFACE $ID --config="$CONFIG"
+exec softlimit -d500000000 ./geodns $INTERFACE $ID --config="$CONFIG" $XARGS
