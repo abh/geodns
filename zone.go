@@ -4,6 +4,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/abh/geodns/applog"
+	"github.com/abh/geodns/health"
+
 	"github.com/miekg/dns"
 	"github.com/rcrowley/go-metrics"
 )
@@ -26,7 +29,7 @@ type Record struct {
 	RR     dns.RR
 	Weight int
 	Loc    *Location
-	Test   *HealthTest
+	Test   *health.HealthTest
 }
 
 type Records []Record
@@ -45,7 +48,7 @@ type Label struct {
 	Records  map[uint16]Records
 	Weight   map[uint16]int
 	Closest  bool
-	Test     *HealthTest
+	Test     *health.HealthTest
 }
 
 type labels map[string]*Label
@@ -195,7 +198,6 @@ func (z *Zone) findLabels(s string, targets []string, qts qTypes) (*Label, uint1
 
 // Find the locations of all the A records within a zone. If we were being really clever
 // here we could use LOC records too. But for the time being we'll just use GeoIP
-
 func (z *Zone) SetLocations() {
 	qtypes := []uint16{dns.TypeA}
 	for _, label := range z.Labels {
@@ -215,4 +217,104 @@ func (z *Zone) SetLocations() {
 			}
 		}
 	}
+}
+
+func (z *Zone) newHealthTest(l *Label, data interface{}) {
+	// First safely get rid of any old test. As label tests
+	// should never run this should never be executed
+	if l.Test != nil {
+		l.Test.Stop()
+		l.Test = nil
+	}
+
+	if data == nil {
+		return
+	}
+
+	if i, ok := data.(map[string]interface{}); ok {
+		tester, err := health.NewFromMap(i)
+		if err != nil {
+			applog.Printf("Could not configure health check: %s", err)
+			return
+		}
+		l.Test = tester
+
+	}
+}
+
+func (z *Zone) StartStopHealthChecks(start bool, oldZone *Zone) {
+	// 	applog.Printf("Start/stop health checks on zone %s start=%v", z.Origin, start)
+	// 	for labelName, label := range z.Labels {
+	// 		for _, qtype := range health.Qtypes {
+	// 			if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
+	// 				for i := range label.Records[qtype] {
+	// 					rr := label.Records[qtype][i].RR
+	// 					var ip net.IP
+	// 					switch rrt := rr.(type) {
+	// 					case *dns.A:
+	// 						ip = rrt.A
+	// 					case *dns.AAAA:
+	// 						ip = rrt.AAAA
+	// 					default:
+	// 						continue
+	// 					}
+
+	// 					var test *health.HealthTest
+	// 					ref := fmt.Sprintf("%s/%s/%d/%d", z.Origin, labelName, qtype, i)
+	// 					if start {
+	// 						if test = label.Records[qtype][i].Test; test != nil {
+	// 							// stop any old test
+	// 							health.TestRunner.removeTest(test, ref)
+	// 						} else {
+	// 							if ltest := label.Test; ltest != nil {
+	// 								test = ltest.copy(ip)
+	// 								label.Records[qtype][i].Test = test
+	// 							}
+	// 						}
+	// 						if test != nil {
+	// 							test.ipAddress = ip
+	// 							// if we are given an oldzone, let's see if we can find the old RR and
+	// 							// copy over the initial health state, rather than use the initial health
+	// 							// state provided from the label. This helps to stop health state bouncing
+	// 							// when a zone file is reloaded for a purposes unrelated to the RR
+	// 							if oldZone != nil {
+	// 								oLabel, ok := oldZone.Labels[labelName]
+	// 								if ok {
+	// 									if oLabel.Test != nil {
+	// 										for i := range oLabel.Records[qtype] {
+	// 											oRecord := oLabel.Records[qtype][i]
+	// 											var oip net.IP
+	// 											switch orrt := oRecord.RR.(type) {
+	// 											case *dns.A:
+	// 												oip = orrt.A
+	// 											case *dns.AAAA:
+	// 												oip = orrt.AAAA
+	// 											default:
+	// 												continue
+	// 											}
+	// 											if oip.Equal(ip) {
+	// 												if oRecord.Test != nil {
+	// 													h := oRecord.Test.IsHealthy()
+	// 													applog.Printf("Carrying over previous health state for %s: %v", oRecord.Test.ipAddress, h)
+	// 													// we know the test is stopped (as we haven't started it) so we can write
+	// 													// without the mutex and avoid a misleading log message
+	// 													test.healthy = h
+	// 												}
+	// 												break
+	// 											}
+	// 										}
+	// 									}
+	// 								}
+	// 							}
+	// 							health.TestRunner.addTest(test, ref)
+	// 						}
+	// 					} else {
+	// 						if test = label.Records[qtype][i].Test; test != nil {
+	// 							health.TestRunner.removeTest(test, ref)
+	// 						}
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
 }

@@ -1,10 +1,12 @@
-package main
+package applog
 
 import (
 	"log"
 	"os"
 	"time"
 )
+
+var Enabled bool
 
 type logToFile struct {
 	fn      string
@@ -22,14 +24,14 @@ func newlogToFile(fn string) *logToFile {
 	}
 }
 
-func logPrintf(format string, a ...interface{}) {
-	if *flaglog {
+func Printf(format string, a ...interface{}) {
+	if Enabled {
 		log.Printf(format, a...)
 	}
 }
 
-func logPrintln(a ...interface{}) {
-	if *flaglog {
+func Println(a ...interface{}) {
+	if Enabled {
 		log.Println(a...)
 	}
 }
@@ -62,8 +64,7 @@ func logToFileMonitor() {
 	}
 }
 
-func logToFileOpen(fn string) {
-
+func FileOpen(fn string) {
 	ltf = newlogToFile(fn)
 
 	var err error
@@ -79,7 +80,7 @@ func logToFileOpen(fn string) {
 	go logToFileMonitor()
 }
 
-func logToFileClose() {
+func FileClose() {
 	if ltf != nil {
 		log.Printf("Closing log file")
 		errc := make(chan error) // pass a 'chan error' through the closing channel

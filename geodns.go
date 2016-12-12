@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/abh/geodns/applog"
 	"github.com/abh/geodns/querylog"
 	"github.com/pborman/uuid"
 )
@@ -98,8 +99,12 @@ func main() {
 
 	srv := Server{}
 
+	if *flaglog {
+		applog.Enabled = true
+	}
+
 	if len(*flagLogFile) > 0 {
-		logToFileOpen(*flagLogFile)
+		applog.FileOpen(*flagLogFile)
 	}
 
 	if len(*flagidentifier) > 0 {
@@ -228,5 +233,5 @@ func main() {
 		pprof.WriteHeapProfile(f)
 		f.Close()
 	}
-	logToFileClose()
+	applog.FileClose()
 }

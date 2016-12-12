@@ -10,7 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/abh/geodns/applog"
+	"github.com/abh/geodns/health"
 	"github.com/abh/geodns/querylog"
+
 	"github.com/miekg/dns"
 	"github.com/rcrowley/go-metrics"
 )
@@ -38,7 +41,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		defer srv.queryLogger.Write(qle)
 	}
 
-	logPrintf("[zone %s] incoming  %s %s (id %d) from %s\n", z.Origin, qname,
+	applog.Printf("[zone %s] incoming  %s %s (id %d) from %s\n", z.Origin, qname,
 		dns.TypeToString[qtype], req.Id, w.RemoteAddr())
 
 	// Global meter
@@ -47,7 +50,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	// Zone meter
 	z.Metrics.Queries.Mark(1)
 
-	logPrintln("Got request", req)
+	applog.Println("Got request", req)
 
 	label := getQuestionName(z, req)
 
@@ -84,7 +87,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 					// do stuff with e.Nsid
 				case *dns.EDNS0_SUBNET:
 					z.Metrics.EdnsQueries.Mark(1)
-					logPrintln("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
+					applog.Println("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
 					if e.Address != nil {
 						edns = e
 						ip = e.Address
@@ -239,7 +242,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		m.Ns = append(m.Ns, z.SoaRR())
 	}
 
-	logPrintln(m)
+	applog.Println(m)
 
 	if qle != nil {
 		qle.LabelName = labels.Label
@@ -280,7 +283,7 @@ func (z *Zone) healthRR(label string, baseLabel string) []dns.RR {
 	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
 	h.Name = label
 
-	health := make(map[string]map[string]bool)
+	healthstatus := make(map[string]map[string]bool)
 
 	if l, ok := z.Labels[baseLabel]; ok {
 		for qt, records := range l.Records {
@@ -288,15 +291,15 @@ func (z *Zone) healthRR(label string, baseLabel string) []dns.RR {
 				hmap := make(map[string]bool)
 				for _, record := range records {
 					if record.Test != nil {
-						hmap[(*record.Test).ipAddress.String()] = healthTestRunner.isHealthy(record.Test)
+						hmap[(*record.Test).IP().String()] = health.TestRunner.IsHealthy(record.Test)
 					}
 				}
-				health[qts] = hmap
+				healthstatus[qts] = hmap
 			}
 		}
 	}
 
-	js, _ := json.Marshal(health)
+	js, _ := json.Marshal(healthstatus)
 
 	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
 }

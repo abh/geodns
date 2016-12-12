@@ -1,18 +1,20 @@
-package main
+package health
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"sync"
 	"time"
 
+	"github.com/abh/geodns/applog"
+	"github.com/abh/geodns/typeutil"
+
 	"github.com/miekg/dns"
 )
 
 var (
-	healthQtypes = []uint16{dns.TypeA, dns.TypeAAAA}
+	Qtypes = []uint16{dns.TypeA, dns.TypeAAAA}
 )
 
 type HealthTester interface {
@@ -51,7 +53,7 @@ type HealthTestRunner struct {
 	entryMutex sync.RWMutex
 }
 
-var healthTestRunner = &HealthTestRunner{
+var TestRunner = &HealthTestRunner{
 	entries: make(map[string]*HealthTestRunnerEntry),
 }
 
@@ -65,7 +67,7 @@ func defaultHealthTestParameters() HealthTestParameters {
 	}
 }
 
-func newHealthTest(ipAddress net.IP, htp HealthTestParameters, tester *HealthTester) *HealthTest {
+func NewTest(ipAddress net.IP, htp HealthTestParameters, tester *HealthTester) *HealthTest {
 	ht := HealthTest{
 		ipAddress:            ipAddress,
 		HealthTestParameters: htp,
@@ -98,7 +100,7 @@ func (ht *HealthTest) String() string {
 // safe copy function that copies the parameters but not (e.g.) the
 // mutex
 func (ht *HealthTest) copy(ipAddress net.IP) *HealthTest {
-	return newHealthTest(ipAddress, ht.HealthTestParameters, ht.tester)
+	return NewTest(ipAddress, ht.HealthTestParameters, ht.tester)
 }
 
 func (ht *HealthTest) setGlobal(g map[string]bool) {
@@ -147,14 +149,14 @@ func (ht *HealthTest) run() {
 				failCount = 0
 			} else {
 				failCount++
-				logPrintf("Failure for %s, retry count=%d, healthy=%v", ht.ipAddress, failCount, ht.isHealthy())
+				applog.Printf("Failure for %s, retry count=%d, healthy=%v", ht.ipAddress, failCount, ht.isHealthy())
 				if failCount >= ht.retries {
 					ht.setHealthy(false)
 					nextPoll = pollStart.Add(ht.retryTime)
 				}
 			}
 			pollStart = time.Time{}
-			logPrintf("Check result for %s health=%v, next poll at %s", ht.ipAddress, h, nextPoll)
+			applog.Printf("Check result for %s health=%v, next poll at %s", ht.ipAddress, h, nextPoll)
 			//randomDelay := rand.Int63n(time.Second.Nanoseconds())
 			//nextPoll = nextPoll.Add(time.Duration(randomDelay))
 		}
@@ -162,25 +164,26 @@ func (ht *HealthTest) run() {
 }
 
 func (ht *HealthTest) poll() {
-	logPrintf("Checking health of %s", ht.ipAddress)
+	applog.Printf("Checking health of %s", ht.ipAddress)
 	result := (*ht.tester).Test(ht)
-	logPrintf("Checked health of %s, healthy=%v", ht.ipAddress, result)
+	applog.Printf("Checked health of %s, healthy=%v", ht.ipAddress, result)
 	ht.health <- result
 }
 
 func (ht *HealthTest) start() {
 	ht.closing = make(chan chan error)
 	ht.health = make(chan bool)
-	logPrintf("Starting health test on %s, frequency=%s, retry_time=%s, timeout=%s, retries=%d", ht.ipAddress, ht.frequency, ht.retryTime, ht.timeout, ht.retries)
+	applog.Printf("Starting health test on %s, frequency=%s, retry_time=%s, timeout=%s, retries=%d", ht.ipAddress, ht.frequency, ht.retryTime, ht.timeout, ht.retries)
 	go ht.run()
 }
 
-func (ht *HealthTest) stop() (err error) {
+// Stop the health check from running
+func (ht *HealthTest) Stop() (err error) {
 	// Check it's been started by existing of the closing channel
 	if ht.closing == nil {
 		return nil
 	}
-	logPrintf("Stopping health test on %s", ht.ipAddress)
+	applog.Printf("Stopping health test on %s", ht.ipAddress)
 	errc := make(chan error)
 	ht.closing <- errc
 	err = <-errc
@@ -189,6 +192,13 @@ func (ht *HealthTest) stop() (err error) {
 	close(ht.health)
 	ht.health = nil
 	return err
+}
+
+func (ht *HealthTest) IP() net.IP {
+	return ht.ipAddress
+}
+func (ht *HealthTest) IsHealthy() bool {
+	return ht.isHealthy()
 }
 
 func (ht *HealthTest) isHealthy() bool {
@@ -204,7 +214,7 @@ func (ht *HealthTest) setHealthy(h bool) {
 	ht.healthy = h
 	ht.healthyMutex.Unlock()
 	if old != h {
-		logPrintf("Changing health status of %s from %v to %v", ht.ipAddress, old, h)
+		applog.Printf("Changing health status of %s from %v to %v", ht.ipAddress, old, h)
 	}
 }
 
@@ -244,7 +254,7 @@ func (htr *HealthTestRunner) removeTest(ht *HealthTest, ref string) {
 		ht.healthyMutex.Unlock()
 		if len(t.references) == 0 {
 			// no more references, delete the test
-			t.stop()
+			t.Stop()
 			delete(htr.entries, key)
 		}
 	}
@@ -261,12 +271,16 @@ func (htr *HealthTestRunner) refAllGlobalHealthChecks(ref string, add bool) {
 				delete(t.references, ref)
 				if len(t.references) == 0 {
 					// no more references, delete the test
-					t.stop()
+					t.Stop()
 					delete(htr.entries, key)
 				}
 			}
 		}
 	}
+}
+
+func (htr *HealthTestRunner) IsHealthy(ht *HealthTest) bool {
+	return htr.isHealthy(ht)
 }
 
 func (htr *HealthTestRunner) isHealthy(ht *HealthTest) bool {
@@ -286,121 +300,39 @@ func (htr *HealthTestRunner) isHealthy(ht *HealthTest) bool {
 	return ht.isHealthy()
 }
 
-func (z *Zone) newHealthTest(l *Label, data interface{}) {
-	// First safely get rid of any old test. As label tests
-	// should never run this should never be executed
-	if l.Test != nil {
-		l.Test.stop()
-		l.Test = nil
+func NewFromMap(i map[string]interface{}) (*HealthTest, error) {
+	ts := typeutil.ToString(i["type"])
+
+	if len(ts) == 0 {
+		return nil, fmt.Errorf("type required")
 	}
 
-	if data == nil {
-		return
+	htp := defaultHealthTestParameters()
+	nh, ok := HealthTesterMap[ts]
+	if !ok {
+		return nil, fmt.Errorf("Bad health test type '%s'", ts)
 	}
-	if i, ok := data.(map[string]interface{}); ok {
-		if t, ok := i["type"]; ok {
-			ts := valueToString(t)
-			htp := defaultHealthTestParameters()
-			if nh, ok := HealthTesterMap[ts]; !ok {
-				log.Printf("Bad health test type '%s'", ts)
-			} else {
-				htp.testName = ts
-				h := nh(i, &htp)
 
-				for k, v := range i {
-					switch k {
-					case "frequency":
-						htp.frequency = time.Duration(valueToInt(v)) * time.Second
-					case "retry_time":
-						htp.retryTime = time.Duration(valueToInt(v)) * time.Second
-					case "timeout":
-						htp.retryTime = time.Duration(valueToInt(v)) * time.Second
-					case "retries":
-						htp.retries = valueToInt(v)
-					case "healthy_initially":
-						htp.healthyInitially = valueToBool(v)
-						logPrintf("HealthyInitially for %s is %v", l.Label, htp.healthyInitially)
-					}
-				}
+	htp.testName = ts
+	h := nh(i, &htp)
 
-				l.Test = newHealthTest(nil, htp, &h)
-			}
+	for k, v := range i {
+		switch k {
+		case "frequency":
+			htp.frequency = time.Duration(typeutil.ToInt(v)) * time.Second
+		case "retry_time":
+			htp.retryTime = time.Duration(typeutil.ToInt(v)) * time.Second
+		case "timeout":
+			htp.retryTime = time.Duration(typeutil.ToInt(v)) * time.Second
+		case "retries":
+			htp.retries = typeutil.ToInt(v)
+		case "healthy_initially":
+			htp.healthyInitially = typeutil.ToBool(v)
+			// applog.Printf("HealthyInitially for %s is %v", l.Label, htp.healthyInitially)
 		}
 	}
-}
 
-func (z *Zone) StartStopHealthChecks(start bool, oldZone *Zone) {
-	logPrintf("Start/stop health checks on zone %s start=%v", z.Origin, start)
-	for labelName, label := range z.Labels {
-		for _, qtype := range healthQtypes {
-			if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
-				for i := range label.Records[qtype] {
-					rr := label.Records[qtype][i].RR
-					var ip net.IP
-					switch rrt := rr.(type) {
-					case *dns.A:
-						ip = rrt.A
-					case *dns.AAAA:
-						ip = rrt.AAAA
-					default:
-						continue
-					}
-					var test *HealthTest
-					ref := fmt.Sprintf("%s/%s/%d/%d", z.Origin, labelName, qtype, i)
-					if start {
-						if test = label.Records[qtype][i].Test; test != nil {
-							// stop any old test
-							healthTestRunner.removeTest(test, ref)
-						} else {
-							if ltest := label.Test; ltest != nil {
-								test = ltest.copy(ip)
-								label.Records[qtype][i].Test = test
-							}
-						}
-						if test != nil {
-							test.ipAddress = ip
-							// if we are given an oldzone, let's see if we can find the old RR and
-							// copy over the initial health state, rather than use the initial health
-							// state provided from the label. This helps to stop health state bouncing
-							// when a zone file is reloaded for a purposes unrelated to the RR
-							if oldZone != nil {
-								oLabel, ok := oldZone.Labels[labelName]
-								if ok {
-									if oLabel.Test != nil {
-										for i := range oLabel.Records[qtype] {
-											oRecord := oLabel.Records[qtype][i]
-											var oip net.IP
-											switch orrt := oRecord.RR.(type) {
-											case *dns.A:
-												oip = orrt.A
-											case *dns.AAAA:
-												oip = orrt.AAAA
-											default:
-												continue
-											}
-											if oip.Equal(ip) {
-												if oRecord.Test != nil {
-													h := oRecord.Test.isHealthy()
-													logPrintf("Carrying over previous health state for %s: %v", oRecord.Test.ipAddress, h)
-													// we know the test is stopped (as we haven't started it) so we can write
-													// without the mutex and avoid a misleading log message
-													test.healthy = h
-												}
-												break
-											}
-										}
-									}
-								}
-							}
-							healthTestRunner.addTest(test, ref)
-						}
-					} else {
-						if test = label.Records[qtype][i].Test; test != nil {
-							healthTestRunner.removeTest(test, ref)
-						}
-					}
-				}
-			}
-		}
-	}
+	tester := NewTest(nil, htp, &h)
+	return tester, nil
+
 }

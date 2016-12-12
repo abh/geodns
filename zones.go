@@ -16,6 +16,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/abh/geodns/applog"
+	"github.com/abh/geodns/typeutil"
+
 	"github.com/abh/errorutil"
 	"github.com/miekg/dns"
 )
@@ -56,10 +59,10 @@ func (srv *Server) zonesReadDir(dirName string, zones Zones) error {
 		if _, ok := lastRead[zoneName]; !ok || file.ModTime().After(lastRead[zoneName].time) {
 			modTime := file.ModTime()
 			if ok {
-				logPrintf("Reloading %s\n", fileName)
+				applog.Printf("Reloading %s\n", fileName)
 				lastRead[zoneName].time = modTime
 			} else {
-				logPrintf("Reading new file %s\n", fileName)
+				applog.Printf("Reading new file %s\n", fileName)
 				lastRead[zoneName] = &ZoneReadRecord{time: modTime}
 			}
 
@@ -88,7 +91,7 @@ func (srv *Server) zonesReadDir(dirName string, zones Zones) error {
 
 			sha256 := sha256File(filename)
 			if lastRead[zoneName].hash == sha256 {
-				logPrintf("Skipping new file %s as hash is unchanged\n", filename)
+				applog.Printf("Skipping new file %s as hash is unchanged\n", filename)
 				continue
 			}
 
@@ -193,13 +196,13 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 
 		switch k {
 		case "ttl":
-			zone.Options.Ttl = valueToInt(v)
+			zone.Options.Ttl = typeutil.ToInt(v)
 		case "serial":
-			zone.Options.Serial = valueToInt(v)
+			zone.Options.Serial = typeutil.ToInt(v)
 		case "contact":
 			zone.Options.Contact = v.(string)
 		case "max_hosts":
-			zone.Options.MaxHosts = valueToInt(v)
+			zone.Options.MaxHosts = typeutil.ToInt(v)
 		case "closest":
 			zone.Options.Closest = v.(bool)
 			if zone.Options.Closest {
@@ -218,9 +221,9 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 				for logger, v := range v.(map[string]interface{}) {
 					switch logger {
 					case "stathat":
-						logging.StatHat = valueToBool(v)
+						logging.StatHat = typeutil.ToBool(v)
 					case "stathat_api":
-						logging.StatHatAPI = valueToString(v)
+						logging.StatHatAPI = typeutil.ToString(v)
 						logging.StatHat = true
 					default:
 						log.Println("Unknown logger option", logger)
@@ -283,7 +286,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		for rType, rdata := range dv {
 			switch rType {
 			case "max_hosts":
-				label.MaxHosts = valueToInt(rdata)
+				label.MaxHosts = typeutil.ToInt(rdata)
 				continue
 			case "closest":
 				label.Closest = rdata.(bool)
@@ -292,7 +295,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 				}
 				continue
 			case "ttl":
-				label.Ttl = valueToInt(rdata)
+				label.Ttl = typeutil.ToInt(rdata)
 				continue
 			case "test":
 				Zone.newHealthTest(label, rdata)
@@ -390,10 +393,10 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						mx = mx + "."
 					}
 					if rec["weight"] != nil {
-						record.Weight = valueToInt(rec["weight"])
+						record.Weight = typeutil.ToInt(rec["weight"])
 					}
 					if rec["preference"] != nil {
-						pref = uint16(valueToInt(rec["preference"]))
+						pref = uint16(typeutil.ToInt(rec["preference"]))
 					}
 					record.RR = &dns.MX{
 						Hdr:        h,
@@ -412,13 +415,13 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					}
 
 					if rec["srv_weight"] != nil {
-						srv_weight = uint16(valueToInt(rec["srv_weight"]))
+						srv_weight = uint16(typeutil.ToInt(rec["srv_weight"]))
 					}
 					if rec["port"] != nil {
-						port = uint16(valueToInt(rec["port"]))
+						port = uint16(typeutil.ToInt(rec["port"]))
 					}
 					if rec["priority"] != nil {
-						priority = uint16(valueToInt(rec["priority"]))
+						priority = uint16(typeutil.ToInt(rec["priority"]))
 					}
 					record.RR = &dns.SRV{
 						Hdr:      h,
@@ -484,7 +487,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						recmap := rec.(map[string]interface{})
 
 						if weight, ok := recmap["weight"]; ok {
-							record.Weight = valueToInt(weight)
+							record.Weight = typeutil.ToInt(weight)
 						}
 						if t, ok := recmap["txt"]; ok {
 							txt = t.(string)
@@ -512,7 +515,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						recmap := rec.(map[string]interface{})
 
 						if weight, ok := recmap["weight"]; ok {
-							record.Weight = valueToInt(weight)
+							record.Weight = typeutil.ToInt(weight)
 						}
 						if t, ok := recmap["spf"]; ok {
 							spf = t.(string)
@@ -645,60 +648,6 @@ func setupSOA(Zone *Zone) {
 	label.Records[dns.TypeSOA] = make([]Record, 1)
 	label.Records[dns.TypeSOA][0] = record
 
-}
-
-func valueToBool(v interface{}) (rv bool) {
-	switch v.(type) {
-	case bool:
-		rv = v.(bool)
-	case string:
-		str := v.(string)
-		switch str {
-		case "true":
-			rv = true
-		case "1":
-			rv = true
-		}
-	case float64:
-		if v.(float64) > 0 {
-			rv = true
-		}
-	default:
-		log.Println("Can't convert", v, "to bool")
-		panic("Can't convert value")
-	}
-	return rv
-
-}
-
-func valueToString(v interface{}) (rv string) {
-	switch v.(type) {
-	case string:
-		rv = v.(string)
-	case float64:
-		rv = strconv.FormatFloat(v.(float64), 'f', -1, 64)
-	default:
-		log.Println("Can't convert", v, "to string")
-		panic("Can't convert value")
-	}
-	return rv
-}
-
-func valueToInt(v interface{}) (rv int) {
-	switch v.(type) {
-	case string:
-		i, err := strconv.Atoi(v.(string))
-		if err != nil {
-			panic("Error converting weight to integer")
-		}
-		rv = i
-	case float64:
-		rv = int(v.(float64))
-	default:
-		log.Println("Can't convert", v, "to integer")
-		panic("Can't convert value")
-	}
-	return rv
 }
 
 func zoneNameFromFile(fileName string) string {

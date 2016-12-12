@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/abh/geodns/querylog"
+
 	"github.com/miekg/dns"
 )
 
@@ -49,14 +50,14 @@ func (srv *Server) addHandler(zones Zones, name string, config *Zone) {
 	oldZone := zones[name]
 	// across the recconfiguration keep a reference to all healthchecks to ensure
 	// the global map doesn't get destroyed
-	healthTestRunner.refAllGlobalHealthChecks(name, true)
-	defer healthTestRunner.refAllGlobalHealthChecks(name, false)
-	if oldZone != nil {
-		oldZone.StartStopHealthChecks(false, nil)
-	}
+	// health.TestRunner.refAllGlobalHealthChecks(name, true)
+	// defer health.TestRunner.refAllGlobalHealthChecks(name, false)
+	// if oldZone != nil {
+	// 	oldZone.StartStopHealthChecks(false, nil)
+	// }
 	config.SetupMetrics(oldZone)
 	zones[name] = config
-	config.StartStopHealthChecks(true, oldZone)
+	// config.StartStopHealthChecks(true, oldZone)
 	dns.HandleFunc(name, srv.setupServerFunc(config))
 }
 

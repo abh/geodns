@@ -1,4 +1,4 @@
-package main
+package health
 
 import (
 	"crypto/sha256"
@@ -15,6 +15,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/abh/geodns/applog"
+	"github.com/abh/geodns/typeutil"
 )
 
 /*
@@ -38,7 +41,9 @@ import (
  * Then add a single entry to the HealthTesterTypes map pointing to the third function
  */
 
-var HealthTesterMap = map[string]func(params map[string]interface{}, htp *HealthTestParameters) HealthTester{
+type healthTesterBuilder func(params map[string]interface{}, htp *HealthTestParameters) HealthTester
+
+var HealthTesterMap = map[string]healthTesterBuilder{
 	"tcp":      newTcpHealthTester,
 	"ntp":      newNtpHealthTester,
 	"exec":     newExecHealthTester,
@@ -72,7 +77,7 @@ func (t *TcpHealthTester) String() string {
 func newTcpHealthTester(params map[string]interface{}, htp *HealthTestParameters) HealthTester {
 	port := 80
 	if v, ok := params["port"]; ok {
-		port = valueToInt(v)
+		port = typeutil.ToInt(v)
 	}
 	return &TcpHealthTester{port: port}
 }
@@ -130,7 +135,7 @@ func (t *NtpHealthTester) String() string {
 func newNtpHealthTester(params map[string]interface{}, htp *HealthTestParameters) HealthTester {
 	maxStratum := 3
 	if v, ok := params["max_stratum"]; ok {
-		maxStratum = valueToInt(v)
+		maxStratum = typeutil.ToInt(v)
 	}
 	return &NtpHealthTester{maxStratum: maxStratum}
 }
@@ -159,7 +164,7 @@ func (t *ExecHealthTester) String() string {
 func newExecHealthTester(params map[string]interface{}, htp *HealthTestParameters) HealthTester {
 	cmd := "echo '%s'"
 	if v, ok := params["cmd"]; ok {
-		cmd = valueToString(v)
+		cmd = typeutil.ToString(v)
 	}
 	return &ExecHealthTester{cmd: cmd}
 }
@@ -184,7 +189,7 @@ type FileHealthTester struct {
 
 func (t *FileHealthTester) Test(ht *HealthTest) bool {
 	if len(t.path) == 0 {
-		logPrintf("No test file path specified")
+		applog.Printf("No test file path specified")
 		return false
 	}
 
@@ -235,7 +240,7 @@ func (t *FileHealthTester) String() string {
 func newFileHealthTester(params map[string]interface{}, htp *HealthTestParameters) HealthTester {
 	var path string
 	if v, ok := params["path"]; ok {
-		path = valueToString(v)
+		path = typeutil.ToString(v)
 	}
 	htp.global = true
 	return &FileHealthTester{path: path}
@@ -269,13 +274,8 @@ type NodepingHealthTester struct {
 func (t *NodepingHealthTester) Test(ht *HealthTest) bool {
 	token := t.token
 	if len(token) == 0 {
-		cfgMutex.RLock()
-		token = Config.Nodeping.Token
-		cfgMutex.RUnlock()
-		if len(token) == 0 {
-			logPrintf("No Nodeping API key specified")
-			return false
-		}
+		applog.Printf("No Nodeping API key specified")
+		return false
 	}
 
 	var vals url.Values = url.Values{}
@@ -305,8 +305,8 @@ func (t *NodepingHealthTester) Test(ht *HealthTest) bool {
 			for _, item := range m {
 				if result, ok := item.(map[string]interface{}); ok {
 					if ip, ok := result["label"]; ok {
-						host := valueToString(ip)
-						logPrintf("Nodeping host %s health set to false", host)
+						host := typeutil.ToString(ip)
+						applog.Printf("Nodeping host %s health set to false", host)
 						state[host] = false // only down or disabled events reported
 					}
 				}
@@ -327,7 +327,7 @@ func (t *NodepingHealthTester) String() string {
 func newNodepingHealthTester(params map[string]interface{}, htp *HealthTestParameters) HealthTester {
 	var token string
 	if v, ok := params["token"]; ok {
-		token = valueToString(v)
+		token = typeutil.ToString(v)
 	}
 	// as we can only detect down nodes, not all nodes, we should assume the default is health
 	htp.healthyInitially = true
@@ -399,55 +399,35 @@ type PingdomHealthTester struct {
 func (t *PingdomHealthTester) Test(ht *HealthTest) bool {
 	username := t.username
 	if len(username) == 0 {
-		cfgMutex.RLock()
-		username = Config.Pingdom.Username
-		cfgMutex.RUnlock()
-		if len(username) == 0 {
-			logPrintf("No Pingdom username specified")
-			return false
-		}
+		applog.Printf("No Pingdom username specified")
+		return false
 	}
 
 	password := t.password
 	if len(password) == 0 {
-		cfgMutex.RLock()
-		password = Config.Pingdom.Password
-		cfgMutex.RUnlock()
-		if len(password) == 0 {
-			logPrintf("No Pingdom password specified")
-			return false
-		}
+		applog.Printf("No Pingdom password specified")
+		return false
 	}
 
 	accountEmail := t.accountEmail
-	if len(accountEmail) == 0 {
-		cfgMutex.RLock()
-		accountEmail = Config.Pingdom.AccountEmail
-		cfgMutex.RUnlock()
-	}
 
 	appKey := t.appKey
 	if len(appKey) == 0 {
-		cfgMutex.RLock()
-		appKey = Config.Pingdom.AppKey
-		cfgMutex.RUnlock()
-		if len(appKey) == 0 {
-			appKey = "gyxtnd2fzco8ys29m8luk4syag4ybmc0"
-		}
+		applog.Printf("No Pingdom appkey specified")
 	}
 
 	stateMap := t.stateMap
 	if stateMap == nil {
-		cfgMutex.RLock()
-		stateMapString := Config.Pingdom.StateMap
-		cfgMutex.RUnlock()
-		if len(stateMapString) > 0 {
-			stateMap = make(map[string]bool)
-			if err := json.Unmarshal([]byte(stateMapString), &stateMap); err != nil {
-				logPrintf("Cannot decode configfile Pingdom state map JSON")
-				return false
-			}
-		}
+		// cfgMutex.RLock()
+		// stateMapString := Config.Pingdom.StateMap
+		// cfgMutex.RUnlock()
+		// if len(stateMapString) > 0 {
+		// 	stateMap = make(map[string]bool)
+		// 	if err := json.Unmarshal([]byte(stateMapString), &stateMap); err != nil {
+		// 		applog.Printf("Cannot decode configfile Pingdom state map JSON")
+		// 		return false
+		// 	}
+		// }
 		if stateMap == nil {
 			stateMap = defaultPingdomStateMap
 		}
@@ -498,11 +478,11 @@ func (t *PingdomHealthTester) Test(ht *HealthTest) bool {
 							if check, ok := checki.(map[string]interface{}); ok {
 								if ip, ok := check["name"]; ok {
 									if status, ok := check["status"]; ok {
-										s := valueToString(status)
+										s := typeutil.ToString(status)
 										if updown, ok := stateMap[s]; ok {
-											host := valueToString(ip)
+											host := typeutil.ToString(ip)
 											state[host] = updown
-											logPrintf("Pingdom host %s state %s health set to %v", host, s, updown)
+											applog.Printf("Pingdom host %s state %s health set to %v", host, s, updown)
 										}
 									}
 								}
@@ -537,22 +517,22 @@ func newPingdomHealthTester(params map[string]interface{}, htp *HealthTestParame
 	var appKey string
 	var stateMap map[string]bool = nil
 	if v, ok := params["username"]; ok {
-		username = valueToString(v)
+		username = typeutil.ToString(v)
 	}
 	if v, ok := params["password"]; ok {
-		password = valueToString(v)
+		password = typeutil.ToString(v)
 	}
 	if v, ok := params["account_email"]; ok {
-		accountEmail = valueToString(v)
+		accountEmail = typeutil.ToString(v)
 	}
 	if v, ok := params["app_key"]; ok {
-		appKey = valueToString(v)
+		appKey = typeutil.ToString(v)
 	}
 	if v, ok := params["state_map"]; ok {
 		if vv, ok := v.(map[string]interface{}); ok {
 			stateMap = make(map[string]bool)
 			for k, s := range vv {
-				stateMap[valueToString(k)] = valueToBool(s)
+				stateMap[typeutil.ToString(k)] = typeutil.ToBool(s)
 			}
 		}
 	}
