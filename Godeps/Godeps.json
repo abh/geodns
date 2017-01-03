@@ -44,10 +44,6 @@
 			"Rev": "eeba7bd0dd01ace6e690fa833b3f22aaec29af43"
 		},
 		{
-			"ImportPath": "github.com/stathat/go",
-			"Rev": "01d012b9ee2ecc107cb28b6dd32d9019ed5c1d77"
-		},
-		{
 			"ImportPath": "golang.org/x/net/websocket",
 			"Rev": "db8e4de5b2d6653f66aea53094624468caad15d2"
 		},

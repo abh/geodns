@@ -11,20 +11,20 @@ import (
 	"time"
 
 	"github.com/abh/geodns/applog"
-	"github.com/abh/geodns/health"
 	"github.com/abh/geodns/querylog"
+	"github.com/abh/geodns/zones"
 
 	"github.com/miekg/dns"
 	"github.com/rcrowley/go-metrics"
 )
 
-func getQuestionName(z *Zone, req *dns.Msg) string {
+func getQuestionName(z *zones.Zone, req *dns.Msg) string {
 	lx := dns.SplitDomainName(req.Question[0].Name)
 	ql := lx[0 : len(lx)-z.LabelCount]
 	return strings.ToLower(strings.Join(ql, "."))
 }
 
-func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
+func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 	qname := req.Question[0].Name
 	qtype := req.Question[0].Qtype
@@ -141,7 +141,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		}
 	}
 
-	labels, labelQtype := z.findLabels(label, targets, qTypes{dns.TypeMF, dns.TypeCNAME, qtype})
+	labels, labelQtype := z.FindLabels(label, targets, []uint16{dns.TypeMF, dns.TypeCNAME, qtype})
 	if labelQtype == 0 {
 		labelQtype = qtype
 	}
@@ -170,7 +170,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		if permitDebug && firstLabel == "_health" {
 			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
 				baseLabel := strings.Join((strings.Split(label, "."))[1:], ".")
-				m.Answer = z.healthRR(label+"."+z.Origin+".", baseLabel)
+				m.Answer = z.HealthRR(label+"."+z.Origin+".", baseLabel)
 				m.Authoritative = true
 				w.WriteMsg(m)
 				return
@@ -195,7 +195,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 				txt = append(txt, strings.Join(targets, " "))
 				txt = append(txt, fmt.Sprintf("/%d", netmask), serverID, serverIP)
 				if location != nil {
-					txt = append(txt, fmt.Sprintf("(%.3f,%.3f)", location.latitude, location.longitude))
+					txt = append(txt, fmt.Sprintf("(%.3f,%.3f)", location.Latitude, location.Longitude))
 				} else {
 					txt = append(txt, "(?,?)")
 				}
@@ -275,31 +275,6 @@ func statusRR(label string) []dns.RR {
 	status["qps1"] = fmt.Sprintf("%.4f", qCounter.Rate1())
 
 	js, err := json.Marshal(status)
-
-	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
-}
-
-func (z *Zone) healthRR(label string, baseLabel string) []dns.RR {
-	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
-	h.Name = label
-
-	healthstatus := make(map[string]map[string]bool)
-
-	if l, ok := z.Labels[baseLabel]; ok {
-		for qt, records := range l.Records {
-			if qts, ok := dns.TypeToString[qt]; ok {
-				hmap := make(map[string]bool)
-				for _, record := range records {
-					if record.Test != nil {
-						hmap[(*record.Test).IP().String()] = health.TestRunner.IsHealthy(record.Test)
-					}
-				}
-				healthstatus[qts] = hmap
-			}
-		}
-	}
-
-	js, _ := json.Marshal(healthstatus)
 
 	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
 }

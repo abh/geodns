@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/abh/geodns/zones"
+
 	"github.com/rcrowley/go-metrics"
 	"golang.org/x/net/websocket"
 )
@@ -159,7 +161,7 @@ func initialStatus() string {
 	return string(message)
 }
 
-func monitor(zones Zones) {
+func monitor(zones zones.Zones) {
 
 	if len(*flaghttp) == 0 {
 		return
@@ -213,7 +215,7 @@ func MainServer(w http.ResponseWriter, req *http.Request) {
 type rate struct {
 	Name    string
 	Count   int64
-	Metrics ZoneMetrics
+	Metrics zones.ZoneMetrics
 }
 type Rates []*rate
 
@@ -269,7 +271,7 @@ func topParam(req *http.Request, def int) int {
 	return topOption
 }
 
-func StatusJSONHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
+func StatusJSONHandler(zones zones.Zones) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		zonemetrics := make(map[string]metrics.Registry)
@@ -319,7 +321,7 @@ func StatusJSONHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func StatusHandler(zones Zones) func(http.ResponseWriter, *http.Request) {
+func StatusHandler(zones zones.Zones) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, req *http.Request) {
 
@@ -422,7 +424,7 @@ func (b *basicauth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func httpHandler(zones Zones) {
+func httpHandler(zones zones.Zones) {
 	http.Handle("/monitor", websocket.Handler(wsHandler))
 	http.HandleFunc("/status", StatusHandler(zones))
 	http.HandleFunc("/status.json", StatusJSONHandler(zones))

@@ -1,22 +1,17 @@
-package main
+package zones
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
-	"path"
 	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/abh/geodns/applog"
+	"github.com/abh/geodns/targeting"
 	"github.com/abh/geodns/typeutil"
 
 	"github.com/abh/errorutil"
@@ -26,125 +21,7 @@ import (
 // Zones maps domain names to zone data
 type Zones map[string]*Zone
 
-type ZoneReadRecord struct {
-	time time.Time
-	hash string
-}
-
-var lastRead = map[string]*ZoneReadRecord{}
-
-func (srv *Server) zonesReadDir(dirName string, zones Zones) error {
-	dir, err := ioutil.ReadDir(dirName)
-	if err != nil {
-		log.Println("Could not read", dirName, ":", err)
-		return err
-	}
-
-	seenZones := map[string]bool{}
-
-	var parseErr error
-
-	for _, file := range dir {
-		fileName := file.Name()
-		if !strings.HasSuffix(strings.ToLower(fileName), ".json") ||
-			strings.HasPrefix(path.Base(fileName), ".") ||
-			file.IsDir() {
-			continue
-		}
-
-		zoneName := zoneNameFromFile(fileName)
-
-		seenZones[zoneName] = true
-
-		if _, ok := lastRead[zoneName]; !ok || file.ModTime().After(lastRead[zoneName].time) {
-			modTime := file.ModTime()
-			if ok {
-				applog.Printf("Reloading %s\n", fileName)
-				lastRead[zoneName].time = modTime
-			} else {
-				applog.Printf("Reading new file %s\n", fileName)
-				lastRead[zoneName] = &ZoneReadRecord{time: modTime}
-			}
-
-			filename := path.Join(dirName, fileName)
-
-			// Check the sha256 of the file has not changed. It's worth an explanation of
-			// why there isn't a TOCTOU race here. Conceivably after checking whether the
-			// SHA has changed, the contents then change again before we actually load
-			// the JSON. This can occur in two situations:
-			//
-			// 1. The SHA has not changed when we read the file for the SHA, but then
-			//    changes before we process the JSON
-			//
-			// 2. The SHA has changed when we read the file for the SHA, but then changes
-			//    again before we process the JSON
-			//
-			// In circumstance (1) we won't reread the file the first time, but the subsequent
-			// change should alter the mtime again, causing us to reread it. This reflects
-			// the fact there were actually two changes.
-			//
-			// In circumstance (2) we have already reread the file once, and then when the
-			// contents are changed the mtime changes again
-			//
-			// Provided files are replaced atomically, this should be OK. If files are not
-			// replaced atomically we have other problems (e.g. partial reads).
-
-			sha256 := sha256File(filename)
-			if lastRead[zoneName].hash == sha256 {
-				applog.Printf("Skipping new file %s as hash is unchanged\n", filename)
-				continue
-			}
-
-			config, err := readZoneFile(zoneName, filename)
-			if config == nil || err != nil {
-				parseErr = fmt.Errorf("Error reading zone '%s': %s", zoneName, err)
-				log.Println(parseErr.Error())
-				continue
-			}
-
-			(lastRead[zoneName]).hash = sha256
-
-			srv.addHandler(zones, zoneName, config)
-		}
-	}
-
-	for zoneName, zone := range zones {
-		if zoneName == "pgeodns" {
-			continue
-		}
-		if ok, _ := seenZones[zoneName]; ok {
-			continue
-		}
-		log.Println("Removing zone", zone.Origin)
-		delete(lastRead, zoneName)
-		zone.Close()
-		dns.HandleRemove(zoneName)
-		delete(zones, zoneName)
-	}
-
-	return parseErr
-}
-
-func (srv *Server) setupPgeodnsZone(zones Zones) {
-	zoneName := "pgeodns"
-	Zone := NewZone(zoneName)
-	label := new(Label)
-	label.Records = make(map[uint16]Records)
-	label.Weight = make(map[uint16]int)
-	Zone.Labels[""] = label
-	setupSOA(Zone)
-	srv.addHandler(zones, zoneName, Zone)
-}
-
-func (srv *Server) setupRootZone() {
-	dns.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {
-		m := new(dns.Msg)
-		m.SetRcode(r, dns.RcodeRefused)
-		w.WriteMsg(m)
-	})
-}
-
-func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
+func ReadZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("reading %s failed: %s", zoneName, r)
@@ -209,7 +86,7 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 				zone.HasClosest = true
 			}
 		case "targeting":
-			zone.Options.Targeting, err = parseTargets(v.(string))
+			zone.Options.Targeting, err = targeting.ParseTargets(v.(string))
 			if err != nil {
 				log.Printf("Could not parse targeting '%s': %s", v, err)
 				return nil, err
@@ -246,13 +123,13 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 	//log.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
 
 	switch {
-	case zone.Options.Targeting >= TargetRegionGroup || zone.HasClosest:
-		geoIP.setupGeoIPCity()
-	case zone.Options.Targeting >= TargetContinent:
-		geoIP.setupGeoIPCountry()
+	case zone.Options.Targeting >= targeting.TargetRegionGroup || zone.HasClosest:
+		targeting.GeoIP().SetupGeoIPCity()
+	case zone.Options.Targeting >= targeting.TargetContinent:
+		targeting.GeoIP().SetupGeoIPCountry()
 	}
-	if zone.Options.Targeting&TargetASN > 0 {
-		geoIP.setupGeoIPASN()
+	if zone.Options.Targeting&targeting.TargetASN > 0 {
+		targeting.GeoIP().SetupGeoIPASN()
 	}
 
 	if zone.HasClosest {
@@ -262,7 +139,7 @@ func readZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 	return zone, nil
 }
 
-func setupZoneData(data map[string]interface{}, Zone *Zone) {
+func setupZoneData(data map[string]interface{}, zone *Zone) {
 	recordTypes := map[string]uint16{
 		"a":     dns.TypeA,
 		"aaaa":  dns.TypeAAAA,
@@ -281,7 +158,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 		//log.Printf("K %s V %s TYPE-V %T\n", dk, dv, dv)
 
-		label := Zone.AddLabel(dk)
+		label := zone.AddLabel(dk)
 
 		for rType, rdata := range dv {
 			switch rType {
@@ -291,14 +168,14 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 			case "closest":
 				label.Closest = rdata.(bool)
 				if label.Closest {
-					Zone.HasClosest = true
+					zone.HasClosest = true
 				}
 				continue
 			case "ttl":
 				label.Ttl = typeutil.ToInt(rdata)
 				continue
 			case "test":
-				Zone.newHealthTest(label, rdata)
+				zone.newHealthTest(label, rdata)
 				continue
 			}
 
@@ -355,9 +232,9 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				switch len(label.Label) {
 				case 0:
-					h.Name = Zone.Origin + "."
+					h.Name = zone.Origin + "."
 				default:
-					h.Name = label.Label + "." + Zone.Origin + "."
+					h.Name = label.Label + "." + zone.Origin + "."
 				}
 
 				switch dnsType {
@@ -411,7 +288,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 					target := rec["target"].(string)
 
 					if !dns.IsFqdn(target) {
-						target = target + "." + Zone.Origin
+						target = target + "." + zone.Origin
 					}
 
 					if rec["srv_weight"] != nil {
@@ -441,7 +318,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						target, weight = getStringWeight(rec.([]interface{}))
 					}
 					if !dns.IsFqdn(target) {
-						target = target + "." + Zone.Origin
+						target = target + "." + zone.Origin
 					}
 					record.Weight = weight
 					record.RR = &dns.CNAME{Hdr: h, Target: dns.Fqdn(target)}
@@ -497,7 +374,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						rr := &dns.TXT{Hdr: h, Txt: []string{txt}}
 						record.RR = rr
 					} else {
-						log.Printf("Zero length txt record for '%s' in '%s'\n", label.Label, Zone.Origin)
+						log.Printf("Zero length txt record for '%s' in '%s'\n", label.Label, zone.Origin)
 						continue
 					}
 					// Initial SPF support added here, cribbed from the TypeTXT case definition - SPF records should be handled identically
@@ -525,7 +402,7 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 						rr := &dns.SPF{Hdr: h, Txt: []string{spf}}
 						record.RR = rr
 					} else {
-						log.Printf("Zero length SPF record for '%s' in '%s'\n", label.Label, Zone.Origin)
+						log.Printf("Zero length SPF record for '%s' in '%s'\n", label.Label, zone.Origin)
 						continue
 					}
 
@@ -549,26 +426,26 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 	// loop over exisiting labels, create zone records for missing sub-domains
 	// and set TTLs
-	for k := range Zone.Labels {
+	for k := range zone.Labels {
 		if strings.Contains(k, ".") {
 			subLabels := strings.Split(k, ".")
 			for i := 1; i < len(subLabels); i++ {
 				subSubLabel := strings.Join(subLabels[i:], ".")
-				if _, ok := Zone.Labels[subSubLabel]; !ok {
-					Zone.AddLabel(subSubLabel)
+				if _, ok := zone.Labels[subSubLabel]; !ok {
+					zone.AddLabel(subSubLabel)
 				}
 			}
 		}
-		for _, records := range Zone.Labels[k].Records {
+		for _, records := range zone.Labels[k].Records {
 			for _, r := range records {
 				var defaultTtl uint32 = 86400
 				if r.RR.Header().Rrtype != dns.TypeNS {
 					// NS records have special treatment. If they are not specified, they default to 86400 rather than
 					// defaulting to the zone ttl option. The label TTL option always works though
-					defaultTtl = uint32(Zone.Options.Ttl)
+					defaultTtl = uint32(zone.Options.Ttl)
 				}
-				if Zone.Labels[k].Ttl > 0 {
-					defaultTtl = uint32(Zone.Labels[k].Ttl)
+				if zone.Labels[k].Ttl > 0 {
+					defaultTtl = uint32(zone.Labels[k].Ttl)
 				}
 				if r.RR.Header().Ttl == 0 {
 					r.RR.Header().Ttl = defaultTtl
@@ -577,9 +454,8 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 		}
 	}
 
-	setupSOA(Zone)
+	zone.addSOA()
 
-	//log.Println(Zones[k])
 }
 
 func getStringWeight(rec []interface{}) (string, int) {
@@ -600,66 +476,4 @@ func getStringWeight(rec []interface{}) (string, int) {
 	}
 
 	return str, weight
-}
-
-func setupSOA(Zone *Zone) {
-	label := Zone.Labels[""]
-
-	primaryNs := "ns"
-
-	// log.Println("LABEL", label)
-
-	if label == nil {
-		log.Println(Zone.Origin, "doesn't have any 'root' records,",
-			"you should probably add some NS records")
-		label = Zone.AddLabel("")
-	}
-
-	if record, ok := label.Records[dns.TypeNS]; ok {
-		primaryNs = record[0].RR.(*dns.NS).Ns
-	}
-
-	ttl := Zone.Options.Ttl * 10
-	if ttl > 3600 {
-		ttl = 3600
-	}
-	if ttl == 0 {
-		ttl = 600
-	}
-
-	s := Zone.Origin + ". " + strconv.Itoa(ttl) + " IN SOA " +
-		primaryNs + " " + Zone.Options.Contact + " " +
-		strconv.Itoa(Zone.Options.Serial) +
-		// refresh, retry, expire, minimum are all
-		// meaningless with this implementation
-		" 5400 5400 1209600 3600"
-
-	// log.Println("SOA: ", s)
-
-	rr, err := dns.NewRR(s)
-
-	if err != nil {
-		log.Println("SOA Error", err)
-		panic("Could not setup SOA")
-	}
-
-	record := Record{RR: rr}
-
-	label.Records[dns.TypeSOA] = make([]Record, 1)
-	label.Records[dns.TypeSOA][0] = record
-
-}
-
-func zoneNameFromFile(fileName string) string {
-	return fileName[0:strings.LastIndex(fileName, ".")]
-}
-
-func sha256File(fn string) string {
-	if data, err := ioutil.ReadFile(fn); err != nil {
-		return ""
-	} else {
-		hasher := sha256.New()
-		hasher.Write(data)
-		return hex.EncodeToString(hasher.Sum(nil))
-	}
 }

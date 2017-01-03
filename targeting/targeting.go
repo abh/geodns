@@ -1,4 +1,4 @@
-package main
+package targeting
 
 import (
 	"fmt"
@@ -32,13 +32,15 @@ func (t TargetOptions) GetTargets(ip net.IP, hasClosest bool) ([]string, int, *L
 	var netmask int
 	var location *Location
 
+	g := GeoIP()
+
 	if t&TargetASN > 0 {
-		asn, netmask = geoIP.GetASN(ip)
+		asn, netmask = g.GetASN(ip)
 	}
 	if t&TargetRegion > 0 || t&TargetRegionGroup > 0 || hasClosest {
 		country, continent, regionGroup, region, netmask, location = geoIP.GetCountryRegion(ip)
 	} else if t&TargetCountry > 0 || t&TargetContinent > 0 {
-		country, continent, netmask = geoIP.GetCountry(ip)
+		country, continent, netmask = g.GetCountry(ip)
 	}
 
 	if t&TargetIP > 0 {
@@ -108,7 +110,7 @@ func (t TargetOptions) String() string {
 	return strings.Join(targets, " ")
 }
 
-func parseTargets(v string) (tgt TargetOptions, err error) {
+func ParseTargets(v string) (tgt TargetOptions, err error) {
 	targets := strings.Split(v, " ")
 	for _, t := range targets {
 		var x TargetOptions

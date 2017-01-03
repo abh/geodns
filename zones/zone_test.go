@@ -1,4 +1,4 @@
-package main
+package zones
 
 import (
 	"github.com/miekg/dns"

@@ -7,18 +7,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/abh/geodns/zones"
+
 	. "gopkg.in/check.v1"
 )
 
 type MonitorSuite struct {
-	zones   Zones
+	zones   zones.Zones
 	metrics *ServerMetrics
 }
 
 var _ = Suite(&MonitorSuite{})
 
 func (s *MonitorSuite) SetUpSuite(c *C) {
-	s.zones = make(Zones)
+	s.zones = make(zones.Zones)
 	s.metrics = NewMetrics()
 	go s.metrics.Updater()
 

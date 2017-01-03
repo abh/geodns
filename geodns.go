@@ -31,6 +31,7 @@ import (
 
 	"github.com/abh/geodns/applog"
 	"github.com/abh/geodns/querylog"
+	"github.com/abh/geodns/zones"
 	"github.com/pborman/uuid"
 )
 
@@ -132,7 +133,7 @@ func main() {
 			os.Exit(2)
 		}
 
-		Zones := make(Zones)
+		Zones := make(zones.Zones)
 		srv.setupPgeodnsZone(Zones)
 		err = srv.zonesReadDir(dirName, Zones)
 		if err != nil {
@@ -202,18 +203,16 @@ func main() {
 
 	inter := getInterfaces()
 
-	go statHatPoster()
+	if Config.HasStatHat() {
+		log.Println("StatHat integration has been removed in favor of more generic metrics")
+	}
 
-	Zones := make(Zones)
-
-	go monitor(Zones)
-	go Zones.statHatPoster()
-
+	// the global-ish zones 'context' is quite a mess
+	zonelist := make(zones.Zones)
+	go monitor(zonelist)
 	srv.setupRootZone()
-	srv.setupPgeodnsZone(Zones)
-
-	dirName := *flagconfig
-	go srv.zonesReader(dirName, Zones)
+	srv.setupPgeodnsZone(zonelist)
+	go srv.zonesReader(*flagconfig, zonelist)
 
 	for _, host := range inter {
 		go srv.listenAndServe(host)

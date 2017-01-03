@@ -1,4 +1,4 @@
-package main
+package zones
 
 import (
 	. "gopkg.in/check.v1"

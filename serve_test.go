@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/abh/geodns/zones"
 	"github.com/miekg/dns"
 	. "gopkg.in/check.v1"
 )
@@ -28,10 +29,10 @@ func (s *ServeSuite) SetUpSuite(c *C) {
 
 	srv := Server{}
 
-	Zones := make(Zones)
-	srv.setupPgeodnsZone(Zones)
+	zonelist := make(zones.Zones)
+	srv.setupPgeodnsZone(zonelist)
 	srv.setupRootZone()
-	srv.zonesReadDir("dns", Zones)
+	srv.zonesReadDir("dns", zonelist)
 
 	// listenAndServe returns after listening on udp + tcp, so just
 	// wait for it before continuing

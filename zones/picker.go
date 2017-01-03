@@ -1,14 +1,15 @@
-package main
+package zones
 
 import (
 	"math/rand"
 
 	"github.com/abh/geodns/health"
+	"github.com/abh/geodns/targeting"
 
 	"github.com/miekg/dns"
 )
 
-func (label *Label) Picker(qtype uint16, max int, location *Location) Records {
+func (label *Label) Picker(qtype uint16, max int, location *targeting.Location) Records {
 
 	if qtype == dns.TypeANY {
 		var result []Record

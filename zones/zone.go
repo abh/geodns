@@ -1,11 +1,15 @@
-package main
+package zones
 
 import (
+	"encoding/json"
+	"log"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/abh/geodns/applog"
 	"github.com/abh/geodns/health"
+	"github.com/abh/geodns/targeting"
 
 	"github.com/miekg/dns"
 	"github.com/rcrowley/go-metrics"
@@ -16,7 +20,7 @@ type ZoneOptions struct {
 	Ttl       int
 	MaxHosts  int
 	Contact   string
-	Targeting TargetOptions
+	Targeting targeting.TargetOptions
 	Closest   bool
 }
 
@@ -28,7 +32,7 @@ type ZoneLogging struct {
 type Record struct {
 	RR     dns.RR
 	Weight int
-	Loc    *Location
+	Loc    *targeting.Location
 	Test   *health.HealthTest
 }
 
@@ -72,8 +76,6 @@ type Zone struct {
 	sync.RWMutex
 }
 
-type qTypes []uint16
-
 func NewZone(name string) *Zone {
 	zone := new(Zone)
 	zone.Labels = make(labels)
@@ -84,7 +86,7 @@ func NewZone(name string) *Zone {
 	zone.Options.Ttl = 120
 	zone.Options.MaxHosts = 2
 	zone.Options.Contact = "hostmaster." + name
-	zone.Options.Targeting = TargetGlobal + TargetCountry + TargetContinent
+	zone.Options.Targeting = targeting.TargetGlobal + targeting.TargetCountry + targeting.TargetContinent
 
 	return zone
 }
@@ -149,11 +151,62 @@ func (z *Zone) SoaRR() dns.RR {
 	return z.Labels[""].firstRR(dns.TypeSOA)
 }
 
+func (zone *Zone) AddSOA() {
+	zone.addSOA()
+}
+
+func (zone *Zone) addSOA() {
+	label := zone.Labels[""]
+
+	primaryNs := "ns"
+
+	// log.Println("LABEL", label)
+
+	if label == nil {
+		log.Println(zone.Origin, "doesn't have any 'root' records,",
+			"you should probably add some NS records")
+		label = zone.AddLabel("")
+	}
+
+	if record, ok := label.Records[dns.TypeNS]; ok {
+		primaryNs = record[0].RR.(*dns.NS).Ns
+	}
+
+	ttl := zone.Options.Ttl * 10
+	if ttl > 3600 {
+		ttl = 3600
+	}
+	if ttl == 0 {
+		ttl = 600
+	}
+
+	s := zone.Origin + ". " + strconv.Itoa(ttl) + " IN SOA " +
+		primaryNs + " " + zone.Options.Contact + " " +
+		strconv.Itoa(zone.Options.Serial) +
+		// refresh, retry, expire, minimum are all
+		// meaningless with this implementation
+		" 5400 5400 1209600 3600"
+
+	// log.Println("SOA: ", s)
+
+	rr, err := dns.NewRR(s)
+
+	if err != nil {
+		log.Println("SOA Error", err)
+		panic("Could not setup SOA")
+	}
+
+	record := Record{RR: rr}
+
+	label.Records[dns.TypeSOA] = make([]Record, 1)
+	label.Records[dns.TypeSOA][0] = record
+}
+
 // Find label "s" in country "cc" falling back to the appropriate
 // continent and the global label name as needed. Looks for the
 // first available qType at each targeting level. Return a Label
 // and the qtype that was "found"
-func (z *Zone) findLabels(s string, targets []string, qts qTypes) (*Label, uint16) {
+func (z *Zone) FindLabels(s string, targets []string, qts []uint16) (*Label, uint16) {
 	for _, target := range targets {
 		var name string
 
@@ -181,7 +234,7 @@ func (z *Zone) findLabels(s string, targets []string, qts qTypes) (*Label, uint1
 					if label.Records[dns.TypeMF] != nil {
 						name = label.firstRR(dns.TypeMF).(*dns.MF).Mf
 						// TODO: need to avoid loops here somehow
-						return z.findLabels(name, targets, qts)
+						return z.FindLabels(name, targets, qts)
 					}
 				default:
 					// return the label if it has the right record
@@ -209,7 +262,7 @@ func (z *Zone) SetLocations() {
 						rr := label.Records[qtype][i].RR
 						if a, ok := rr.(*dns.A); ok {
 							ip := a.A
-							_, _, _, _, _, location := geoIP.GetCountryRegion(ip)
+							_, _, _, _, _, location := targeting.GeoIP().GetCountryRegion(ip)
 							label.Records[qtype][i].Loc = location
 						}
 					}
@@ -317,4 +370,29 @@ func (z *Zone) StartStopHealthChecks(start bool, oldZone *Zone) {
 	// 			}
 	// 		}
 	// 	}
+}
+
+func (z *Zone) HealthRR(label string, baseLabel string) []dns.RR {
+	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
+	h.Name = label
+
+	healthstatus := make(map[string]map[string]bool)
+
+	if l, ok := z.Labels[baseLabel]; ok {
+		for qt, records := range l.Records {
+			if qts, ok := dns.TypeToString[qt]; ok {
+				hmap := make(map[string]bool)
+				for _, record := range records {
+					if record.Test != nil {
+						hmap[(*record.Test).IP().String()] = health.TestRunner.IsHealthy(record.Test)
+					}
+				}
+				healthstatus[qts] = hmap
+			}
+		}
+	}
+
+	js, _ := json.Marshal(healthstatus)
+
+	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
 }

@@ -1,17 +1,19 @@
-package main
+package targeting
 
 import (
-	"github.com/abh/geodns/countries"
-	"github.com/abh/geoip"
-	"github.com/golang/geo/s2"
 	"log"
 	"math"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/abh/geodns/countries"
+
+	"github.com/abh/geoip"
+	"github.com/golang/geo/s2"
 )
 
-type GeoIP struct {
+type GeoIPData struct {
 	country         *geoip.GeoIP
 	hasCountry      bool
 	countryLastLoad time.Time
@@ -28,8 +30,8 @@ type GeoIP struct {
 const MAX_DISTANCE = 360
 
 type Location struct {
-	latitude  float64
-	longitude float64
+	Latitude  float64
+	Longitude float64
 }
 
 func (l *Location) MaxDistance() float64 {
@@ -40,20 +42,25 @@ func (l *Location) Distance(to *Location) float64 {
 	if to == nil {
 		return MAX_DISTANCE
 	}
-	ll1 := s2.LatLngFromDegrees(l.latitude, l.longitude)
-	ll2 := s2.LatLngFromDegrees(to.latitude, to.longitude)
+	ll1 := s2.LatLngFromDegrees(l.Latitude, l.Longitude)
+	ll2 := s2.LatLngFromDegrees(to.Latitude, to.Longitude)
 	angle := ll1.Distance(ll2)
 	return math.Abs(angle.Degrees())
 }
 
-var geoIP = new(GeoIP)
+var geoIP = &GeoIPData{}
 
-func (g *GeoIP) GetCountry(ip net.IP) (country, continent string, netmask int) {
+func GeoIP() *GeoIPData {
+	// mutex this and allow it to reload as needed?
+	return geoIP
+}
+
+func (g *GeoIPData) GetCountry(ip net.IP) (country, continent string, netmask int) {
 	if g.country == nil {
 		return "", "", 0
 	}
 
-	country, netmask = geoIP.country.GetCountry(ip.String())
+	country, netmask = g.country.GetCountry(ip.String())
 	if len(country) > 0 {
 		country = strings.ToLower(country)
 		continent = countries.CountryContinent[country]
@@ -61,14 +68,14 @@ func (g *GeoIP) GetCountry(ip net.IP) (country, continent string, netmask int) {
 	return
 }
 
-func (g *GeoIP) GetCountryRegion(ip net.IP) (country, continent, regionGroup, region string, netmask int, location *Location) {
+func (g *GeoIPData) GetCountryRegion(ip net.IP) (country, continent, regionGroup, region string, netmask int, location *Location) {
 	if g.city == nil {
 		log.Println("No city database available")
 		country, continent, netmask = g.GetCountry(ip)
 		return
 	}
 
-	record := geoIP.city.GetRecord(ip.String())
+	record := g.city.GetRecord(ip.String())
 	if record == nil {
 		return
 	}
@@ -90,7 +97,7 @@ func (g *GeoIP) GetCountryRegion(ip net.IP) (country, continent, regionGroup, re
 	return
 }
 
-func (g *GeoIP) GetASN(ip net.IP) (asn string, netmask int) {
+func (g *GeoIPData) GetASN(ip net.IP) (asn string, netmask int) {
 	if g.asn == nil {
 		log.Println("No asn database available")
 		return
@@ -105,23 +112,21 @@ func (g *GeoIP) GetASN(ip net.IP) (asn string, netmask int) {
 	return
 }
 
-func (g *GeoIP) setDirectory() {
-	directory := Config.GeoIPDirectory()
+func (g *GeoIPData) SetDirectory(directory string) {
+	// directory := Config.GeoIPDataDirectory()
 	if len(directory) > 0 {
 		geoip.SetCustomDirectory(directory)
 	}
 }
 
-func (g *GeoIP) setupGeoIPCountry() {
+func (g *GeoIPData) SetupGeoIPCountry() {
 	if g.country != nil {
 		return
 	}
 
-	g.setDirectory()
-
 	gi, err := geoip.OpenType(geoip.GEOIP_COUNTRY_EDITION)
 	if gi == nil || err != nil {
-		log.Printf("Could not open country GeoIP database: %s\n", err)
+		log.Printf("Could not open country GeoIPData database: %s\n", err)
 		return
 	}
 	g.countryLastLoad = time.Now()
@@ -130,16 +135,14 @@ func (g *GeoIP) setupGeoIPCountry() {
 
 }
 
-func (g *GeoIP) setupGeoIPCity() {
+func (g *GeoIPData) SetupGeoIPCity() {
 	if g.city != nil {
 		return
 	}
 
-	g.setDirectory()
-
 	gi, err := geoip.OpenType(geoip.GEOIP_CITY_EDITION_REV1)
 	if gi == nil || err != nil {
-		log.Printf("Could not open city GeoIP database: %s\n", err)
+		log.Printf("Could not open city GeoIPData database: %s\n", err)
 		return
 	}
 	g.cityLastLoad = time.Now()
@@ -148,16 +151,14 @@ func (g *GeoIP) setupGeoIPCity() {
 
 }
 
-func (g *GeoIP) setupGeoIPASN() {
+func (g *GeoIPData) SetupGeoIPASN() {
 	if g.asn != nil {
 		return
 	}
 
-	g.setDirectory()
-
 	gi, err := geoip.OpenType(geoip.GEOIP_ASNUM_EDITION)
 	if gi == nil || err != nil {
-		log.Printf("Could not open ASN GeoIP database: %s\n", err)
+		log.Printf("Could not open ASN GeoIPData database: %s\n", err)
 		return
 	}
 	g.asnLastLoad = time.Now()
