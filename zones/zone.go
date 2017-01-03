@@ -128,7 +128,7 @@ func (z *Zone) Close() {
 	}
 }
 
-func (l *Label) firstRR(dnsType uint16) dns.RR {
+func (l *Label) FirstRR(dnsType uint16) dns.RR {
 	return l.Records[dnsType][0].RR
 }
 
@@ -148,7 +148,7 @@ func (z *Zone) AddLabel(k string) *Label {
 }
 
 func (z *Zone) SoaRR() dns.RR {
-	return z.Labels[""].firstRR(dns.TypeSOA)
+	return z.Labels[""].FirstRR(dns.TypeSOA)
 }
 
 func (zone *Zone) AddSOA() {
@@ -232,7 +232,7 @@ func (z *Zone) FindLabels(s string, targets []string, qts []uint16) (*Label, uin
 					return z.Labels[s], qtype
 				case dns.TypeMF:
 					if label.Records[dns.TypeMF] != nil {
-						name = label.firstRR(dns.TypeMF).(*dns.MF).Mf
+						name = label.FirstRR(dns.TypeMF).(*dns.MF).Mf
 						// TODO: need to avoid loops here somehow
 						return z.FindLabels(name, targets, qts)
 					}

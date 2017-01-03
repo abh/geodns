@@ -1,4 +1,4 @@
-package zones
+package main
 
 import (
 	"io"
@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/abh/geodns/zones"
 	"github.com/miekg/dns"
 	. "gopkg.in/check.v1"
 )
@@ -14,31 +15,31 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 type ConfigSuite struct {
-	srv   *Server
-	zones Zones
+	srv      *Server
+	zonelist zones.Zones
 }
 
 var _ = Suite(&ConfigSuite{})
 
 func (s *ConfigSuite) SetUpSuite(c *C) {
-	s.zones = make(Zones)
-	lastRead = map[string]*ZoneReadRecord{}
+	s.zonelist = make(zones.Zones)
+	lastRead = map[string]*zoneReadRecord{}
 	s.srv = &Server{}
-	s.srv.zonesReadDir("dns", s.zones)
+	s.srv.zonesReadDir("dns", s.zonelist)
 }
 
 func (s *ConfigSuite) TestReadConfigs(c *C) {
 	// Just check that example.com and test.example.org loaded, too.
-	c.Check(s.zones["example.com"].Origin, Equals, "example.com")
-	c.Check(s.zones["test.example.org"].Origin, Equals, "test.example.org")
-	if s.zones["test.example.org"].Options.Serial == 0 {
+	c.Check(s.zonelist["example.com"].Origin, Equals, "example.com")
+	c.Check(s.zonelist["test.example.org"].Origin, Equals, "test.example.org")
+	if s.zonelist["test.example.org"].Options.Serial == 0 {
 		c.Log("Serial number is 0, should be set by file timestamp")
 		c.Fail()
 	}
 
 	// The real tests are in test.example.com so we have a place
 	// to make nutty configuration entries
-	tz := s.zones["test.example.com"]
+	tz := s.zonelist["test.example.com"]
 
 	// test.example.com was loaded
 	c.Check(tz.Origin, Equals, "test.example.com")
@@ -54,15 +55,15 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 
 	/* test different cname targets */
 	c.Check(tz.Labels["www"].
-		firstRR(dns.TypeCNAME).(*dns.CNAME).
+		FirstRR(dns.TypeCNAME).(*dns.CNAME).
 		Target, Equals, "geo.bitnames.com.")
 
 	c.Check(tz.Labels["www-cname"].
-		firstRR(dns.TypeCNAME).(*dns.CNAME).
+		FirstRR(dns.TypeCNAME).(*dns.CNAME).
 		Target, Equals, "bar.test.example.com.")
 
 	c.Check(tz.Labels["www-alias"].
-		firstRR(dns.TypeMF).(*dns.MF).
+		FirstRR(dns.TypeMF).(*dns.MF).
 		Mf, Equals, "www")
 
 	// The header name should just have a dot-prefix
@@ -72,7 +73,7 @@ func (s *ConfigSuite) TestReadConfigs(c *C) {
 
 func (s *ConfigSuite) TestRemoveConfig(c *C) {
 	// restore the dns.Mux
-	defer s.srv.zonesReadDir("dns", s.zones)
+	defer s.srv.zonesReadDir("dns", s.zonelist)
 
 	dir, err := ioutil.TempDir("", "geodns-test.")
 	if err != nil {
@@ -97,16 +98,16 @@ func (s *ConfigSuite) TestRemoveConfig(c *C) {
 		c.Fail()
 	}
 
-	s.srv.zonesReadDir(dir, s.zones)
-	c.Check(s.zones["test.example.org"].Origin, Equals, "test.example.org")
-	c.Check(s.zones["test2.example.org"].Origin, Equals, "test2.example.org")
+	s.srv.zonesReadDir(dir, s.zonelist)
+	c.Check(s.zonelist["test.example.org"].Origin, Equals, "test.example.org")
+	c.Check(s.zonelist["test2.example.org"].Origin, Equals, "test2.example.org")
 
 	os.Remove(dir + "/test2.example.org.json")
 	os.Remove(dir + "/invalid.example.org.json")
 
-	s.srv.zonesReadDir(dir, s.zones)
-	c.Check(s.zones["test.example.org"].Origin, Equals, "test.example.org")
-	_, ok := s.zones["test2.example.org"]
+	s.srv.zonesReadDir(dir, s.zonelist)
+	c.Check(s.zonelist["test.example.org"].Origin, Equals, "test.example.org")
+	_, ok := s.zonelist["test2.example.org"]
 	c.Check(ok, Equals, false)
 }
 
