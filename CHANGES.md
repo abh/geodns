@@ -1,5 +1,16 @@
 # GeoDNS Changelog
 
+## 2.7.0 February 13, 2017
+
+* Add support for PTR records (Florent AIDE)
+* Test improvements (Alex Bligh)
+* Update github.com/miekg/dns
+* Update github.com/rcrowley/go-metrics
+* Use vendor/ instead of godep
+* Make query logging (globally) configurable
+* Support base configuration file outside the zone config directory
+* service: Read extra args from env/ARGS
+
 ## 2.6.0 October 4, 2015
 
 Leif Johansson:
