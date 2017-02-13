@@ -5,3 +5,5 @@
 /run
 .idea
 /dns/geodns.conf
+geodns-*-*
+geodns-*-*.tar

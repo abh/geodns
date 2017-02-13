@@ -22,5 +22,5 @@ install:
   - go install
 
 script:
-  - cd $TRAVIS_BUILD_DIR && go test -gocheck.v
+  - cd $TRAVIS_BUILD_DIR && make test
   - go test -gocheck.v -gocheck.b -gocheck.btime=2s

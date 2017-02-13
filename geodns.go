@@ -30,7 +30,9 @@ import (
 	"time"
 
 	"github.com/abh/geodns/applog"
+	"github.com/abh/geodns/monitor"
 	"github.com/abh/geodns/querylog"
+	"github.com/abh/geodns/server"
 	"github.com/abh/geodns/zones"
 	"github.com/pborman/uuid"
 )
@@ -45,13 +47,8 @@ var gitVersion string
 var development bool
 
 var (
-	serverID     string
-	serverIP     string
-	serverGroups []string
-	serverUUID   = uuid.New()
+	serverInfo *monitor.ServerInfo
 )
-
-var timeStarted = time.Now()
 
 var (
 	flagconfig       = flag.String("config", "./dns/", "directory of zone files")
@@ -79,6 +76,11 @@ func init() {
 
 	log.SetPrefix("geodns ")
 	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
+
+	serverInfo = &monitor.ServerInfo{}
+	serverInfo.UUID = uuid.New()
+	serverInfo.Started = time.Now()
+
 }
 
 func main() {
@@ -98,8 +100,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	srv := Server{}
-
 	if *flaglog {
 		applog.Enabled = true
 	}
@@ -110,9 +110,9 @@ func main() {
 
 	if len(*flagidentifier) > 0 {
 		ids := strings.Split(*flagidentifier, ",")
-		serverID = ids[0]
+		serverInfo.ID = ids[0]
 		if len(ids) > 1 {
-			serverGroups = ids[1:]
+			serverInfo.Groups = ids[1:]
 		}
 	}
 
@@ -125,17 +125,16 @@ func main() {
 	}
 
 	if *flagcheckconfig {
-		dirName := *flagconfig
-
 		err := configReader(configFileName)
 		if err != nil {
 			log.Println("Errors reading config", err)
 			os.Exit(2)
 		}
 
-		Zones := make(zones.Zones)
-		srv.setupPgeodnsZone(Zones)
-		err = srv.zonesReadDir(dirName, Zones)
+		// dirName := *flagconfig
+		// Zones := make(zones.Zones)
+		// srv.setupPgeodnsZone(Zones)
+		// err = srv.zonesReadDir(dirName, Zones)
 		if err != nil {
 			log.Println("Errors reading zones", err)
 			os.Exit(2)
@@ -174,17 +173,6 @@ func main() {
 	// load (and re-load) zone data
 	go configWatcher(configFileName)
 
-	metrics := NewMetrics()
-	go metrics.Updater()
-
-	if qlc := Config.QueryLog; len(qlc.Path) > 0 {
-		ql, err := querylog.NewFileLogger(qlc.Path, qlc.MaxSize, qlc.Keep)
-		if err != nil {
-			log.Fatalf("Could not start file query logger: %s", err)
-		}
-		srv.SetQueryLogger(ql)
-	}
-
 	if *flaginter == "*" {
 		addrs, _ := net.InterfaceAddrs()
 		ips := make([]string, 0)
@@ -207,16 +195,32 @@ func main() {
 		log.Println("StatHat integration has been removed in favor of more generic metrics")
 	}
 
-	// the global-ish zones 'context' is quite a mess
-	zonelist := make(zones.Zones)
-	go monitor(zonelist)
-	srv.setupRootZone()
-	srv.setupPgeodnsZone(zonelist)
-	go srv.zonesReader(*flagconfig, zonelist)
+	mon := monitor.NewMonitor(serverInfo)
+	go mon.Run()
+
+	srv := server.NewServer(serverInfo)
+
+	if qlc := Config.QueryLog; len(qlc.Path) > 0 {
+		ql, err := querylog.NewFileLogger(qlc.Path, qlc.MaxSize, qlc.Keep)
+		if err != nil {
+			log.Fatalf("Could not start file query logger: %s", err)
+		}
+		srv.SetQueryLogger(ql)
+	}
+
+	muxm, err := zones.NewMuxManager(*flagconfig, srv)
+	if err != nil {
+		log.Printf("error loading zones: %s", err)
+	}
+	go muxm.Run()
 
 	for _, host := range inter {
-		go srv.listenAndServe(host)
+		go srv.ListenAndServe(host)
 	}
+
+	go func() {
+		// setup metrics httpd stuff
+	}()
 
 	terminate := make(chan os.Signal)
 	signal.Notify(terminate, os.Interrupt)

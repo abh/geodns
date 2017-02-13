@@ -40,11 +40,13 @@ func getInterfaces() []string {
 		}
 		uniq[host] = true
 
-		if len(serverID) == 0 {
-			serverID = ip
+		// default to the first interfaces
+		// todo: skip 127.0.0.1 and ::1 ?
+		if len(serverInfo.ID) == 0 {
+			serverInfo.ID = ip
 		}
-		if len(serverIP) == 0 {
-			serverIP = ip
+		if len(serverInfo.IP) == 0 {
+			serverInfo.IP = ip
 		}
 		inter = append(inter, host)
 

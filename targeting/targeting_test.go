@@ -50,6 +50,8 @@ func TestTargetParse(t *testing.T) {
 func TestGetTargets(t *testing.T) {
 	ip := net.ParseIP("207.171.1.1")
 
+	GeoIP().SetDirectory("../db")
+
 	GeoIP().SetupGeoIPCity()
 	GeoIP().SetupGeoIPCountry()
 	GeoIP().SetupGeoIPASN()

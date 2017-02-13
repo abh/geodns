@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/json"
@@ -148,7 +148,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 	if labels == nil {
 
-		permitDebug := !*flagPrivateDebug || (realIP != nil && realIP.IsLoopback())
+		permitDebug := srv.PublicDebugQueries || (realIP != nil && realIP.IsLoopback())
 
 		firstLabel := (strings.Split(label, "."))[0]
 
@@ -158,7 +158,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 		if permitDebug && firstLabel == "_status" {
 			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
-				m.Answer = statusRR(label + "." + z.Origin + ".")
+				m.Answer = srv.statusRR(label + "." + z.Origin + ".")
 			} else {
 				m.Ns = append(m.Ns, z.SoaRR())
 			}
@@ -193,7 +193,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 				targets, netmask, location := z.Options.Targeting.GetTargets(ip, z.HasClosest)
 				txt = append(txt, strings.Join(targets, " "))
-				txt = append(txt, fmt.Sprintf("/%d", netmask), serverID, serverIP)
+				txt = append(txt, fmt.Sprintf("/%d", netmask), srv.info.ID, srv.info.IP)
 				if location != nil {
 					txt = append(txt, fmt.Sprintf("(%.3f,%.3f)", location.Latitude, location.Longitude))
 				} else {
@@ -258,11 +258,11 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 	return
 }
 
-func statusRR(label string) []dns.RR {
+func (srv *Server) statusRR(label string) []dns.RR {
 	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
 	h.Name = label
 
-	status := map[string]string{"v": VERSION, "id": serverID}
+	status := map[string]string{"v": srv.info.Version, "id": srv.info.ID}
 
 	hostname, err := os.Hostname()
 	if err == nil {
@@ -270,7 +270,7 @@ func statusRR(label string) []dns.RR {
 	}
 
 	qCounter := metrics.Get("queries").(metrics.Meter)
-	status["up"] = strconv.Itoa(int(time.Since(timeStarted).Seconds()))
+	status["up"] = strconv.Itoa(int(time.Since(srv.info.Started).Seconds()))
 	status["qs"] = strconv.FormatInt(qCounter.Count(), 10)
 	status["qps1"] = fmt.Sprintf("%.4f", qCounter.Rate1())
 

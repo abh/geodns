@@ -34,7 +34,8 @@ type AppConfig struct {
 		Token string
 	}
 	Pingdom struct {
-		Username     string
+		Username string
+
 		Password     string
 		AccountEmail string
 		AppKey       string
