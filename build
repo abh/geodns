@@ -1,8 +1,15 @@
 #!/bin/sh
+echo building
 # git describe --always --tags --dirty --long)
 REVISION=`git rev-parse --short=5  HEAD`
 BUILDTIME=`TZ=UTC date "+%Y-%m-%dT%H:%MZ"`
 echo $REVISION > REVISION
-go build \
-  -ldflags "-X main.gitVersion $REVISION -X main.buildTime $BUILDTIME" \
-  -v
+
+OS=`go env GOOS`
+ARCH=`go env GOARCH`
+
+go build -i -o geodns-$OS-$ARCH \
+  -ldflags "-X main.gitVersion=$REVISION -X main.buildTime=$BUILDTIME" \
+  -v && \
+  (cd geodns-influxdb && go build -i -v -o geodns-influxdb-$OS-$ARCH && cd ..) && \
+tar cvf geodns-$OS-$ARCH.tar geodns-$OS-$ARCH geodns-influxdb/geodns-influxdb-$OS-$ARCH service service-influxdb

@@ -5,8 +5,8 @@ templates.go: templates/*.html monitor.go
 	go generate
 
 .PHONY: test
-test:
-	go test $(go list ./... | grep -v /vendor/)
+test: .PHONY
+	go test $(shell go list ./... | grep -v /vendor/)
 
 testrace: .PHONY
 	go test -race $(shell go list ./... | grep -v /vendor/)
