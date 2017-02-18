@@ -22,7 +22,7 @@ type RegistrationAPI interface {
 
 type MuxManager struct {
 	reg      RegistrationAPI
-	zonelist Zones
+	zonelist ZoneList
 	path     string
 	lastRead map[string]*zoneReadRecord
 }
@@ -37,7 +37,7 @@ func NewMuxManager(path string, reg RegistrationAPI) (*MuxManager, error) {
 	mm := &MuxManager{
 		reg:      reg,
 		path:     path,
-		zonelist: make(Zones),
+		zonelist: make(ZoneList),
 		lastRead: map[string]*zoneReadRecord{},
 	}
 
@@ -61,7 +61,7 @@ func (mm *MuxManager) Run() {
 
 // GetZones returns the list of currently active zones in the mux manager.
 // (todo: rename to Zones() when the Zones struct has been renamed to ZoneList)
-func (mm *MuxManager) Zones() Zones {
+func (mm *MuxManager) Zones() ZoneList {
 	return mm.zonelist
 }
 

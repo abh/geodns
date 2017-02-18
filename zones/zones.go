@@ -18,8 +18,8 @@ import (
 	"github.com/miekg/dns"
 )
 
-// Zones maps domain names to zone data
-type Zones map[string]*Zone
+// ZoneList maps domain names to zone data
+type ZoneList map[string]*Zone
 
 func ReadZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 	defer func() {

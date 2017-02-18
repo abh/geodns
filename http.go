@@ -19,7 +19,7 @@ import (
 
 type httpServer struct {
 	mux        *http.ServeMux
-	zones      zones.Zones
+	zones      zones.ZoneList
 	serverInfo monitor.ServerInfo
 }
 
@@ -82,7 +82,7 @@ func topParam(req *http.Request, def int) int {
 	return topOption
 }
 
-func NewHTTPServer(zones zones.Zones) *httpServer {
+func NewHTTPServer(zones zones.ZoneList) *httpServer {
 	hs := &httpServer{
 		// todo: zones.MuxManager instead of zones?
 		zones: zones,
