@@ -4,7 +4,6 @@ all: templates.go
 templates.go: templates/*.html monitor.go
 	go generate
 
-.PHONY: test
 test: .PHONY
 	go test $(shell go list ./... | grep -v /vendor/)
 
