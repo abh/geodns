@@ -27,6 +27,11 @@ type MuxManager struct {
 	lastRead map[string]*zoneReadRecord
 }
 
+type NilReg struct{}
+
+func (r *NilReg) Add(string, *Zone) {}
+func (r *NilReg) Remove(string)     {}
+
 // track when each zone was read last
 type zoneReadRecord struct {
 	time time.Time

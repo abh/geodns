@@ -8,15 +8,9 @@ import (
 	"testing"
 )
 
-type TestReg struct{}
-
-func (r *TestReg) Add(name string, zone *Zone) {}
-
-func (r *TestReg) Remove(name string) {}
-
 func TestReadConfigs(t *testing.T) {
 
-	muxm, err := NewMuxManager("../dns", &TestReg{})
+	muxm, err := NewMuxManager("../dns", &NilReg{})
 	if err != nil {
 		t.Logf("loading zones: %s", err)
 		t.Fail()
@@ -86,7 +80,7 @@ func TestRemoveConfig(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	muxm, err := NewMuxManager(dir, &TestReg{})
+	muxm, err := NewMuxManager(dir, &NilReg{})
 	if err != nil {
 		t.Logf("loading zones: %s", err)
 		t.Fail()

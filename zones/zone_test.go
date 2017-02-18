@@ -7,7 +7,7 @@ import (
 )
 
 func TestExampleComZone(t *testing.T) {
-	mm, err := NewMuxManager("../dns", &TestReg{})
+	mm, err := NewMuxManager("../dns", &NilReg{})
 	if err != nil {
 		t.Fatalf("Loading test zones: %s", err)
 	}
@@ -108,7 +108,7 @@ func TestExampleComZone(t *testing.T) {
 }
 
 func TestExampleOrgZone(t *testing.T) {
-	mm, err := NewMuxManager("../dns", &TestReg{})
+	mm, err := NewMuxManager("../dns", &NilReg{})
 	if err != nil {
 		t.Fatalf("Loading test zones: %s", err)
 	}

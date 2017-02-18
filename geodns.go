@@ -131,10 +131,9 @@ func main() {
 			os.Exit(2)
 		}
 
-		// dirName := *flagconfig
-		// Zones := make(zones.Zones)
-		// srv.setupPgeodnsZone(Zones)
-		// err = srv.zonesReadDir(dirName, Zones)
+		dirName := *flagconfig
+
+		_, err = zones.NewMuxManager(dirName, &zones.NilReg{})
 		if err != nil {
 			log.Println("Errors reading zones", err)
 			os.Exit(2)
