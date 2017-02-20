@@ -5,10 +5,10 @@ templates.go: templates/*.html monitor.go
 	go generate
 
 test: .PHONY
-	go test $(shell go list ./... | grep -v /vendor/)
+	go test -v $(shell go list ./... | grep -v /vendor/)
 
 testrace: .PHONY
-	go test -race $(shell go list ./... | grep -v /vendor/)
+	go test -v -race $(shell go list ./... | grep -v /vendor/)
 
 devel:
 	go build -tags devel

@@ -19,8 +19,8 @@ import (
 
 type httpServer struct {
 	mux        *http.ServeMux
-	zones      zones.ZoneList
-	serverInfo monitor.ServerInfo
+	zones      *zones.MuxManager
+	serverInfo *monitor.ServerInfo
 }
 
 type rate struct {
@@ -28,18 +28,18 @@ type rate struct {
 	Count   int64
 	Metrics zones.ZoneMetrics
 }
-type Rates []*rate
+type rates []*rate
 
-func (s Rates) Len() int      { return len(s) }
-func (s Rates) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s rates) Len() int      { return len(s) }
+func (s rates) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
-type RatesByCount struct{ Rates }
+type ratesByCount struct{ rates }
 
-func (s RatesByCount) Less(i, j int) bool {
-	ic := s.Rates[i].Count
-	jc := s.Rates[j].Count
+func (s ratesByCount) Less(i, j int) bool {
+	ic := s.rates[i].Count
+	jc := s.rates[j].Count
 	if ic == jc {
-		return s.Rates[i].Name < s.Rates[j].Name
+		return s.rates[i].Name < s.rates[j].Name
 	}
 	return ic > jc
 }
@@ -82,11 +82,11 @@ func topParam(req *http.Request, def int) int {
 	return topOption
 }
 
-func NewHTTPServer(zones zones.ZoneList) *httpServer {
+func NewHTTPServer(mm *zones.MuxManager, serverInfo *monitor.ServerInfo) *httpServer {
 	hs := &httpServer{
-		// todo: zones.MuxManager instead of zones?
-		zones: zones,
-		mux:   &http.ServeMux{},
+		zones:      mm,
+		mux:        &http.ServeMux{},
+		serverInfo: serverInfo,
 	}
 	hs.mux.HandleFunc("/status", hs.StatusHandler())
 	hs.mux.HandleFunc("/status.json", hs.StatusJSONHandler())
@@ -112,7 +112,7 @@ func (hs *httpServer) StatusJSONHandler() func(http.ResponseWriter, *http.Reques
 
 		zonemetrics := make(map[string]metrics.Registry)
 
-		for name, zone := range hs.zones {
+		for name, zone := range hs.zones.Zones() {
 			zone.Lock()
 			zonemetrics[name] = zone.Metrics.Registry
 			zone.Unlock()
@@ -159,13 +159,26 @@ func (hs *httpServer) StatusJSONHandler() func(http.ResponseWriter, *http.Reques
 
 func (hs *httpServer) StatusHandler() func(http.ResponseWriter, *http.Request) {
 
+	type statusData struct {
+		Version  string
+		Zones    rates
+		Uptime   DayDuration
+		Platform string
+		Global   struct {
+			Queries         metrics.Meter
+			Histogram       histogramData
+			HistogramRecent histogramData
+		}
+		TopOption int
+	}
+
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		topOption := topParam(req, 10)
 
-		rates := make(Rates, 0)
+		rates := make(rates, 0)
 
-		for name, zone := range hs.zones {
+		for name, zone := range hs.zones.Zones() {
 			count := zone.Metrics.Queries.Count()
 			rates = append(rates, &rate{
 				Name:    name,
@@ -174,20 +187,7 @@ func (hs *httpServer) StatusHandler() func(http.ResponseWriter, *http.Request) {
 			})
 		}
 
-		sort.Sort(RatesByCount{rates})
-
-		type statusData struct {
-			Version  string
-			Zones    Rates
-			Uptime   DayDuration
-			Platform string
-			Global   struct {
-				Queries         metrics.Meter
-				Histogram       histogramData
-				HistogramRecent histogramData
-			}
-			TopOption int
-		}
+		sort.Sort(ratesByCount{rates})
 
 		uptime := DayDuration{time.Since(hs.serverInfo.Started)}
 

@@ -15,10 +15,6 @@ path = log/queries.log
 ;; keep up to this many rotated log files (default 1)
 ; keep = 2
 
-[stathat]
-;; Add an API key to send query counts and other metrics to stathat
-;apikey=abc123
-
 [http]
 ; require basic HTTP authentication; not encrypted or safe over the public internet
 ; user = stats

@@ -78,6 +78,7 @@ func init() {
 	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
 
 	serverInfo = &monitor.ServerInfo{}
+	serverInfo.Version = VERSION
 	serverInfo.UUID = uuid.New()
 	serverInfo.Started = time.Now()
 
@@ -217,9 +218,12 @@ func main() {
 		go srv.ListenAndServe(host)
 	}
 
-	go func() {
-		// setup metrics httpd stuff
-	}()
+	if len(*flaghttp) > 0 {
+		go func() {
+			hs := NewHTTPServer(muxm, serverInfo)
+			hs.Run(*flaghttp)
+		}()
+	}
 
 	terminate := make(chan os.Signal)
 	signal.Notify(terminate, os.Interrupt)
