@@ -1,31 +1,32 @@
 package zones
 
 import (
-	. "gopkg.in/check.v1"
+	"github.com/stretchr/testify/assert"
+
+	"testing"
 )
 
-type ZoneStatsSuite struct {
-}
-
-var _ = Suite(&ZoneStatsSuite{})
-
-func (s *ZoneStatsSuite) TestZoneStats(c *C) {
+func TestZoneStats(t *testing.T) {
 	zs := NewZoneLabelStats(4)
-	c.Assert(zs, NotNil)
-	c.Log("adding 4 entries")
+	if zs == nil {
+		t.Fatalf("NewZoneLabelStats returned nil")
+	}
+	t.Log("adding 4 entries")
 	zs.Add("abc")
 	zs.Add("foo")
 	zs.Add("def")
 	zs.Add("abc")
-	c.Log("getting counts")
+	t.Log("getting counts")
 	co := zs.Counts()
-	c.Check(co["abc"], Equals, 2)
-	c.Check(co["foo"], Equals, 1)
-	zs.Add("foo")
-	co = zs.Counts()
+	assert.Equal(t, co["abc"], 2)
+	assert.Equal(t, co["foo"], 1)
 
-	c.Check(co["abc"], Equals, 1)
-	c.Check(co["foo"], Equals, 2)
+	zs.Add("foo")
+
+	co = zs.Counts()
+	assert.Equal(t, co["abc"], 1) // the first abc rolled off
+	assert.Equal(t, co["foo"], 2)
+
 	zs.Close()
 
 	zs = NewZoneLabelStats(10)
@@ -41,11 +42,11 @@ func (s *ZoneStatsSuite) TestZoneStats(c *C) {
 	zs.Add("f")
 
 	top := zs.TopCounts(2)
-	c.Check(top, HasLen, 3)
-	c.Check(top[0].Label, Equals, "a")
+	assert.Len(t, top, 3, "TopCounts(2) returned 3 elements")
+	assert.Equal(t, top[0].Label, "a")
 
 	zs.Reset()
-	c.Check(zs.Counts(), HasLen, 0)
+	assert.Len(t, zs.Counts(), 0, "Counts() is empty after reset")
 
 	zs.Close()
 
