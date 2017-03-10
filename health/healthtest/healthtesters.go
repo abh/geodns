@@ -1,4 +1,4 @@
-package health
+package healthtest
 
 import (
 	"crypto/sha256"

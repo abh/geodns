@@ -229,6 +229,7 @@ func (hs *httpServer) mainServer(w http.ResponseWriter, req *http.Request) {
 		http.NotFound(w, req)
 		return
 	}
+	log.Printf("serverInfo: %+v", hs.serverInfo)
 	io.WriteString(w, `<html><head><title>GeoDNS `+
 		hs.serverInfo.Version+`</title><body>`+
 		`GeoDNS Server`+

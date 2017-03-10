@@ -22,6 +22,10 @@ type ZoneOptions struct {
 	Contact   string
 	Targeting targeting.TargetOptions
 	Closest   bool
+
+	// temporary, using this to keep the healthtest code
+	// compiling and vaguely included
+	healthChecker bool
 }
 
 type ZoneLogging struct {
@@ -33,10 +37,10 @@ type Record struct {
 	RR     dns.RR
 	Weight int
 	Loc    *targeting.Location
-	Test   *health.HealthTest
+	Test   string
 }
 
-type Records []Record
+type Records []*Record
 
 func (s Records) Len() int      { return len(s) }
 func (s Records) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
@@ -52,10 +56,15 @@ type Label struct {
 	Records  map[uint16]Records
 	Weight   map[uint16]int
 	Closest  bool
-	Test     *health.HealthTest
+	Test     health.HealthTester
 }
 
-type labels map[string]*Label
+type LabelMatch struct {
+	Label *Label
+	Type  uint16
+}
+
+type labelmap map[string]*Label
 
 type ZoneMetrics struct {
 	Queries     metrics.Meter
@@ -66,19 +75,22 @@ type ZoneMetrics struct {
 }
 
 type Zone struct {
-	Origin     string
-	Labels     labels
-	LabelCount int
-	Options    ZoneOptions
-	Logging    *ZoneLogging
-	Metrics    ZoneMetrics
-	HasClosest bool
+	Origin       string
+	Labels       labelmap
+	LabelCount   int
+	Options      ZoneOptions
+	Logging      *ZoneLogging
+	Metrics      ZoneMetrics
+	HasClosest   bool
+	HealthStatus health.Status
+	healthExport bool
+
 	sync.RWMutex
 }
 
 func NewZone(name string) *Zone {
 	zone := new(Zone)
-	zone.Labels = make(labels)
+	zone.Labels = make(labelmap)
 	zone.Origin = name
 	zone.LabelCount = dns.CountLabel(zone.Origin)
 
@@ -118,7 +130,6 @@ func (z *Zone) SetupMetrics(old *Zone) {
 }
 
 func (z *Zone) Close() {
-	z.StartStopHealthChecks(false, nil)
 	z.Metrics.Registry.UnregisterAll()
 	if z.Metrics.LabelStats != nil {
 		z.Metrics.LabelStats.Close()
@@ -198,15 +209,19 @@ func (zone *Zone) addSOA() {
 
 	record := Record{RR: rr}
 
-	label.Records[dns.TypeSOA] = make([]Record, 1)
-	label.Records[dns.TypeSOA][0] = record
+	label.Records[dns.TypeSOA] = make([]*Record, 1)
+	label.Records[dns.TypeSOA][0] = &record
 }
 
 // Find label "s" in country "cc" falling back to the appropriate
 // continent and the global label name as needed. Looks for the
-// first available qType at each targeting level. Return a Label
-// and the qtype that was "found"
-func (z *Zone) FindLabels(s string, targets []string, qts []uint16) (*Label, uint16) {
+// first available qType at each targeting level. Returns a list of
+// LabelMatch for potential labels that might satisfy the query.
+// "MF" records are treated as aliases.
+func (z *Zone) FindLabels(s string, targets []string, qts []uint16) []LabelMatch {
+
+	matches := make([]LabelMatch, 0)
+
 	for _, target := range targets {
 		var name string
 
@@ -229,24 +244,36 @@ func (z *Zone) FindLabels(s string, targets []string, qts []uint16) (*Label, uin
 					// short-circuit mostly to avoid subtle bugs later
 					// to be correct we should run through all the selectors and
 					// pick types not already picked
-					return z.Labels[s], qtype
+					matches = append(matches, LabelMatch{z.Labels[s], qtype})
+					continue
 				case dns.TypeMF:
 					if label.Records[dns.TypeMF] != nil {
 						name = label.FirstRR(dns.TypeMF).(*dns.MF).Mf
 						// TODO: need to avoid loops here somehow
-						return z.FindLabels(name, targets, qts)
+						aliases := z.FindLabels(name, targets, qts)
+						matches = append(matches, aliases...)
+						continue
 					}
 				default:
 					// return the label if it has the right record
 					if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
-						return label, qtype
+						matches = append(matches, LabelMatch{label, qtype})
+						continue
 					}
 				}
 			}
 		}
 	}
 
-	return z.Labels[s], 0
+	if len(matches) == 0 {
+		// this is to make sure we return 'noerror' instead of 'nxdomain' when
+		// appropriate.
+		if label, ok := z.Labels[s]; ok {
+			matches = append(matches, LabelMatch{label, 0})
+		}
+	}
+
+	return matches
 }
 
 // Find the locations of all the A records within a zone. If we were being really clever
@@ -272,105 +299,142 @@ func (z *Zone) SetLocations() {
 	}
 }
 
-func (z *Zone) newHealthTest(l *Label, data interface{}) {
+func (z *Zone) addHealthReference(l *Label, data interface{}) {
+
 	// First safely get rid of any old test. As label tests
 	// should never run this should never be executed
-	if l.Test != nil {
-		l.Test.Stop()
-		l.Test = nil
-	}
+	// if l.Test != nil {
+	// 	l.Test.Stop()
+	// 	l.Test = nil
+	// }
 
 	if data == nil {
 		return
 	}
 
 	if i, ok := data.(map[string]interface{}); ok {
-		tester, err := health.NewFromMap(i)
+		tester, err := health.NewReferenceFromMap(i)
 		if err != nil {
-			applog.Printf("Could not configure health check: %s", err)
+			applog.Printf("Could not setup reference to health check: %s", err)
 			return
 		}
 		l.Test = tester
-
 	}
 }
 
-func (z *Zone) StartStopHealthChecks(start bool, oldZone *Zone) {
-	// 	applog.Printf("Start/stop health checks on zone %s start=%v", z.Origin, start)
-	// 	for labelName, label := range z.Labels {
-	// 		for _, qtype := range health.Qtypes {
-	// 			if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
-	// 				for i := range label.Records[qtype] {
-	// 					rr := label.Records[qtype][i].RR
-	// 					var ip net.IP
-	// 					switch rrt := rr.(type) {
-	// 					case *dns.A:
-	// 						ip = rrt.A
-	// 					case *dns.AAAA:
-	// 						ip = rrt.AAAA
-	// 					default:
-	// 						continue
-	// 					}
+func (z *Zone) setupHealthTests() {
 
-	// 					var test *health.HealthTest
-	// 					ref := fmt.Sprintf("%s/%s/%d/%d", z.Origin, labelName, qtype, i)
-	// 					if start {
-	// 						if test = label.Records[qtype][i].Test; test != nil {
-	// 							// stop any old test
-	// 							health.TestRunner.removeTest(test, ref)
-	// 						} else {
-	// 							if ltest := label.Test; ltest != nil {
-	// 								test = ltest.copy(ip)
-	// 								label.Records[qtype][i].Test = test
-	// 							}
-	// 						}
-	// 						if test != nil {
-	// 							test.ipAddress = ip
-	// 							// if we are given an oldzone, let's see if we can find the old RR and
-	// 							// copy over the initial health state, rather than use the initial health
-	// 							// state provided from the label. This helps to stop health state bouncing
-	// 							// when a zone file is reloaded for a purposes unrelated to the RR
-	// 							if oldZone != nil {
-	// 								oLabel, ok := oldZone.Labels[labelName]
-	// 								if ok {
-	// 									if oLabel.Test != nil {
-	// 										for i := range oLabel.Records[qtype] {
-	// 											oRecord := oLabel.Records[qtype][i]
-	// 											var oip net.IP
-	// 											switch orrt := oRecord.RR.(type) {
-	// 											case *dns.A:
-	// 												oip = orrt.A
-	// 											case *dns.AAAA:
-	// 												oip = orrt.AAAA
-	// 											default:
-	// 												continue
-	// 											}
-	// 											if oip.Equal(ip) {
-	// 												if oRecord.Test != nil {
-	// 													h := oRecord.Test.IsHealthy()
-	// 													applog.Printf("Carrying over previous health state for %s: %v", oRecord.Test.ipAddress, h)
-	// 													// we know the test is stopped (as we haven't started it) so we can write
-	// 													// without the mutex and avoid a misleading log message
-	// 													test.healthy = h
-	// 												}
-	// 												break
-	// 											}
-	// 										}
-	// 									}
-	// 								}
-	// 							}
-	// 							health.TestRunner.addTest(test, ref)
-	// 						}
-	// 					} else {
-	// 						if test = label.Records[qtype][i].Test; test != nil {
-	// 							health.TestRunner.removeTest(test, ref)
-	// 						}
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
+	log.Println("Setting up Health Tests on records")
+
+	for _, label := range z.Labels {
+		if label.Test == nil {
+			// log.Printf("label.Test for '%s' == nil", label.Label)
+			continue
+		}
+
+		log.Printf("====  setting up '%s'", label.Label)
+
+		// todo: document which record types are processed
+		// or process all ...
+		for _, rrs := range label.Records {
+			for _, rec := range rrs {
+				if len(rec.Test) > 0 {
+					continue
+				}
+				var t string
+				switch rrt := rec.RR.(type) {
+				case *dns.A:
+					t = rrt.A.String()
+				case *dns.AAAA:
+					t = rrt.AAAA.String()
+				case *dns.MX:
+					t = rrt.Mx
+				default:
+					continue
+				}
+				log.Printf("t='%s'", t)
+				rec.Test = t
+			}
+			log.Printf("rrs: %+v", rrs)
+		}
+	}
 }
+
+// func (z *Zone) StartStopHealthTests(start bool, oldZone *Zone) {}
+// 	applog.Printf("Start/stop health checks on zone %s start=%v", z.Origin, start)
+// for labelName, label := range z.Labels {
+// 		for _, qtype := range health.Qtypes {
+// 			if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
+// 				for i := range label.Records[qtype] {
+// 					rr := label.Records[qtype][i].RR
+// 					var ip net.IP
+// 					switch rrt := rr.(type) {
+// 					case *dns.A:
+// 						ip = rrt.A
+// 					case *dns.AAAA:
+// 						ip = rrt.AAAA
+// 					default:
+// 						continue
+// 					}
+
+// 					var test *health.HealthTest
+// 					ref := fmt.Sprintf("%s/%s/%d/%d", z.Origin, labelName, qtype, i)
+// 					if start {
+// 						if test = label.Records[qtype][i].Test; test != nil {
+// 							// stop any old test
+// 							health.TestRunner.removeTest(test, ref)
+// 						} else {
+// 							if ltest := label.Test; ltest != nil {
+// 								test = ltest.copy(ip)
+// 								label.Records[qtype][i].Test = test
+// 							}
+// 						}
+// 						if test != nil {
+// 							test.ipAddress = ip
+// 							// if we are given an oldzone, let's see if we can find the old RR and
+// 							// copy over the initial health state, rather than use the initial health
+// 							// state provided from the label. This helps to stop health state bouncing
+// 							// when a zone file is reloaded for a purposes unrelated to the RR
+// 							if oldZone != nil {
+// 								oLabel, ok := oldZone.Labels[labelName]
+// 								if ok {
+// 									if oLabel.Test != nil {
+// 										for i := range oLabel.Records[qtype] {
+// 											oRecord := oLabel.Records[qtype][i]
+// 											var oip net.IP
+// 											switch orrt := oRecord.RR.(type) {
+// 											case *dns.A:
+// 												oip = orrt.A
+// 											case *dns.AAAA:
+// 												oip = orrt.AAAA
+// 											default:
+// 												continue
+// 											}
+// 											if oip.Equal(ip) {
+// 												if oRecord.Test != nil {
+// 													h := oRecord.Test.IsHealthy()
+// 													applog.Printf("Carrying over previous health state for %s: %v", oRecord.Test.ipAddress, h)
+// 													// we know the test is stopped (as we haven't started it) so we can write
+// 													// without the mutex and avoid a misleading log message
+// 													test.healthy = h
+// 												}
+// 												break
+// 											}
+// 										}
+// 									}
+// 								}
+// 							}
+// 							health.TestRunner.addTest(test, ref)
+// 						}
+// 					} else {
+// 						if test = label.Records[qtype][i].Test; test != nil {
+// 							health.TestRunner.removeTest(test, ref)
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
 
 func (z *Zone) HealthRR(label string, baseLabel string) []dns.RR {
 	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
@@ -378,19 +442,19 @@ func (z *Zone) HealthRR(label string, baseLabel string) []dns.RR {
 
 	healthstatus := make(map[string]map[string]bool)
 
-	if l, ok := z.Labels[baseLabel]; ok {
-		for qt, records := range l.Records {
-			if qts, ok := dns.TypeToString[qt]; ok {
-				hmap := make(map[string]bool)
-				for _, record := range records {
-					if record.Test != nil {
-						hmap[(*record.Test).IP().String()] = health.TestRunner.IsHealthy(record.Test)
-					}
-				}
-				healthstatus[qts] = hmap
-			}
-		}
-	}
+	// if l, ok := z.Labels[baseLabel]; ok {
+	// 	for qt, records := range l.Records {
+	// 		if qts, ok := dns.TypeToString[qt]; ok {
+	// 			hmap := make(map[string]bool)
+	// 			for _, record := range records {
+	// 				if record.Test != nil {
+	// 					hmap[(*record.Test).IP().String()] = health.TestRunner.IsHealthy(record.Test)
+	// 				}
+	// 			}
+	// 			healthstatus[qts] = hmap
+	// 		}
+	// 	}
+	// }
 
 	js, _ := json.Marshal(healthstatus)
 

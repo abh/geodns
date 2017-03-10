@@ -21,12 +21,12 @@ import (
 // ZoneList maps domain names to zone data
 type ZoneList map[string]*Zone
 
-func ReadZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
+func (zone *Zone) ReadZoneFile(fileName string) (zerr error) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("reading %s failed: %s", zoneName, r)
+			log.Printf("reading %s failed: %s", zone.Origin, r)
 			debug.PrintStack()
-			zerr = fmt.Errorf("reading %s failed: %s", zoneName, r)
+			zerr = fmt.Errorf("reading %s failed: %s", zone.Origin, r)
 		}
 	}()
 
@@ -35,8 +35,6 @@ func ReadZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 		log.Printf("Could not read '%s': %s", fileName, err)
 		panic(err)
 	}
-
-	zone = NewZone(zoneName)
 
 	fileInfo, err := fh.Stat()
 	if err != nil {
@@ -57,13 +55,10 @@ func ReadZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 			extra = fmt.Sprintf(":\nError at line %d, column %d (file offset %d):\n%s",
 				line, col, serr.Offset, highlight)
 		}
-		return nil, fmt.Errorf("error parsing JSON object in config file %s%s\n%v",
+		return fmt.Errorf("error parsing JSON object in config file %s%s\n%v",
 			fh.Name(), extra, err)
 	}
 
-	if err != nil {
-		panic(err)
-	}
 	//log.Println(objmap)
 
 	var data map[string]interface{}
@@ -88,8 +83,7 @@ func ReadZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 		case "targeting":
 			zone.Options.Targeting, err = targeting.ParseTargets(v.(string))
 			if err != nil {
-				log.Printf("Could not parse targeting '%s': %s", v, err)
-				return nil, err
+				return fmt.Errorf("parsing targeting '%s': %s", v, err)
 			}
 
 		case "logging":
@@ -136,7 +130,7 @@ func ReadZoneFile(zoneName, fileName string) (zone *Zone, zerr error) {
 		zone.SetLocations()
 	}
 
-	return zone, nil
+	return nil
 }
 
 func setupZoneData(data map[string]interface{}, zone *Zone) {
@@ -174,8 +168,9 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 			case "ttl":
 				label.Ttl = typeutil.ToInt(rdata)
 				continue
-			case "test":
-				zone.newHealthTest(label, rdata)
+			case "health":
+				zone.addHealthReference(label, rdata)
+				log.Printf("health status: '%+v'", label.Test.String())
 				continue
 			}
 
@@ -416,7 +411,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 				}
 
 				label.Weight[dnsType] += record.Weight
-				label.Records[dnsType][i] = *record
+				label.Records[dnsType][i] = record
 			}
 			if label.Weight[dnsType] > 0 {
 				sort.Sort(RecordsByWeight{label.Records[dnsType]})

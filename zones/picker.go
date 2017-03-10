@@ -1,6 +1,7 @@
 package zones
 
 import (
+	"log"
 	"math/rand"
 
 	"github.com/abh/geodns/health"
@@ -9,13 +10,28 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (label *Label) Picker(qtype uint16, max int, location *targeting.Location) Records {
+func (zone *Zone) filterHealth(servers Records) int {
+	// Remove any unhealthy servers
+	tmpServers := servers[:0]
+	sum := 0
+
+	for i, s := range servers {
+		if len(servers[i].Test) == 0 || zone.HealthStatus.GetStatus(servers[i].Test) == health.StatusHealthy {
+			tmpServers = append(tmpServers, s)
+			sum += s.Weight
+		}
+	}
+	servers = tmpServers
+	return sum
+}
+
+func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *targeting.Location) Records {
 
 	if qtype == dns.TypeANY {
-		var result []Record
+		var result Records
 		for rtype := range label.Records {
 
-			rtypeRecords := label.Picker(rtype, max, location)
+			rtypeRecords := zone.Picker(label, rtype, max, location)
 
 			tmpResult := make(Records, len(result)+len(rtypeRecords))
 
@@ -31,23 +47,20 @@ func (label *Label) Picker(qtype uint16, max int, location *targeting.Location) 
 
 		sum := label.Weight[qtype]
 
-		servers := make([]Record, len(labelRR))
+		servers := make(Records, len(labelRR))
 		copy(servers, labelRR)
 
 		if label.Test != nil {
-			// Remove any unhealthy servers
-			tmpServers := servers[:0]
-			sum = 0
-			for i, s := range servers {
-				if servers[i].Test == nil || health.TestRunner.IsHealthy(servers[i].Test) {
-					tmpServers = append(tmpServers, s)
-					sum += s.Weight
-				}
+			sum = zone.filterHealth(servers)
+			if sum == 0 {
+				return servers
 			}
-			servers = tmpServers
 		}
 
-		// not "balanced", just return all
+		// not "balanced", just return all -- It's been working
+		// this way since the first prototype, it might not make
+		// sense anymore. This probably makes NS records and such
+		// work as expected.
 		if label.Weight[qtype] == 0 {
 			return servers
 		}
@@ -60,7 +73,7 @@ func (label *Label) Picker(qtype uint16, max int, location *targeting.Location) 
 		if max > rrCount {
 			max = rrCount
 		}
-		result := make([]Record, max)
+		result := make(Records, max)
 
 		// Find the distance to each server, and find the servers that are
 		// closer to the querier than the max'th furthest server, or within
@@ -134,5 +147,6 @@ func (label *Label) Picker(qtype uint16, max int, location *targeting.Location) 
 
 		return result
 	}
+	log.Printf("returning nil ...!")
 	return nil
 }

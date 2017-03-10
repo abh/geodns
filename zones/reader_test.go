@@ -6,10 +6,11 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestReadConfigs(t *testing.T) {
-
+func loadZones(t *testing.T) *MuxManager {
 	muxm, err := NewMuxManager("../dns", &NilReg{})
 	if err != nil {
 		t.Logf("loading zones: %s", err)
@@ -17,7 +18,7 @@ func TestReadConfigs(t *testing.T) {
 	}
 
 	// Just check that example.com and test.example.org loaded, too.
-	for _, zonename := range []string{"example.com", "test.example.com"} {
+	for _, zonename := range []string{"example.com", "test.example.com", "hc.example.com"} {
 
 		if z, ok := muxm.zonelist[zonename]; ok {
 			if z.Origin != zonename {
@@ -32,6 +33,12 @@ func TestReadConfigs(t *testing.T) {
 			t.Fatalf("Didn't load '%s'", zonename)
 		}
 	}
+	return muxm
+}
+
+func TestReadConfigs(t *testing.T) {
+
+	muxm := loadZones(t)
 
 	// The real tests are in test.example.com so we have a place
 	// to make nutty configuration entries
@@ -48,12 +55,9 @@ func TestReadConfigs(t *testing.T) {
 		t.Logf("Contact='%s', expected support.bitnames.com", tz.Options.Contact)
 		t.Fail()
 	}
-	// c.Check(tz.Options.Targeting.String(), Equals, "@ continent country regiongroup region asn ip")
 
-	// // Got logging option
-	// c.Check(tz.Logging.StatHat, Equals, true)
-
-	// c.Check(tz.Labels["weight"].MaxHosts, Equals, 1)
+	assert.Equal(t, tz.Options.Targeting.String(), "@ continent country regiongroup region asn ip", "Targeting.String()")
+	assert.Equal(t, tz.Labels["weight"].MaxHosts, 1, "weight label has max_hosts=1")
 
 	// /* test different cname targets */
 	// c.Check(tz.Labels["www"].

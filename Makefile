@@ -10,6 +10,14 @@ test: .PHONY
 testrace: .PHONY
 	go test -v -race $(shell go list ./... | grep -v /vendor/)
 
+docker-test: .PHONY
+	mkdir -p .cache/pkg
+	docker run --rm -v `pwd`:/go/src/github.com/abh/geodns \
+		-v `pwd`/.cache/pkg:/go/pkg \
+		geodns-build \
+		make test
+		# go test -i ./...
+
 devel:
 	go build -tags devel
 

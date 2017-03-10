@@ -18,15 +18,15 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-func getQuestionName(z *zones.Zone, req *dns.Msg) string {
-	lx := dns.SplitDomainName(req.Question[0].Name)
+func getQuestionName(z *zones.Zone, fqdn string) string {
+	lx := dns.SplitDomainName(fqdn)
 	ql := lx[0 : len(lx)-z.LabelCount]
 	return strings.ToLower(strings.Join(ql, "."))
 }
 
 func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
-	qname := req.Question[0].Name
+	qnamefqdn := req.Question[0].Name
 	qtype := req.Question[0].Qtype
 
 	var qle *querylog.Entry
@@ -35,13 +35,13 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		qle = &querylog.Entry{
 			Time:   time.Now().UnixNano(),
 			Origin: z.Origin,
-			Name:   qname,
+			Name:   qnamefqdn,
 			Qtype:  qtype,
 		}
 		defer srv.queryLogger.Write(qle)
 	}
 
-	applog.Printf("[zone %s] incoming  %s %s (id %d) from %s\n", z.Origin, qname,
+	applog.Printf("[zone %s] incoming  %s %s (id %d) from %s\n", z.Origin, qnamefqdn,
 		dns.TypeToString[qtype], req.Id, w.RemoteAddr())
 
 	// Global meter
@@ -52,9 +52,10 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 	applog.Println("Got request", req)
 
-	label := getQuestionName(z, req)
+	// qlabel is the qname without the zone origin suffix
+	qlabel := getQuestionName(z, qnamefqdn)
 
-	z.Metrics.LabelStats.Add(label)
+	z.Metrics.LabelStats.Add(qlabel)
 
 	// IP that's talking to us (not EDNS CLIENT SUBNET)
 	var realIP net.IP
@@ -141,16 +142,13 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		}
 	}
 
-	labels, labelQtype := z.FindLabels(label, targets, []uint16{dns.TypeMF, dns.TypeCNAME, qtype})
-	if labelQtype == 0 {
-		labelQtype = qtype
-	}
+	labelMatches := z.FindLabels(qlabel, targets, []uint16{dns.TypeMF, dns.TypeCNAME, qtype})
 
-	if labels == nil {
+	if len(labelMatches) == 0 {
 
 		permitDebug := srv.PublicDebugQueries || (realIP != nil && realIP.IsLoopback())
 
-		firstLabel := (strings.Split(label, "."))[0]
+		firstLabel := (strings.Split(qlabel, "."))[0]
 
 		if qle != nil {
 			qle.LabelName = firstLabel
@@ -158,7 +156,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 		if permitDebug && firstLabel == "_status" {
 			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
-				m.Answer = srv.statusRR(label + "." + z.Origin + ".")
+				m.Answer = srv.statusRR(qlabel + "." + z.Origin + ".")
 			} else {
 				m.Ns = append(m.Ns, z.SoaRR())
 			}
@@ -169,8 +167,8 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 		if permitDebug && firstLabel == "_health" {
 			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
-				baseLabel := strings.Join((strings.Split(label, "."))[1:], ".")
-				m.Answer = z.HealthRR(label+"."+z.Origin+".", baseLabel)
+				baseLabel := strings.Join((strings.Split(qlabel, "."))[1:], ".")
+				m.Answer = z.HealthRR(qlabel+"."+z.Origin+".", baseLabel)
 				m.Authoritative = true
 				w.WriteMsg(m)
 				return
@@ -184,7 +182,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		if firstLabel == "_country" {
 			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
 				h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
-				h.Name = label + "." + z.Origin + "."
+				h.Name = qnamefqdn
 
 				txt := []string{
 					w.RemoteAddr().String(),
@@ -223,18 +221,34 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		return
 	}
 
-	if !labels.Closest {
-		location = nil
-	}
+	for _, match := range labelMatches {
+		label := match.Label
+		labelQtype := match.Type
 
-	if servers := labels.Picker(labelQtype, labels.MaxHosts, location); servers != nil {
-		var rrs []dns.RR
-		for _, record := range servers {
-			rr := dns.Copy(record.RR)
-			rr.Header().Name = qname
-			rrs = append(rrs, rr)
+		if !label.Closest {
+			location = nil
 		}
-		m.Answer = rrs
+
+		if servers := z.Picker(label, labelQtype, label.MaxHosts, location); servers != nil {
+			var rrs []dns.RR
+			for _, record := range servers {
+				rr := dns.Copy(record.RR)
+				rr.Header().Name = qnamefqdn
+				rrs = append(rrs, rr)
+			}
+			m.Answer = rrs
+		}
+		if len(m.Answer) > 0 {
+			// maxHosts only matter within a "targeting group"; at least that's
+			// how it has been working
+
+			if qle != nil {
+				qle.LabelName = label.Label
+				qle.Answers = len(m.Answer)
+			}
+
+			break
+		}
 	}
 
 	if len(m.Answer) == 0 {
@@ -245,8 +259,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 	applog.Println(m)
 
 	if qle != nil {
-		qle.LabelName = labels.Label
-		qle.Answers = len(m.Answer)
+		// should this be in the match loop above?
 		qle.Rcode = m.Rcode
 	}
 	err := w.WriteMsg(m)

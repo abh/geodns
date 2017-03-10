@@ -1,4 +1,4 @@
-package health
+package healthtest
 
 import (
 	"fmt"
@@ -18,8 +18,8 @@ var (
 )
 
 type HealthTester interface {
-	Test(ht *HealthTest) bool
 	String() string
+	Test(*HealthTest) bool
 }
 
 type HealthTestParameters struct {

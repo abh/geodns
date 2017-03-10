@@ -7,6 +7,7 @@ import (
 )
 
 func TestExampleComZone(t *testing.T) {
+	t.Log("example com")
 	mm, err := NewMuxManager("../dns", &NilReg{})
 	if err != nil {
 		t.Fatalf("Loading test zones: %s", err)
@@ -23,7 +24,9 @@ func TestExampleComZone(t *testing.T) {
 	}
 
 	// Make sure that the empty "no.bar" zone gets skipped and "bar" is used
-	label, qtype := ex.FindLabels("bar", []string{"no", "europe", "@"}, []uint16{dns.TypeA})
+	matches := ex.FindLabels("bar", []string{"no", "europe", "@"}, []uint16{dns.TypeA})
+	label := matches[0].Label
+	qtype := matches[0].Type
 	if l := len(label.Records[dns.TypeA]); l != 1 {
 		t.Logf("Unexpected number of A records: '%d'", l)
 		t.Fail()
@@ -118,12 +121,12 @@ func TestExampleOrgZone(t *testing.T) {
 		t.Fatalf("Did not load 'test.example.org' test zone")
 	}
 
-	label, qtype := ex.FindLabels("sub", []string{"@"}, []uint16{dns.TypeNS})
-	if qtype != dns.TypeNS {
-		t.Fatalf("Expected qtype = NS record (type %d), got type %d", dns.TypeNS, qtype)
+	matches := ex.FindLabels("sub", []string{"@"}, []uint16{dns.TypeNS})
+	if matches[0].Type != dns.TypeNS {
+		t.Fatalf("Expected qtype = NS record (type %d), got type %d", dns.TypeNS, matches[0].Type)
 	}
 
-	Ns := label.Records[qtype]
+	Ns := matches[0].Label.Records[matches[0].Type]
 	if l := len(Ns); l != 2 {
 		t.Fatalf("Expected 2 NS records, got '%d'", l)
 	}

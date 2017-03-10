@@ -131,7 +131,8 @@ func (mm *MuxManager) reload() error {
 				continue
 			}
 
-			zone, err := ReadZoneFile(zoneName, filename)
+			zone := NewZone(zoneName)
+			err := zone.ReadZoneFile(filename)
 			if zone == nil || err != nil {
 				parseErr = fmt.Errorf("Error reading zone '%s': %s", zoneName, err)
 				log.Println(parseErr.Error())
@@ -161,16 +162,9 @@ func (mm *MuxManager) reload() error {
 
 func (mm *MuxManager) addHandler(name string, zone *Zone) {
 	oldZone := mm.zonelist[name]
-	// across the recconfiguration keep a reference to all healthchecks to ensure
-	// the global map doesn't get destroyed
-	// healtmm.TestRunner.refAllGlobalHealthChecks(name, true)
-	// defer healtmm.TestRunner.refAllGlobalHealthChecks(name, false)
-	// if oldZone != nil {
-	// 	oldZone.StartStopHealthChecks(false, nil)
-	// }
 	zone.SetupMetrics(oldZone)
+	zone.setupHealthTests()
 	mm.zonelist[name] = zone
-	// config.StartStopHealthChecks(true, oldZone)
 	mm.reg.Add(name, zone)
 }
 
