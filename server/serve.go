@@ -240,7 +240,8 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		}
 		if len(m.Answer) > 0 {
 			// maxHosts only matter within a "targeting group"; at least that's
-			// how it has been working
+			// how it has been working, so we stop looking for answers as soon
+			// as we have some.
 
 			if qle != nil {
 				qle.LabelName = label.Label

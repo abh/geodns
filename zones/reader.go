@@ -170,7 +170,6 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 				continue
 			case "health":
 				zone.addHealthReference(label, rdata)
-				log.Printf("health status: '%+v'", label.Test.String())
 				continue
 			}
 

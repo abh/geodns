@@ -7,8 +7,6 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 )
 
-// todo: make this not have global variables ...
-
 type ServerMetrics struct {
 	qCounter         metrics.Meter
 	lastQueryCount   int64

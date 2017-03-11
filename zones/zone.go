@@ -323,16 +323,11 @@ func (z *Zone) addHealthReference(l *Label, data interface{}) {
 }
 
 func (z *Zone) setupHealthTests() {
-
-	log.Println("Setting up Health Tests on records")
-
 	for _, label := range z.Labels {
 		if label.Test == nil {
 			// log.Printf("label.Test for '%s' == nil", label.Label)
 			continue
 		}
-
-		log.Printf("====  setting up '%s'", label.Label)
 
 		// todo: document which record types are processed
 		// or process all ...
@@ -352,10 +347,8 @@ func (z *Zone) setupHealthTests() {
 				default:
 					continue
 				}
-				log.Printf("t='%s'", t)
 				rec.Test = t
 			}
-			log.Printf("rrs: %+v", rrs)
 		}
 	}
 }
