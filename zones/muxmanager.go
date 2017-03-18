@@ -88,7 +88,7 @@ func (mm *MuxManager) reload() error {
 			continue
 		}
 
-		zoneName := zoneNameFromFile(fileName)
+		zoneName := fileName[0:strings.LastIndex(fileName, ".")]
 
 		seenZones[zoneName] = true
 
@@ -191,10 +191,6 @@ func (mm *MuxManager) setupRootZone() {
 		m.SetRcode(r, dns.RcodeRefused)
 		w.WriteMsg(m)
 	})
-}
-
-func zoneNameFromFile(fileName string) string {
-	return fileName[0:strings.LastIndex(fileName, ".")]
 }
 
 func sha256File(fn string) string {

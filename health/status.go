@@ -1,6 +1,7 @@
 package health
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -11,14 +12,15 @@ import (
 type StatusType uint8
 
 const (
-	StatusUnhealthy StatusType = iota
+	StatusUnknown StatusType = iota
+	StatusUnhealthy
 	StatusHealthy
-	StatusUnknown
 )
 
 type Status interface {
-	// Load(string) error
 	GetStatus(string) StatusType
+	Reload() error
+	Close() error
 }
 
 type statusRegistry struct {
@@ -32,14 +34,29 @@ type Service struct {
 	Status StatusType
 }
 
-type StatusFile struct {
-	mu sync.RWMutex
-	m  map[string]*Service
-}
-
 func init() {
 	registry = statusRegistry{
 		m: make(map[string]Status),
+	}
+}
+
+func (r *statusRegistry) Add(name string, status Status) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.m[name] = status
+	return nil
+}
+
+func (st StatusType) String() string {
+	switch st {
+	case StatusHealthy:
+		return "healthy"
+	case StatusUnhealthy:
+		return "unhealthy"
+	case StatusUnknown:
+		return "unknown"
+	default:
+		return fmt.Sprintf("status=%d", st)
 	}
 }
 
@@ -56,18 +73,4 @@ func GetStatus(name string) StatusType {
 		return StatusUnknown
 	}
 	return status.GetStatus(check[1])
-}
-
-func NewStatusFile() *StatusFile {
-	return &StatusFile{
-		m: make(map[string]*Service),
-	}
-}
-
-func (s *StatusFile) Load(filename string) error {
-	return nil
-}
-
-func (s *StatusFile) GetStatus(check string) StatusType {
-	return StatusUnknown
 }

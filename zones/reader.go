@@ -221,8 +221,15 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 				h.Class = dns.ClassINET
 				h.Rrtype = dnsType
 
-				// We add the TTL as a last pass because we might not have
-				// processed it yet when we process the record data.
+				{
+					// allow for individual health test name overrides
+					if rec, ok := records[rType][i].(map[string]interface{}); ok {
+						if h, ok := rec["health"].(string); ok {
+							record.Test = h
+						}
+
+					}
+				}
 
 				switch len(label.Label) {
 				case 0:
@@ -233,7 +240,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 
 				switch dnsType {
 				case dns.TypeA, dns.TypeAAAA, dns.TypePTR:
-
+					// todo: check interface type
 					str, weight := getStringWeight(records[rType][i].([]interface{}))
 					ip := str
 					record.Weight = weight
@@ -418,7 +425,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 		}
 	}
 
-	// loop over exisiting labels, create zone records for missing sub-domains
+	// Loop over exisiting labels, create zone records for missing sub-domains
 	// and set TTLs
 	for k := range zone.Labels {
 		if strings.Contains(k, ".") {
@@ -432,6 +439,9 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 		}
 		for _, records := range zone.Labels[k].Records {
 			for _, r := range records {
+				// We add the TTL as a last pass because we might not have
+				// processed it yet when we process the record data.
+
 				var defaultTtl uint32 = 86400
 				if r.RR.Header().Rrtype != dns.TypeNS {
 					// NS records have special treatment. If they are not specified, they default to 86400 rather than
