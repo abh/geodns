@@ -55,7 +55,10 @@ func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *targetin
 
 	if label.Test != nil {
 		servers, sum = zone.filterHealth(servers)
+		// sum re-check to mirror the label.Weight[] check below
 		if sum == 0 {
+			// todo: this is wrong for cname since it misses
+			// the 'max_hosts' setting
 			return servers
 		}
 	}
