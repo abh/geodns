@@ -19,3 +19,6 @@ path = log/queries.log
 ; require basic HTTP authentication; not encrypted or safe over the public internet
 ; user = stats
 ; password = Aeteereun8eoth4
+
+[health]
+; directory = dns/health

@@ -30,6 +30,14 @@ func (hs *HealthStatus) GetStatus(name string) health.StatusType {
 	return hs.status
 }
 
+func (hs *HealthStatus) Close() error {
+	return nil
+}
+
+func (hs *HealthStatus) Reload() error {
+	return nil
+}
+
 func TestHealth(t *testing.T) {
 	muxm := loadZones(t)
 	t.Log("setting up health status")

@@ -30,6 +30,9 @@ type AppConfig struct {
 		MaxSize int
 		Keep    int
 	}
+	Health struct {
+		Directory string
+	}
 	Nodeping struct {
 		Token string
 	}

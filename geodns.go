@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/abh/geodns/applog"
+	"github.com/abh/geodns/health"
 	"github.com/abh/geodns/monitor"
 	"github.com/abh/geodns/querylog"
 	"github.com/abh/geodns/server"
@@ -38,7 +39,7 @@ import (
 )
 
 // VERSION is the current version of GeoDNS
-var VERSION string = "2.7.0"
+var VERSION string = "3.0.0"
 var buildTime string
 var gitVersion string
 
@@ -169,6 +170,10 @@ func main() {
 
 	// load geodns.conf config
 	configReader(configFileName)
+
+	if len(Config.Health.Directory) > 0 {
+		go health.DirectoryReader(Config.Health.Directory)
+	}
 
 	// load (and re-load) zone data
 	go configWatcher(configFileName)

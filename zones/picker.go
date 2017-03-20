@@ -15,7 +15,7 @@ func (zone *Zone) filterHealth(servers Records) (Records, int) {
 
 	sum := 0
 	for i, s := range servers {
-		if len(servers[i].Test) == 0 || zone.HealthStatus.GetStatus(servers[i].Test) == health.StatusHealthy {
+		if len(servers[i].Test) == 0 || health.GetStatus(servers[i].Test) == health.StatusHealthy {
 			tmpServers = append(tmpServers, s)
 			sum += s.Weight
 		}

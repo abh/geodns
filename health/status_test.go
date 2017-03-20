@@ -3,7 +3,7 @@ package health
 import "testing"
 
 func TestStatusFile(t *testing.T) {
-	sf := NewStatusFile()
+	sf := NewStatusFile("test.json")
 	err := sf.Load("test.json")
 	if err != nil {
 		t.Fatalf("could not load test.json: %s", err)

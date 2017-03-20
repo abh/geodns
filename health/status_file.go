@@ -9,8 +9,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/kr/pretty"
 )
 
 type StatusFile struct {
@@ -28,6 +26,9 @@ func NewStatusFile(filename string) *StatusFile {
 	}
 }
 
+// DirectoryReader loads (and regularly re-loads) health
+// .json files from the specified files into the default
+// health registry.
 func DirectoryReader(dir string) {
 	for {
 		err := reloadDirectory(dir)
@@ -128,8 +129,6 @@ func (s *StatusFile) GetStatus(check string) StatusType {
 	if s.m == nil {
 		return StatusUnknown
 	}
-
-	pretty.Println(s)
 
 	st, ok := s.m[check]
 	if !ok {

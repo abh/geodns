@@ -317,6 +317,20 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 						target = rec.(string)
 					case []interface{}:
 						target, weight = getStringWeight(rec.([]interface{}))
+					case map[string]interface{}:
+						r := rec.(map[string]interface{})
+
+						if t, ok := r["cname"]; ok {
+							target = typeutil.ToString(t)
+						}
+
+						if w, ok := r["weight"]; ok {
+							weight = typeutil.ToInt(w)
+						}
+
+						if h, ok := r["health"]; ok {
+							record.Test = typeutil.ToString(h)
+						}
 					}
 					if !dns.IsFqdn(target) {
 						target = target + "." + zone.Origin
