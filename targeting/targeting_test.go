@@ -4,6 +4,8 @@ import (
 	"net"
 	"reflect"
 	"testing"
+
+	"github.com/abh/geodns/targeting/geoip2"
 )
 
 func TestTargetString(t *testing.T) {
@@ -50,28 +52,36 @@ func TestTargetParse(t *testing.T) {
 func TestGetTargets(t *testing.T) {
 	ip := net.ParseIP("207.171.1.1")
 
-	GeoIP().SetDirectory("../db")
+	g, err := geoip2.New("../db")
+	if err != nil {
+		t.Fatalf("opening geoip2: %s", err)
+	}
+	Setup(g)
 
-	GeoIP().SetupGeoIPCity()
-	GeoIP().SetupGeoIPCountry()
-	GeoIP().SetupGeoIPASN()
+	// GeoIP().SetDirectory("../db")
+	// GeoIP().SetupGeoIPCity()
+	// GeoIP().SetupGeoIPCountry()
+	// GeoIP().SetupGeoIPASN()
 
 	tgt, _ := ParseTargets("@ continent country")
 	targets, _, _ := tgt.GetTargets(ip, false)
-	if !reflect.DeepEqual(targets, []string{"us", "north-america", "@"}) {
-		t.Fatalf("Unexpected parse results of targets")
+	expect := []string{"us", "north-america", "@"}
+	if !reflect.DeepEqual(targets, expect) {
+		t.Fatalf("Unexpected parse results of targets, got '%s', expected '%s'", targets, expect)
 	}
 
-	if geoIP.city == nil {
+	if !g.HasLocation() {
 		t.Log("City GeoIP database requred for these tests")
 		return
 	}
 
-	tests := []struct {
+	type test struct {
 		Str     string
 		Targets []string
 		IP      string
-	}{
+	}
+
+	tests := []test{
 		{
 			"@ continent country region ",
 			[]string{"us-ca", "us", "north-america", "@"},
@@ -83,15 +93,18 @@ func TestGetTargets(t *testing.T) {
 			"",
 		},
 		{
-			"@ continent regiongroup country region asn ip",
-			[]string{"[207.171.1.1]", "[207.171.1.0]", "as7012", "us-ca", "us-west", "us", "north-america", "@"},
-			"",
-		},
-		{
 			"ip",
 			[]string{"[2607:f238:2::ff:4]", "[2607:f238:2::]"},
 			"2607:f238:2:0::ff:4",
 		},
+	}
+
+	if g.HasASN() {
+		tests = append(tests,
+			test{"@ continent regiongroup country region asn ip",
+				[]string{"[207.171.1.1]", "[207.171.1.0]", "as7012", "us-ca", "us-west", "us", "north-america", "@"},
+				"",
+			})
 	}
 
 	for _, test := range tests {
@@ -103,7 +116,7 @@ func TestGetTargets(t *testing.T) {
 		targets, _, _ = tgt.GetTargets(ip, false)
 
 		if !reflect.DeepEqual(targets, test.Targets) {
-			t.Logf("For targets '%s' expected '%s', got '%s'", test.Str, test.Targets, targets)
+			t.Logf("For IP '%s' targets '%s' expected '%s', got '%s'", ip, test.Str, test.Targets, targets)
 			t.Fail()
 		}
 

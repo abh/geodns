@@ -60,7 +60,7 @@ func (mm *MuxManager) Run() {
 		if err != nil {
 			log.Printf("error reading zones: %s", err)
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 }
 

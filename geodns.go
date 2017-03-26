@@ -34,6 +34,8 @@ import (
 	"github.com/abh/geodns/monitor"
 	"github.com/abh/geodns/querylog"
 	"github.com/abh/geodns/server"
+	"github.com/abh/geodns/targeting"
+	"github.com/abh/geodns/targeting/geoip2"
 	"github.com/abh/geodns/zones"
 	"github.com/pborman/uuid"
 )
@@ -198,6 +200,16 @@ func main() {
 
 	if Config.HasStatHat() {
 		log.Println("StatHat integration has been removed in favor of more generic metrics")
+	}
+
+	if len(Config.GeoIPDirectory()) > 0 {
+		geoProvider, err := geoip2.New(Config.GeoIPDirectory())
+		if err != nil {
+			log.Printf("Configuring geo provider: %s", err)
+		}
+		if geoProvider != nil {
+			targeting.Setup(geoProvider)
+		}
 	}
 
 	mon := monitor.NewMonitor(serverInfo)

@@ -116,14 +116,30 @@ func (zone *Zone) ReadZoneFile(fileName string) (zerr error) {
 
 	//log.Println("IP", string(Zone.Regions["0.us"].IPv4[0].ip))
 
+	if zone.Options.Targeting == 0 && !zone.HasClosest {
+		// no targeting requested
+		return nil
+	}
+
+	if targeting.Geo() == nil {
+		log.Printf("'%s': No geo provider configured", zone.Origin)
+		return nil
+	}
+
 	switch {
 	case zone.Options.Targeting >= targeting.TargetRegionGroup || zone.HasClosest:
-		targeting.GeoIP().SetupGeoIPCity()
+		if ok, err := targeting.Geo().HasLocation(); !ok {
+			log.Printf("Zone '%s' requested location/city targeting but geo provider isn't available: %s", zone.Origin, err)
+		}
 	case zone.Options.Targeting >= targeting.TargetContinent:
-		targeting.GeoIP().SetupGeoIPCountry()
+		if ok, err := targeting.Geo().HasCountry(); !ok {
+			log.Printf("Zone '%s' requested country targeting but geo provider isn't available: %s", zone.Origin, err)
+		}
 	}
 	if zone.Options.Targeting&targeting.TargetASN > 0 {
-		targeting.GeoIP().SetupGeoIPASN()
+		if ok, err := targeting.Geo().HasASN(); !ok {
+			log.Printf("Zone '%s' requested ASN targeting but geo provider isn't available: %s", zone.Origin, err)
+		}
 	}
 
 	if zone.HasClosest {

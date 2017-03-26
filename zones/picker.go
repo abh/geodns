@@ -4,7 +4,7 @@ import (
 	"math/rand"
 
 	"github.com/abh/geodns/health"
-	"github.com/abh/geodns/targeting"
+	"github.com/abh/geodns/targeting/geo"
 
 	"github.com/miekg/dns"
 )
@@ -23,7 +23,7 @@ func (zone *Zone) filterHealth(servers Records) (Records, int) {
 	return tmpServers, sum
 }
 
-func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *targeting.Location) Records {
+func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *geo.Location) Records {
 
 	if qtype == dns.TypeANY {
 		var result Records

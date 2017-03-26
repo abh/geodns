@@ -2,8 +2,11 @@ package targeting
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"strings"
+
+	"github.com/abh/geodns/targeting/geo"
 )
 
 type TargetOptions int
@@ -24,24 +27,20 @@ func init() {
 	cidr48Mask = net.CIDRMask(48, 128)
 }
 
-func (t TargetOptions) GetTargets(ip net.IP, hasClosest bool) ([]string, int, *Location) {
+var g geo.Provider
+
+func Setup(gn geo.Provider) error {
+	g = gn
+	return nil
+}
+
+func Geo() geo.Provider {
+	return g
+}
+
+func (t TargetOptions) GetTargets(ip net.IP, hasClosest bool) ([]string, int, *geo.Location) {
 
 	targets := make([]string, 0)
-
-	var country, continent, region, regionGroup, asn string
-	var netmask int
-	var location *Location
-
-	g := GeoIP()
-
-	if t&TargetASN > 0 {
-		asn, netmask = g.GetASN(ip)
-	}
-	if t&TargetRegion > 0 || t&TargetRegionGroup > 0 || hasClosest {
-		country, continent, regionGroup, region, netmask, location = geoIP.GetCountryRegion(ip)
-	} else if t&TargetCountry > 0 || t&TargetContinent > 0 {
-		country, continent, netmask = g.GetCountry(ip)
-	}
 
 	if t&TargetIP > 0 {
 		ipStr := ip.String()
@@ -59,8 +58,35 @@ func (t TargetOptions) GetTargets(ip net.IP, hasClosest bool) ([]string, int, *L
 		}
 	}
 
-	if t&TargetASN > 0 && len(asn) > 0 {
-		targets = append(targets, asn)
+	if t&TargetASN > 0 {
+		asn, _, err := g.GetASN(ip)
+		if err != nil {
+			log.Printf("GetASN error: %s", err)
+		}
+		if len(asn) > 0 {
+			targets = append(targets, asn)
+		}
+	}
+
+	var country, continent, region, regionGroup string
+	var netmask int
+	var location *geo.Location
+
+	if t&TargetRegion > 0 || t&TargetRegionGroup > 0 || hasClosest {
+		var err error
+		location, err = g.GetLocation(ip)
+		if location == nil || err != nil {
+			return targets, 0, nil
+		}
+		log.Printf("Location for '%s' (%s): %+v", ip, err, location)
+		country = location.Country
+		continent = location.Continent
+		region = location.Region
+		regionGroup = location.RegionGroup
+		// continent, regionGroup, region, netmask,
+
+	} else if t&TargetCountry > 0 || t&TargetContinent > 0 {
+		country, continent, netmask = g.GetCountry(ip)
 	}
 
 	if t&TargetRegion > 0 && len(region) > 0 {
