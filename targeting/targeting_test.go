@@ -58,11 +58,6 @@ func TestGetTargets(t *testing.T) {
 	}
 	Setup(g)
 
-	// GeoIP().SetDirectory("../db")
-	// GeoIP().SetupGeoIPCity()
-	// GeoIP().SetupGeoIPCountry()
-	// GeoIP().SetupGeoIPASN()
-
 	tgt, _ := ParseTargets("@ continent country")
 	targets, _, _ := tgt.GetTargets(ip, false)
 	expect := []string{"us", "north-america", "@"}
@@ -70,8 +65,8 @@ func TestGetTargets(t *testing.T) {
 		t.Fatalf("Unexpected parse results of targets, got '%s', expected '%s'", targets, expect)
 	}
 
-	if !g.HasLocation() {
-		t.Log("City GeoIP database requred for these tests")
+	if ok, err := g.HasLocation(); !ok {
+		t.Logf("City GeoIP database required for these tests: %s", err)
 		return
 	}
 
@@ -99,7 +94,7 @@ func TestGetTargets(t *testing.T) {
 		},
 	}
 
-	if g.HasASN() {
+	if ok, _ := g.HasASN(); ok {
 		tests = append(tests,
 			test{"@ continent regiongroup country region asn ip",
 				[]string{"[207.171.1.1]", "[207.171.1.0]", "as7012", "us-ca", "us-west", "us", "north-america", "@"},

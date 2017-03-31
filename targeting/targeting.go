@@ -38,25 +38,9 @@ func Geo() geo.Provider {
 	return g
 }
 
-func (t TargetOptions) GetTargets(ip net.IP, hasClosest bool) ([]string, int, *geo.Location) {
+func (t TargetOptions) getGeoTargets(ip net.IP, hasClosest bool) ([]string, int, *geo.Location) {
 
 	targets := make([]string, 0)
-
-	if t&TargetIP > 0 {
-		ipStr := ip.String()
-		targets = append(targets, "["+ipStr+"]")
-		ip4 := ip.To4()
-		if ip4 != nil {
-			if ip4[3] != 0 {
-				ip4[3] = 0
-				targets = append(targets, "["+ip4.String()+"]")
-			}
-		} else {
-			// v6 address, also target the /48 address
-			ip48 := ip.Mask(cidr48Mask)
-			targets = append(targets, "["+ip48.String()+"]")
-		}
-	}
 
 	if t&TargetASN > 0 {
 		asn, _, err := g.GetASN(ip)
@@ -102,6 +86,37 @@ func (t TargetOptions) GetTargets(ip net.IP, hasClosest bool) ([]string, int, *g
 
 	if t&TargetContinent > 0 && len(continent) > 0 {
 		targets = append(targets, continent)
+	}
+
+	return targets, netmask, location
+}
+
+func (t TargetOptions) GetTargets(ip net.IP, hasClosest bool) ([]string, int, *geo.Location) {
+
+	targets := make([]string, 0)
+	var location *geo.Location
+	var netmask int
+
+	if t&TargetIP > 0 {
+		ipStr := ip.String()
+		targets = append(targets, "["+ipStr+"]")
+		ip4 := ip.To4()
+		if ip4 != nil {
+			if ip4[3] != 0 {
+				ip4[3] = 0
+				targets = append(targets, "["+ip4.String()+"]")
+			}
+		} else {
+			// v6 address, also target the /48 address
+			ip48 := ip.Mask(cidr48Mask)
+			targets = append(targets, "["+ip48.String()+"]")
+		}
+	}
+
+	if g != nil {
+		var geotargets []string
+		geotargets, netmask, location = t.getGeoTargets(ip, hasClosest)
+		targets = append(targets, geotargets...)
 	}
 
 	if t&TargetGlobal > 0 {
