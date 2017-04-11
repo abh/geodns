@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"code.google.com/p/gcfg"
+	"gopkg.in/gcfg.v1"
 	"gopkg.in/fsnotify.v1"
 )
 
@@ -21,8 +21,8 @@ type AppConfig struct {
 		Directory string
 	}
 	StatsD struct {
-		Host string
-		Port int
+		Host              string
+		Port              int
 		IntervalInSeconds int
 	}
 }
