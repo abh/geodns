@@ -35,7 +35,7 @@ func DirectoryReader(dir string) {
 		if err != nil {
 			log.Printf("loading health data: %s", err)
 		}
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 

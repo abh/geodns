@@ -142,6 +142,9 @@ func main() {
 			log.Println("Errors reading zones", err)
 			os.Exit(2)
 		}
+
+		// todo: setup health stuff when configured
+
 		return
 	}
 

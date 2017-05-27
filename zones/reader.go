@@ -191,7 +191,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 
 			dnsType, ok := recordTypes[rType]
 			if !ok {
-				log.Printf("Unsupported record type '%s'\n", rType)
+				log.Printf("'%s' unsupported record type '%s'\n", zone.Origin, rType)
 				continue
 			}
 

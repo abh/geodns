@@ -2,6 +2,7 @@ package health
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 )
@@ -68,6 +69,8 @@ func GetStatus(name string) StatusType {
 	registry.mu.RLock()
 	status, ok := registry.m[check[0]]
 	registry.mu.RUnlock()
+
+	log.Printf("looking up health for '%s', status register: '%s', found: %t", name, check[0], ok)
 
 	if !ok {
 		return StatusUnknown

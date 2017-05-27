@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"gopkg.in/fsnotify.v1"
-	"gopkg.in/gcfg.v1"
+	gcfg "gopkg.in/gcfg.v1"
 )
 
 type AppConfig struct {

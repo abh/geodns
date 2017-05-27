@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -21,6 +22,8 @@ const (
 	asnDB
 )
 
+var dbFiles map[geoType][]string
+
 type g2 struct {
 	dir string
 
@@ -30,9 +33,33 @@ type g2 struct {
 	mu      sync.RWMutex
 }
 
+func init() {
+	dbFiles = map[geoType][]string{
+		countryDB: []string{"GeoIP2-Country.mmdb", "GeoLite2-Country.mmdb"},
+		asnDB:     []string{"GeoIP2-ISP.mmdb"},
+		cityDB:    []string{"GeoIP2-City.mmdb", "GeoLite2-City.mmdb"},
+	}
+
+}
+
 func (g *g2) open(t geoType, db string) (*geoip2.Reader, error) {
-	f := filepath.Join(g.dir, db)
-	n, err := geoip2.Open(f)
+
+	fileName := filepath.Join(g.dir, db)
+
+	if len(db) == 0 {
+		found := false
+		for _, f := range dbFiles[t] {
+			fileName = filepath.Join(g.dir, f)
+			if _, err := os.Stat(f); err == nil {
+				found = true
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("could not find '%s' in '%s'", dbFiles[0], g.dir)
+		}
+	}
+
+	n, err := geoip2.Open(fileName)
 	if err != nil {
 		return nil, err
 	}
