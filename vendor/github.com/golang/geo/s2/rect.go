@@ -21,6 +21,7 @@ import (
 	"math"
 
 	"github.com/golang/geo/r1"
+	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
 
@@ -239,7 +240,7 @@ func (r Rect) CapBound() Cap {
 		poleZ = 1
 		poleAngle = math.Pi/2 - r.Lat.Lo
 	}
-	poleCap := CapFromCenterAngle(PointFromCoords(0, 0, poleZ), s1.Angle(poleAngle)*s1.Radian)
+	poleCap := CapFromCenterAngle(Point{r3.Vector{0, 0, poleZ}}, s1.Angle(poleAngle)*s1.Radian)
 
 	// For bounding rectangles that span 180 degrees or less in longitude, the
 	// maximum cap size is achieved at one of the rectangle vertices.  For
@@ -298,14 +299,14 @@ func intersectsLatEdge(a, b Point, lat s1.Angle, lng s1.Interval) bool {
 	// the sphere. They can intersect a straight edge in 0, 1, or 2 points.
 
 	// First, compute the normal to the plane AB that points vaguely north.
-	z := a.PointCross(b)
+	z := Point{a.PointCross(b).Normalize()}
 	if z.Z < 0 {
 		z = Point{z.Mul(-1)}
 	}
 
 	// Extend this to an orthonormal frame (x,y,z) where x is the direction
 	// where the great circle through AB achieves its maximium latitude.
-	y := z.PointCross(PointFromCoords(0, 0, 1))
+	y := Point{z.PointCross(PointFromCoords(0, 0, 1)).Normalize()}
 	x := y.Cross(z.Vector)
 
 	// Compute the angle "theta" from the x-axis (in the x-y plane defined

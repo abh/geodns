@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sync/atomic"
@@ -41,6 +42,16 @@ func tempMkdir(t *testing.T) string {
 		t.Fatalf("failed to create test directory: %s", err)
 	}
 	return dir
+}
+
+// tempMkFile makes a temporary file.
+func tempMkFile(t *testing.T, dir string) string {
+	f, err := ioutil.TempFile(dir, "fsnotify")
+	if err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+	defer f.Close()
+	return f.Name()
 }
 
 // newWatcher initializes an fsnotify Watcher instance.
@@ -1065,6 +1076,53 @@ func TestFsnotifyFakeSymlink(t *testing.T) {
 	watcher.Close()
 }
 
+func TestCyclicSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks don't work on Windows.")
+	}
+
+	watcher := newWatcher(t)
+
+	testDir := tempMkdir(t)
+	defer os.RemoveAll(testDir)
+
+	link := path.Join(testDir, "link")
+	if err := os.Symlink(".", link); err != nil {
+		t.Fatalf("could not make symlink: %v", err)
+	}
+	addWatch(t, watcher, testDir)
+
+	var createEventsReceived counter
+	go func() {
+		for ev := range watcher.Events {
+			if ev.Op&Create == Create {
+				createEventsReceived.increment()
+			}
+		}
+	}()
+
+	if err := os.Remove(link); err != nil {
+		t.Fatalf("Error removing link: %v", err)
+	}
+
+	// It would be nice to be able to expect a delete event here, but kqueue has
+	// no way for us to get events on symlinks themselves, because opening them
+	// opens an fd to the file to which they point.
+
+	if err := ioutil.WriteFile(link, []byte("foo"), 0700); err != nil {
+		t.Fatalf("could not make symlink: %v", err)
+	}
+
+	// We expect this event to be received almost immediately, but let's wait 500 ms to be sure
+	time.Sleep(500 * time.Millisecond)
+
+	if got := createEventsReceived.value(); got == 0 {
+		t.Errorf("want at least 1 create event got %v", got)
+	}
+
+	watcher.Close()
+}
+
 // TestConcurrentRemovalOfWatch tests that concurrent calls to RemoveWatch do not race.
 // See https://codereview.appspot.com/103300045/
 // go test -test.run=TestConcurrentRemovalOfWatch -test.cpu=1,1,1,1,1 -race
@@ -1120,6 +1178,50 @@ func TestClose(t *testing.T) {
 	}
 	err := watcher.Close()
 	if err != nil {
+		t.Fatalf("Expected no error on Close, got %v.", err)
+	}
+}
+
+// TestRemoveWithClose tests if one can handle Remove events and, at the same
+// time, close Watcher object without any data races.
+func TestRemoveWithClose(t *testing.T) {
+	testDir := tempMkdir(t)
+	defer os.RemoveAll(testDir)
+
+	const fileN = 200
+	tempFiles := make([]string, 0, fileN)
+	for i := 0; i < fileN; i++ {
+		tempFiles = append(tempFiles, tempMkFile(t, testDir))
+	}
+	watcher := newWatcher(t)
+	if err := watcher.Add(testDir); err != nil {
+		t.Fatalf("Expected no error on Add, got %v", err)
+	}
+	startC, stopC := make(chan struct{}), make(chan struct{})
+	errC := make(chan error)
+	go func() {
+		for {
+			select {
+			case <-watcher.Errors:
+			case <-watcher.Events:
+			case <-stopC:
+				return
+			}
+		}
+	}()
+	go func() {
+		<-startC
+		for _, fileName := range tempFiles {
+			os.Remove(fileName)
+		}
+	}()
+	go func() {
+		<-startC
+		errC <- watcher.Close()
+	}()
+	close(startC)
+	defer close(stopC)
+	if err := <-errC; err != nil {
 		t.Fatalf("Expected no error on Close, got %v.", err)
 	}
 }

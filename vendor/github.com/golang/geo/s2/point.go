@@ -24,7 +24,6 @@ import (
 )
 
 // Point represents a point on the unit sphere as a normalized 3D vector.
-// Points are guaranteed to be close to normalized.
 // Fields should be treated as read-only. Use one of the factory methods for creation.
 type Point struct {
 	r3.Vector
@@ -59,8 +58,7 @@ func OriginPoint() Point {
 // PointCross returns a Point that is orthogonal to both p and op. This is similar to
 // p.Cross(op) (the true cross product) except that it does a better job of
 // ensuring orthogonality when the Point is nearly parallel to op, it returns
-// a non-zero result even when p == op or p == -op and the result is a Point,
-// so it will have norm 1.
+// a non-zero result even when p == op or p == -op and the result is a Point.
 //
 // It satisfies the following properties (f == PointCross):
 //
@@ -73,13 +71,14 @@ func (p Point) PointCross(op Point) Point {
 	// but PointCross more accurately describes how this method is used.
 	x := p.Add(op.Vector).Cross(op.Sub(p.Vector))
 
-	if x.ApproxEqual(r3.Vector{0, 0, 0}) {
+	// Compare exactly to the 0 vector.
+	if x == (r3.Vector{}) {
 		// The only result that makes sense mathematically is to return zero, but
 		// we find it more convenient to return an arbitrary orthogonal vector.
 		return Point{p.Ortho()}
 	}
 
-	return Point{x.Normalize()}
+	return Point{x}
 }
 
 // OrderedCCW returns true if the edges OA, OB, and OC are encountered in that
@@ -277,12 +276,33 @@ func regularPointsForFrame(frame matrix3x3, radius s1.Angle, numVertices int) []
 
 	for i := 0; i < numVertices; i++ {
 		angle := float64(i) * radianStep
-		p := PointFromCoords(r*math.Cos(angle), r*math.Sin(angle), z)
+		p := Point{r3.Vector{r * math.Cos(angle), r * math.Sin(angle), z}}
 		vertices = append(vertices, Point{fromFrame(frame, p).Normalize()})
 	}
 
 	return vertices
 }
+
+// CapBound returns a bounding cap for this point.
+func (p Point) CapBound() Cap {
+	return CapFromPoint(p)
+}
+
+// RectBound returns a bounding latitude-longitude rectangle from this point.
+func (p Point) RectBound() Rect {
+	return RectFromLatLng(LatLngFromPoint(p))
+}
+
+// ContainsCell returns false as Points do not contain any other S2 types.
+func (p Point) ContainsCell(c Cell) bool { return false }
+
+// IntersectsCell reports whether this Point intersects the given cell.
+func (p Point) IntersectsCell(c Cell) bool {
+	return c.ContainsPoint(p)
+}
+
+// Contains reports if this Point contains the other Point.
+func (p Point) Contains(other Point) bool { return p == other }
 
 // TODO: Differences from C++
 // Rotate

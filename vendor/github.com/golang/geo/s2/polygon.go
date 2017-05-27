@@ -62,6 +62,9 @@ type Polygon struct {
 	// numVertices keeps the running total of all of the vertices of the contained loops.
 	numVertices int
 
+	// numEdges tracks the total number of edges in all the loops in this polygon.
+	numEdges int
+
 	// bound is a conservative bound on all points contained by this loop.
 	// If l.ContainsPoint(P), then l.bound.ContainsPoint(P).
 	bound Rect
@@ -71,6 +74,11 @@ type Polygon struct {
 	// has been expanded sufficiently to account for this error, i.e.
 	// if A.Contains(B), then A.subregionBound.Contains(B.bound).
 	subregionBound Rect
+
+	// A slice where element i is the cumulative number of edges in the
+	// preceding loops in the polygon. This field is used for polygons that
+	// have a large number of loops, and may be empty for polygons with few loops.
+	cumulativeEdges []int
 }
 
 // PolygonFromLoops constructs a polygon from the given hierarchically nested
@@ -85,17 +93,33 @@ type Polygon struct {
 // panic if given a slice of length > 1.
 func PolygonFromLoops(loops []*Loop) *Polygon {
 	if len(loops) > 1 {
-		panic("s2.PolygonFromLoops for multiple loops is not yet implemented")
+		panic("PolygonFromLoops for multiple loops is not yet implemented")
 	}
-	return &Polygon{
+
+	p := &Polygon{
 		loops: loops,
 		// TODO(roberts): This is explicitly set as depth of 0 for the one loop in
 		// the polygon. When multiple loops are supported, fix this to set the depths.
-		loopDepths:     []int{0},
-		numVertices:    len(loops[0].Vertices()), // TODO(roberts): Once multi-loop is supported, fix this.
-		bound:          EmptyRect(),
+		loopDepths:  []int{0},
+		numVertices: len(loops[0].Vertices()), // TODO(roberts): Once multi-loop is supported, fix this.
+		// TODO(roberts): Compute these bounds.
+		bound:          loops[0].RectBound(),
 		subregionBound: EmptyRect(),
 	}
+
+	const maxLinearSearchLoops = 12 // Based on benchmarks.
+	if len(loops) > maxLinearSearchLoops {
+		p.cumulativeEdges = make([]int, 0, len(loops))
+	}
+
+	for _, l := range loops {
+		if p.cumulativeEdges != nil {
+			p.cumulativeEdges = append(p.cumulativeEdges, p.numEdges)
+		}
+		p.numEdges += len(l.Vertices())
+	}
+
+	return p
 }
 
 // FullPolygon returns a special "full" polygon.
@@ -209,3 +233,114 @@ func (p *Polygon) RectBound() Rect { return p.bound }
 // IntersectsCell reports whether the polygon intersects the given cell.
 // TODO(roberts)
 //func (p *Polygon) IntersectsCell(c Cell) bool { ... }
+
+// Shape Interface
+
+// NumEdges returns the number of edges in this shape.
+func (p *Polygon) NumEdges() int {
+	return p.numEdges
+}
+
+// Edge returns endpoints for the given edge index.
+func (p *Polygon) Edge(e int) (a, b Point) {
+	var i int
+
+	if len(p.cumulativeEdges) > 0 {
+		for i = range p.cumulativeEdges {
+			if i+1 >= len(p.cumulativeEdges) || e < p.cumulativeEdges[i+1] {
+				e -= p.cumulativeEdges[i]
+				break
+			}
+		}
+	} else {
+		// When the number of loops is small, use linear search. Most often
+		// there is exactly one loop and the code below executes zero times.
+		for i = 0; e >= len(p.Loop(i).vertices); i++ {
+			e -= len(p.Loop(i).vertices)
+		}
+	}
+
+	// TODO(roberts): C++ uses the oriented vertices from Loop. Move to those when
+	// they are implmented here.
+	return p.Loop(i).Vertex(e), p.Loop(i).Vertex(e + 1)
+}
+
+// HasInterior reports whether this Polygon has an interior.
+func (p *Polygon) HasInterior() bool {
+	return p.dimension() == polygonGeometry
+}
+
+// ContainsOrigin returns whether this shape contains the origin.
+func (p *Polygon) ContainsOrigin() bool {
+	containsOrigin := false
+	for _, l := range p.loops {
+		containsOrigin = containsOrigin != l.ContainsOrigin()
+	}
+	return containsOrigin
+}
+
+// dimension returns the dimension of the geometry represented by this Polygon.
+func (p *Polygon) dimension() dimension { return polygonGeometry }
+
+// numChains reports the number of contiguous edge chains in the Polygon.
+func (p *Polygon) numChains() int {
+	if p.IsFull() {
+		return 0
+	}
+
+	return p.NumLoops()
+}
+
+// chainStart returns the id of the first edge in the i-th edge chain in this Polygon.
+func (p *Polygon) chainStart(i int) int {
+	if p.cumulativeEdges != nil {
+		if i == p.NumLoops() {
+			return p.numEdges
+		}
+		return p.cumulativeEdges[i]
+	}
+
+	e := 0
+	for i--; i >= 0; i-- {
+		e += len(p.Loop(i).vertices)
+
+	}
+	return e
+}
+
+// TODO(roberts): Differences from C++
+// InitNestedFromLoops
+// InitFromLoop
+// InitOrientedFromLoops
+// IsValid
+// Area
+// Centroid
+// SnapLevel
+// DistanceToPoint
+// DistanceToBoundary
+// Project
+// ProjectToBoundary
+// Contains/ApproxContains/Intersects/ApproxDisjoint for Polygons
+// InitTo{Intersection/ApproxIntersection/Union/ApproxUnion/Diff/ApproxDiff}
+// InitToSimplified
+// InitToSnapped
+// IntersectWithPolyline
+// ApproxIntersectWithPolyline
+// SubtractFromPolyline
+// ApproxSubtractFromPolyline
+// DestructiveUnion
+// DestructiveApproxUnion
+// InitToCellUnionBorder
+// IsNormalized
+// Equals/BoundaryEquals/BoundaryApproxEquals/BoundaryNear Polygons
+// BreakEdgesAndAddToBuilder
+// clearLoops
+// findLoopNestingError
+// initLoops
+// initToSimplifiedInternal
+// internalClipPolyline
+// compareBoundary
+// containsBoundary
+// excludesBoundary
+// containsNonCrossingBoundary
+// excludesNonCrossingShells

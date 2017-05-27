@@ -20,16 +20,58 @@ import (
 	"github.com/golang/geo/r2"
 )
 
-// Shape defines an interface for any s2 type that needs to be indexable.
+// dimension defines the types of geometry dimensions that a Shape supports.
+type dimension int
+
+const (
+	pointGeometry dimension = iota
+	polylineGeometry
+	polygonGeometry
+)
+
+// Shape defines an interface for any S2 type that needs to be indexable. A shape
+// is a collection of edges that optionally defines an interior. It can be used to
+// represent a set of points, a set of polylines, or a set of polygons.
 type Shape interface {
 	// NumEdges returns the number of edges in this shape.
 	NumEdges() int
 
 	// Edge returns endpoints for the given edge index.
+	// Zero-length edges are allowed, and can be used to represent points.
 	Edge(i int) (a, b Point)
 
-	// HasInterior returns true if this shape has an interior.
-	// i.e. the Shape consists of one or more closed non-intersecting loops.
+	// numChains reports the number of contiguous edge chains in the shape.
+	// For example, a shape whose edges are [AB, BC, CD, AE, EF] would consist
+	// of two chains (AB,BC,CD and AE,EF). This method allows some algorithms
+	// to be optimized by skipping over edge chains that do not affect the output.
+	//
+	// Note that it is always acceptable to implement this method by returning
+	// NumEdges, i.e. every chain consists of a single edge.
+	numChains() int
+
+	// chainStart returns the id of the first edge in the i-th edge chain,
+	// and returns NumEdges when i == numChains. For example, if there are
+	// two chains AB,BC,CD and AE,EF, the chain starts would be [0, 3, 5].
+	//
+	// This requires the following:
+	// 0 <= i <= numChains()
+	// chainStart(0) == 0
+	// chainStart(i) < chainStart(i+1)
+	// chainStart(numChains()) == NumEdges()
+	chainStart(i int) int
+
+	// dimension returns the dimension of the geometry represented by this shape.
+	//
+	// Note that this method allows degenerate geometry of different dimensions
+	// to be distinguished, e.g. it allows a point to be distinguished from a
+	// polyline or polygon that has been simplified to a single point.
+	dimension() dimension
+
+	// HasInterior reports whether this shape has an interior. If so, it must be possible
+	// to assemble the edges into a collection of non-crossing loops.  Edges may
+	// be returned in any order, and edges may be oriented arbitrarily with
+	// respect to the shape interior.  (However, note that some Shape types
+	// may have stronger requirements.)
 	HasInterior() bool
 
 	// ContainsOrigin returns true if this shape contains s2.Origin.
@@ -39,8 +81,9 @@ type Shape interface {
 
 // A minimal check for types that should satisfy the Shape interface.
 var (
-	_ Shape = Loop{}
-	_ Shape = Polyline{}
+	_ Shape = &Loop{}
+	_ Shape = &Polygon{}
+	_ Shape = &Polyline{}
 )
 
 // CellRelation describes the possible relationships between a target cell
@@ -147,38 +190,44 @@ type clippedEdge struct {
 	bound    r2.Rect   // Bounding box for the clipped portion
 }
 
-// ShapeIndex indexes a set of Shapes, where a Shape is some collection of
-// edges. A shape can be as simple as a single edge, or as complex as a set of loops.
-// For Shapes that have interiors, the index makes it very fast to determine which
-// Shape(s) contain a given point or region.
+// ShapeIndex indexes a set of Shapes, where a Shape is some collection of edges
+// that optionally defines an interior. It can be used to represent a set of
+// points, a set of polylines, or a set of polygons. For Shapes that have
+// interiors, the index makes it very fast to determine which Shape(s) contain
+// a given point or region.
 type ShapeIndex struct {
-	// shapes maps all shapes to their index.
-	shapes map[Shape]int32
+	// shapes is a map of shape ID to shape.
+	shapes map[int]Shape
 
 	maxEdgesPerCell int
 
 	// nextID tracks the next ID to hand out. IDs are not reused when shapes
 	// are removed from the index.
-	nextID int32
+	nextID int
 }
 
 // NewShapeIndex creates a new ShapeIndex.
 func NewShapeIndex() *ShapeIndex {
 	return &ShapeIndex{
 		maxEdgesPerCell: 10,
-		shapes:          make(map[Shape]int32),
+		shapes:          make(map[int]Shape),
 	}
 }
 
 // Add adds the given shape to the index and assign an ID to it.
 func (s *ShapeIndex) Add(shape Shape) {
-	s.shapes[shape] = s.nextID
+	s.shapes[s.nextID] = shape
 	s.nextID++
 }
 
 // Remove removes the given shape from the index.
 func (s *ShapeIndex) Remove(shape Shape) {
-	delete(s.shapes, shape)
+	for k, v := range s.shapes {
+		if v == shape {
+			delete(s.shapes, k)
+			return
+		}
+	}
 }
 
 // Len reports the number of Shapes in this index.
@@ -188,14 +237,14 @@ func (s *ShapeIndex) Len() int {
 
 // Reset clears the contents of the index and resets it to its original state.
 func (s *ShapeIndex) Reset() {
-	s.shapes = make(map[Shape]int32)
+	s.shapes = make(map[int]Shape)
 	s.nextID = 0
 }
 
 // NumEdges returns the number of edges in this index.
 func (s *ShapeIndex) NumEdges() int {
 	numEdges := 0
-	for shape := range s.shapes {
+	for _, shape := range s.shapes {
 		numEdges += shape.NumEdges()
 	}
 	return numEdges
