@@ -1,8 +1,7 @@
 language: go
 go:
-  - 1.5.4
-  - 1.6.2
   - 1.7.4
+  - 1.8.3
   - tip
 
 env:
@@ -23,4 +22,4 @@ install:
 
 script:
   - cd $TRAVIS_BUILD_DIR && make test
-  - go test -gocheck.v -gocheck.b -gocheck.btime=2s
+  - go test -v
