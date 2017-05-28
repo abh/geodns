@@ -9,17 +9,23 @@ env:
   - GO15VENDOREXPERIMENT='1'
 
 before_install:
-  - sudo apt-get install libgeoip-dev bzr
+  # because travis-ci is running an older ubuntu, we add the maxmind repository
+  # to get geoipupdate
+  - sudo apt-get -y update
+  - sudo apt-get -y install software-properties-common python-software-properties
+  - sudo add-apt-repository -y ppa:maxmind/ppa
+  - sudo apt-get -y update && sudo apt-get -y install libgeoip-dev geoipupdate curl
 
 install:
-  - mkdir -p $TRAVIS_BUILD_DIR/db
-  - curl -s http://geodns.bitnames.com/geoip/GeoLiteCity.dat.gz | gzip -cd > $TRAVIS_BUILD_DIR/db/GeoIPCity.dat
-  - curl -s http://download.maxmind.com/download/geoip/database/asnum/GeoIPASNum.dat.gz | gzip -cd > $TRAVIS_BUILD_DIR/db/GeoIPASNum.dat
+  - curl -fso /tmp/GeoIP.conf http://geodns.bitnames.com/geoip/GeoIP.conf
+  - sudo mv /tmp/GeoIP.conf /etc/
+  - sudo geoipupdate
+  - sudo ln -s /usr/share/GeoIP $TRAVIS_BUILD_DIR/db
+  - sudo ln -s /usr/share/GeoIP/GeoLite2-Country.mmdb /usr/share/GeoIP/GeoIP2-Country.mmdb
   - echo [geodns] >> dns/geodns.conf
-  - echo Directory=$TRAVIS_BUILD_DIR/db >> dns/geodns.conf
+  - echo Directory=/usr/share/GeoIP/ >> dns/geodns.conf
   - go build -v
   - go install
 
 script:
   - cd $TRAVIS_BUILD_DIR && make test
-  - go test -v
