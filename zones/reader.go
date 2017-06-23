@@ -256,10 +256,43 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 
 				switch dnsType {
 				case dns.TypeA, dns.TypeAAAA, dns.TypePTR:
-					// todo: check interface type
-					str, weight := getStringWeight(records[rType][i].([]interface{}))
-					ip := str
-					record.Weight = weight
+
+					rec := records[rType][i]
+
+					var ip string
+
+					switch rec.(type) {
+
+					case []interface{}:
+						str, weight := getStringWeight(records[rType][i].([]interface{}))
+						ip = str
+						record.Weight = weight
+
+					case map[string]interface{}:
+						r := rec.(map[string]interface{})
+
+						ip = r["ip"].(string)
+
+						if len(ip) == 0 || dnsType == dns.TypePTR {
+							switch dnsType {
+							case dns.TypeA:
+								ip = r["a"].(string)
+							case dns.TypeAAAA:
+								ip = r["aaaa"].(string)
+							case dns.TypePTR:
+								ip = r["ptr"].(string)
+							}
+						}
+
+						if w, ok := r["weight"]; ok {
+							record.Weight = typeutil.ToInt(w)
+						}
+
+						if h, ok := r["health"]; ok {
+							record.Test = typeutil.ToString(h)
+						}
+
+					}
 
 					switch dnsType {
 					case dns.TypePTR:
