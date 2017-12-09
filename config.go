@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/abh/geodns/targeting/geoip2"
+
 	"gopkg.in/fsnotify.v1"
 	gcfg "gopkg.in/gcfg.v1"
 )
@@ -64,7 +66,10 @@ func (conf *AppConfig) StatHatApiKey() string {
 func (conf *AppConfig) GeoIPDirectory() string {
 	cfgMutex.RLock()
 	defer cfgMutex.RUnlock()
-	return conf.GeoIP.Directory
+	if len(conf.GeoIP.Directory) > 0 {
+		return conf.GeoIP.Directory
+	}
+	return geoip2.FindDB()
 }
 
 func configWatcher(fileName string) {

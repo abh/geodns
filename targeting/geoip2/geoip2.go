@@ -39,7 +39,26 @@ func init() {
 		asnDB:     []string{"GeoIP2-ISP.mmdb"},
 		cityDB:    []string{"GeoIP2-City.mmdb", "GeoLite2-City.mmdb"},
 	}
+}
 
+func FindDB() string {
+	dirs := []string{
+		"/usr/share/GeoIP/",       // Linux default
+		"/usr/share/local/GeoIP/", // source install?
+		"/usr/local/share/GeoIP/", // FreeBSD
+		"/opt/local/share/GeoIP/", // MacPorts
+		"/usr/share/GeoIP/",       // ArchLinux
+	}
+	for _, dir := range dirs {
+		if _, err := os.Stat(dir); err != nil {
+			if os.IsExist(err) {
+				log.Println(err)
+			}
+			continue
+		}
+		return dir
+	}
+	return ""
 }
 
 func (g *g2) open(t geoType, db string) (*geoip2.Reader, error) {

@@ -29,11 +29,13 @@ func init() {
 
 var g geo.Provider
 
+// Setup sets the global geo provider
 func Setup(gn geo.Provider) error {
 	g = gn
 	return nil
 }
 
+// Geo returns the global geo provider
 func Geo() geo.Provider {
 	return g
 }
