@@ -194,11 +194,11 @@ func (mm *MuxManager) setupRootZone() {
 }
 
 func sha256File(fn string) string {
-	if data, err := ioutil.ReadFile(fn); err != nil {
+	data, err := ioutil.ReadFile(fn)
+	if err != nil {
 		return ""
-	} else {
-		hasher := sha256.New()
-		hasher.Write(data)
-		return hex.EncodeToString(hasher.Sum(nil))
 	}
+	hasher := sha256.New()
+	hasher.Write(data)
+	return hex.EncodeToString(hasher.Sum(nil))
 }

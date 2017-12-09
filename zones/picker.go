@@ -23,6 +23,10 @@ func (zone *Zone) filterHealth(servers Records) (Records, int) {
 	return tmpServers, sum
 }
 
+// Picker picks the best results from a label matching the qtype,
+// up to 'max' results. If location is specified Picker will get
+// return the "closests" results, otherwise they are returned weighted
+// randomized.
 func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *geo.Location) Records {
 
 	if qtype == dns.TypeANY {
@@ -104,7 +108,7 @@ func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *geo.Loca
 		for chosen < max {
 			// Determine the minimum distance of servers not yet chosen
 			minDist := location.MaxDistance()
-			for i, _ := range servers {
+			for i := range servers {
 				if !choose[i] && distances[i] <= minDist {
 					minDist = distances[i]
 				}
