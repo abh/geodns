@@ -214,11 +214,21 @@ func (zone *Zone) addSOA() {
 	label.Records[dns.TypeSOA][0] = &record
 }
 
+func (z *Zone) findFirstLabel(s string, targets []string, qts []uint16) *LabelMatch {
+	matches := z.FindLabels(s, targets, qts)
+	if len(matches) == 0 {
+		return nil
+	}
+	return &matches[0]
+}
+
 // Find label "s" in country "cc" falling back to the appropriate
 // continent and the global label name as needed. Looks for the
 // first available qType at each targeting level. Returns a list of
 // LabelMatch for potential labels that might satisfy the query.
-// "MF" records are treated as aliases.
+// "MF" records are treated as aliases. The API returns all the
+// matches the targeting will allow so health check filtering won't
+// filter out the "best" results leaving no others.
 func (z *Zone) FindLabels(s string, targets []string, qts []uint16) []LabelMatch {
 
 	matches := make([]LabelMatch, 0)

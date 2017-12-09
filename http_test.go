@@ -17,7 +17,7 @@ import (
 
 func TestHTTP(t *testing.T) {
 
-	geoprovider, err := geoip2.New("/usr/local/share/GeoIP")
+	geoprovider, err := geoip2.New(geoip2.FindDB())
 	if err == nil {
 		targeting.Setup(geoprovider)
 	}

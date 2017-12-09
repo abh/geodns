@@ -111,12 +111,10 @@ func TestRemoveConfig(t *testing.T) {
 
 	muxm.reload()
 	if muxm.zonelist["test.example.org"].Origin != "test.example.org" {
-		t.Log("test.example.org has unexpected Origin: '%s'", muxm.zonelist["test.example.org"].Origin)
-		t.Fail()
+		t.Errorf("test.example.org has unexpected Origin: '%s'", muxm.zonelist["test.example.org"].Origin)
 	}
 	if muxm.zonelist["test2.example.org"].Origin != "test2.example.org" {
-		t.Log("test2.example.org has unexpected Origin: '%s'", muxm.zonelist["test2.example.org"].Origin)
-		t.Fail()
+		t.Errorf("test2.example.org has unexpected Origin: '%s'", muxm.zonelist["test2.example.org"].Origin)
 	}
 
 	os.Remove(dir + "/test2.example.org.json")
@@ -125,8 +123,7 @@ func TestRemoveConfig(t *testing.T) {
 	muxm.reload()
 
 	if muxm.zonelist["test.example.org"].Origin != "test.example.org" {
-		t.Log("test.example.org has unexpected Origin: '%s'", muxm.zonelist["test.example.org"].Origin)
-		t.Fail()
+		t.Errorf("test.example.org has unexpected Origin: '%s'", muxm.zonelist["test.example.org"].Origin)
 	}
 	_, ok := muxm.zonelist["test2.example.org"]
 	if ok != false {

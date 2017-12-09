@@ -1,6 +1,7 @@
 package zones
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/miekg/dns"
@@ -24,90 +25,125 @@ func TestExampleComZone(t *testing.T) {
 	}
 
 	// Make sure that the empty "no.bar" zone gets skipped and "bar" is used
-	matches := ex.FindLabels("bar", []string{"no", "europe", "@"}, []uint16{dns.TypeA})
-	label := matches[0].Label
-	qtype := matches[0].Type
-	if l := len(label.Records[dns.TypeA]); l != 1 {
+	m := ex.findFirstLabel("bar", []string{"no", "europe", "@"}, []uint16{dns.TypeA})
+	if l := len(m.Label.Records[dns.TypeA]); l != 1 {
 		t.Logf("Unexpected number of A records: '%d'", l)
 		t.Fail()
 	}
-	if qtype != dns.TypeA {
-		t.Fatalf("Expected qtype = A record (type %d), got type %d", dns.TypeA, qtype)
+	if m.Type != dns.TypeA {
+		t.Fatalf("Expected qtype = A record (type %d), got type %d", dns.TypeA, m.Type)
 	}
-	if str := label.Records[qtype][0].RR.(*dns.A).A.String(); str != "192.168.1.2" {
-		t.Logf("Got A '%s', expected '%s'", str, "192.168.1.2")
-		t.Fail()
+	if str := m.Label.Records[m.Type][0].RR.(*dns.A).A.String(); str != "192.168.1.2" {
+		t.Errorf("Got A '%s', expected '%s'", str, "192.168.1.2")
 	}
 
-	// label, qtype = ex.FindLabels("", []string{"@"}, []uint16{dns.TypeMX})
-	// Mxs := label.Records[dns.TypeMX]
-	// c.Check(Mxs, HasLen, 2)
-	// c.Check(Mxs[0].RR.(*dns.MX).Mx, Equals, "mx.example.net.")
-	// c.Check(Mxs[1].RR.(*dns.MX).Mx, Equals, "mx2.example.net.")
+	m = ex.findFirstLabel("", []string{"@"}, []uint16{dns.TypeMX})
 
-	// label, qtype = ex.FindLabels("", []string{"dk", "europe", "@"}, []uint16{dns.TypeMX})
-	// Mxs = label.Records[dns.TypeMX]
-	// c.Check(Mxs, HasLen, 1)
-	// c.Check(Mxs[0].RR.(*dns.MX).Mx, Equals, "mx-eu.example.net.")
-	// c.Check(qtype, Equals, dns.TypeMX)
+	Mx := m.Label.Records[dns.TypeMX]
+	if len(Mx) != 2 {
+		t.Errorf("Expected 2 MX records but got %d", len(Mx))
+	}
+	if Mx[0].RR.(*dns.MX).Mx != "mx.example.net." {
+		t.Errorf("First MX should have been mx.example.net, but was %s", Mx[0].RR.(*dns.MX).Mx)
+	}
+
+	m = ex.findFirstLabel("", []string{"dk", "europe", "@"}, []uint16{dns.TypeMX})
+	Mx = m.Label.Records[dns.TypeMX]
+	if len(Mx) != 1 {
+		t.Errorf("Got %d MX record for dk,europe,@ - expected %d", len(Mx), 1)
+	}
+	if Mx[0].RR.(*dns.MX).Mx != "mx-eu.example.net." {
+		t.Errorf("First MX should have been mx-eu.example.net, but was %s", Mx[0].RR.(*dns.MX).Mx)
+	}
 
 	// // look for multiple record types
-	// label, qtype = ex.FindLabels("www", []string{"@"}, []uint16{dns.TypeCNAME, dns.TypeA})
-	// c.Check(label.Records[dns.TypeCNAME], HasLen, 1)
-	// c.Check(qtype, Equals, dns.TypeCNAME)
+	m = ex.findFirstLabel("www", []string{"@"}, []uint16{dns.TypeCNAME, dns.TypeA})
+	if m.Type != dns.TypeCNAME {
+		t.Errorf("www should have been a CNAME, but was a %s", dns.TypeToString[m.Type])
+	}
 
-	// // pretty.Println(ex.Labels[""].Records[dns.TypeNS])
+	m = ex.findFirstLabel("", []string{"@"}, []uint16{dns.TypeNS})
+	Ns := m.Label.Records[dns.TypeNS]
+	if len(Ns) != 2 {
+		t.Errorf("root should have returned 2 NS records but got %d", len(Ns))
+	}
 
-	// label, qtype = ex.FindLabels("", []string{"@"}, []uint16{dns.TypeNS})
-	// Ns := label.Records[dns.TypeNS]
-	// c.Check(Ns, HasLen, 2)
-	// // Test that we get the expected NS records (in any order because
-	// // of the configuration format used for this zone)
-	// c.Check(Ns[0].RR.(*dns.NS).Ns, Matches, "^ns[12]\\.example\\.net.$")
-	// c.Check(Ns[1].RR.(*dns.NS).Ns, Matches, "^ns[12]\\.example\\.net.$")
+	// Test that we get the expected NS records (in any order because
+	// of the configuration format used for this zone)
+	for i := 0; i < 2; i++ {
+		if matched, err := regexp.MatchString("^ns[12]\\.example\\.net.$", Ns[i].RR.(*dns.NS).Ns); err != nil || !matched {
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Errorf("Unexpected NS record data '%s'", Ns[i].RR.(*dns.NS).Ns)
+		}
+	}
 
-	// label, qtype = ex.FindLabels("", []string{"@"}, []uint16{dns.TypeSPF})
-	// Spf := label.Records[dns.TypeSPF]
-	// c.Check(Spf, HasLen, 1)
-	// c.Check(Spf[0].RR.(*dns.SPF).Txt[0], Equals, "v=spf1 ~all")
+	m = ex.findFirstLabel("", []string{"@"}, []uint16{dns.TypeSPF})
+	Spf := m.Label.Records[dns.TypeSPF]
+	if txt := Spf[0].RR.(*dns.SPF).Txt[0]; txt != "v=spf1 ~all" {
+		t.Errorf("Wrong SPF data '%s'", txt)
+	}
 
-	// label, qtype = ex.FindLabels("foo", []string{"@"}, []uint16{dns.TypeTXT})
-	// Txt := label.Records[dns.TypeTXT]
-	// c.Check(Txt, HasLen, 1)
-	// c.Check(Txt[0].RR.(*dns.TXT).Txt[0], Equals, "this is foo")
+	m = ex.findFirstLabel("foo", []string{"@"}, []uint16{dns.TypeTXT})
+	Txt := m.Label.Records[dns.TypeTXT]
+	if txt := Txt[0].RR.(*dns.TXT).Txt[0]; txt != "this is foo" {
+		t.Errorf("Wrong TXT data '%s'", txt)
+	}
 
-	// label, qtype = ex.FindLabels("weight", []string{"@"}, []uint16{dns.TypeTXT})
-	// Txt = label.Records[dns.TypeTXT]
-	// c.Check(Txt, HasLen, 2)
-	// c.Check(Txt[0].RR.(*dns.TXT).Txt[0], Equals, "w1000")
-	// c.Check(Txt[1].RR.(*dns.TXT).Txt[0], Equals, "w1")
+	m = ex.findFirstLabel("weight", []string{"@"}, []uint16{dns.TypeTXT})
+	Txt = m.Label.Records[dns.TypeTXT]
 
-	// //verify empty labels are created
-	// label, qtype = ex.FindLabels("a.b.c", []string{"@"}, []uint16{dns.TypeA})
-	// c.Check(label.Records[dns.TypeA], HasLen, 1)
-	// c.Check(label.Records[dns.TypeA][0].RR.(*dns.A).A.String(), Equals, "192.168.1.7")
+	txts := []string{"w10000", "w1"}
+	for i, r := range Txt {
+		if txt := r.RR.(*dns.TXT).Txt[0]; txt != txts[i] {
+			t.Errorf("txt record %d was '%s', expected '%s'", i, txt, txts[i])
+		}
+	}
 
-	// label, qtype = ex.FindLabels("b.c", []string{"@"}, []uint16{dns.TypeA})
-	// c.Check(label.Records[dns.TypeA], HasLen, 0)
-	// c.Check(label.Label, Equals, "b.c")
+	// verify empty labels are created
+	m = ex.findFirstLabel("a.b.c", []string{"@"}, []uint16{dns.TypeA})
+	if a := m.Label.Records[dns.TypeA][0].RR.(*dns.A); a.A.String() != "192.168.1.7" {
+		t.Errorf("unexpected IP for a.b.c '%s'", a)
+	}
 
-	// label, qtype = ex.FindLabels("c", []string{"@"}, []uint16{dns.TypeA})
-	// c.Check(label.Records[dns.TypeA], HasLen, 0)
-	// c.Check(label.Label, Equals, "c")
+	emptyLabels := []string{"b.c", "c"}
+	for _, el := range emptyLabels {
+		m = ex.findFirstLabel(el, []string{"@"}, []uint16{dns.TypeA})
+		if len(m.Label.Records[dns.TypeA]) > 0 {
+			t.Errorf("Unexpected A record for '%s'", el)
+		}
+		if m.Label.Label != el {
+			t.Errorf("'%s' label is '%s'", el, m.Label.Label)
+		}
+	}
 
-	// //verify label is created
-	// label, qtype = ex.FindLabels("three.two.one", []string{"@"}, []uint16{dns.TypeA})
-	// c.Check(label.Records[dns.TypeA], HasLen, 1)
-	// c.Check(label.Records[dns.TypeA][0].RR.(*dns.A).A.String(), Equals, "192.168.1.5")
+	//verify label is created
+	m = ex.findFirstLabel("three.two.one", []string{"@"}, []uint16{dns.TypeA})
+	if l := len(m.Label.Records[dns.TypeA]); l != 1 {
+		t.Errorf("Unexpected A record count for 'three.two.one' %d, expected 1", l)
+	}
+	if a := m.Label.Records[dns.TypeA][0].RR.(*dns.A); a.A.String() != "192.168.1.5" {
+		t.Errorf("unexpected IP for three.two.one '%s'", a)
+	}
 
-	// label, qtype = ex.FindLabels("two.one", []string{"@"}, []uint16{dns.TypeA})
-	// c.Check(label.Records[dns.TypeA], HasLen, 0)
-	// c.Check(label.Label, Equals, "two.one")
+	el := "two.one"
+	m = ex.findFirstLabel(el, []string{"@"}, []uint16{dns.TypeA})
+	if len(m.Label.Records[dns.TypeA]) > 0 {
+		t.Errorf("Unexpected A record for '%s'", el)
+	}
+	if m.Label.Label != el {
+		t.Errorf("'%s' label is '%s'", el, m.Label.Label)
+	}
 
-	// //verify label isn't overwritten
-	// label, qtype = ex.FindLabels("one", []string{"@"}, []uint16{dns.TypeA})
-	// c.Check(label.Records[dns.TypeA], HasLen, 1)
-	// c.Check(label.Records[dns.TypeA][0].RR.(*dns.A).A.String(), Equals, "192.168.1.6")
+	//verify label isn't overwritten
+	m = ex.findFirstLabel("one", []string{"@"}, []uint16{dns.TypeA})
+	if l := len(m.Label.Records[dns.TypeA]); l != 1 {
+		t.Errorf("Unexpected A record count for 'one' %d, expected 1", l)
+	}
+	if a := m.Label.Records[dns.TypeA][0].RR.(*dns.A); a.A.String() != "192.168.1.6" {
+		t.Errorf("unexpected IP for one '%s'", a)
+	}
 }
 
 func TestExampleOrgZone(t *testing.T) {
@@ -130,7 +166,4 @@ func TestExampleOrgZone(t *testing.T) {
 	if l := len(Ns); l != 2 {
 		t.Fatalf("Expected 2 NS records, got '%d'", l)
 	}
-	// c.Check(Ns[0].RR.(*dns.NS).Ns, Equals, "ns1.example.com.")
-	// c.Check(Ns[1].RR.(*dns.NS).Ns, Equals, "ns2.example.com.")
-
 }
