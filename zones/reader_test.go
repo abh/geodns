@@ -7,10 +7,23 @@ import (
 	"os"
 	"testing"
 
+	"github.com/abh/geodns/targeting"
+	"github.com/abh/geodns/targeting/geoip2"
 	"github.com/stretchr/testify/assert"
 )
 
 func loadZones(t *testing.T) *MuxManager {
+
+	if targeting.Geo() == nil {
+		t.Logf("Setting up geo provider")
+		geoprovider, err := geoip2.New(geoip2.FindDB())
+		if err == nil {
+			targeting.Setup(geoprovider)
+		} else {
+			t.Fatalf("error setting up geo provider: %s", err)
+		}
+	}
+
 	muxm, err := NewMuxManager("../dns", &NilReg{})
 	if err != nil {
 		t.Logf("loading zones: %s", err)
