@@ -153,7 +153,7 @@ func (g *GeoIP2) GetASN(ip net.IP) (string, int, error) {
 		return "", 0, err
 	}
 
-	c, err := r.ISP(ip)
+	c, err := r.ASN(ip)
 	if err != nil {
 		return "", 0, fmt.Errorf("lookup ASN for '%s': %s", ip.String(), err)
 	}

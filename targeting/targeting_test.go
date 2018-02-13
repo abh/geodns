@@ -98,7 +98,7 @@ func TestGetTargets(t *testing.T) {
 		tests = append(tests,
 			test{"@ continent regiongroup country region asn ip",
 				[]string{"[207.171.1.1]", "[207.171.1.0]", "as7012", "us-ca", "us-west", "us", "north-america", "@"},
-				"",
+				"207.171.1.1",
 			})
 	}
 
