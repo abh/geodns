@@ -47,7 +47,6 @@ func FindDB() string {
 		"/usr/share/local/GeoIP/", // source install?
 		"/usr/local/share/GeoIP/", // FreeBSD
 		"/opt/local/share/GeoIP/", // MacPorts
-		"/usr/share/GeoIP/",       // ArchLinux
 	}
 	for _, dir := range dirs {
 		if _, err := os.Stat(dir); err != nil {
@@ -69,12 +68,13 @@ func (g *g2) open(t geoType, db string) (*geoip2.Reader, error) {
 		found := false
 		for _, f := range dbFiles[t] {
 			fileName = filepath.Join(g.dir, f)
-			if _, err := os.Stat(f); err == nil {
+			if _, err := os.Stat(fileName); err == nil {
 				found = true
+				break
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("could not find '%s' in '%s'", dbFiles[0], g.dir)
+			return nil, fmt.Errorf("could not find '%s' in '%s'", dbFiles[t], g.dir)
 		}
 	}
 
