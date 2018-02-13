@@ -24,7 +24,9 @@ const (
 
 var dbFiles map[geoType][]string
 
-type g2 struct {
+// GeoIP2 contains the geoip implementation of the GeoDNS geo
+// targeting interface
+type GeoIP2 struct {
 	dir string
 
 	country *geoip2.Reader
@@ -41,6 +43,7 @@ func init() {
 	}
 }
 
+// FindDB returns a guess at a directory path for GeoIP data files
 func FindDB() string {
 	dirs := []string{
 		"/usr/share/GeoIP/",       // Linux default
@@ -60,7 +63,7 @@ func FindDB() string {
 	return ""
 }
 
-func (g *g2) open(t geoType, db string) (*geoip2.Reader, error) {
+func (g *GeoIP2) open(t geoType, db string) (*geoip2.Reader, error) {
 
 	fileName := filepath.Join(g.dir, db)
 
@@ -96,7 +99,7 @@ func (g *g2) open(t geoType, db string) (*geoip2.Reader, error) {
 	return n, nil
 }
 
-func (g *g2) get(t geoType, db string) (*geoip2.Reader, error) {
+func (g *GeoIP2) get(t geoType, db string) (*geoip2.Reader, error) {
 	g.mu.RLock()
 
 	var r *geoip2.Reader
@@ -120,8 +123,9 @@ func (g *g2) get(t geoType, db string) (*geoip2.Reader, error) {
 	return g.open(t, db)
 }
 
-func New(dir string) (*g2, error) {
-	g := &g2{
+// New returns a new GeoIP2 provider
+func New(dir string) (*GeoIP2, error) {
+	g := &GeoIP2{
 		dir: dir,
 	}
 	_, err := g.open(countryDB, "GeoIP2-Country.mmdb")
@@ -132,7 +136,8 @@ func New(dir string) (*g2, error) {
 	return g, nil
 }
 
-func (g *g2) HasASN() (bool, error) {
+// HasASN returns if we can do ASN lookups
+func (g *GeoIP2) HasASN() (bool, error) {
 	r, err := g.get(asnDB, "GeoIP2-ASN.mmdb")
 	if r != nil && err == nil {
 		return true, nil
@@ -140,7 +145,9 @@ func (g *g2) HasASN() (bool, error) {
 	return false, err
 }
 
-func (g *g2) GetASN(ip net.IP) (string, int, error) {
+// GetASN returns the ASN for the IP (as a "as123" string and
+// an integer)
+func (g *GeoIP2) GetASN(ip net.IP) (string, int, error) {
 	r, err := g.get(asnDB, "GeoIP2-ASN.mmdb")
 	if err != nil {
 		return "", 0, err
@@ -154,7 +161,8 @@ func (g *g2) GetASN(ip net.IP) (string, int, error) {
 	return fmt.Sprintf("as%d", asn), 0, nil
 }
 
-func (g *g2) HasCountry() (bool, error) {
+// HasCountry checks if the GeoIP country database is available
+func (g *GeoIP2) HasCountry() (bool, error) {
 	r, err := g.get(countryDB, "GeoIP2-Country.mmdb")
 	if r != nil && err == nil {
 		return true, nil
@@ -162,7 +170,8 @@ func (g *g2) HasCountry() (bool, error) {
 	return false, err
 }
 
-func (g *g2) GetCountry(ip net.IP) (country, continent string, netmask int) {
+// GetCountry returns the country, continent and netmask for the given IP
+func (g *GeoIP2) GetCountry(ip net.IP) (country, continent string, netmask int) {
 	r, err := g.get(countryDB, "GeoIP2.mmdb")
 	c, err := r.Country(ip)
 	if err != nil {
@@ -180,7 +189,9 @@ func (g *g2) GetCountry(ip net.IP) (country, continent string, netmask int) {
 	return country, continent, 0
 }
 
-func (g *g2) HasLocation() (bool, error) {
+// HasLocation returns if the city database is available to
+// return lat/lon information for an IP
+func (g *GeoIP2) HasLocation() (bool, error) {
 	r, err := g.get(cityDB, "GeoIP2-City.mmdb")
 	if r != nil && err == nil {
 		return true, nil
@@ -188,7 +199,8 @@ func (g *g2) HasLocation() (bool, error) {
 	return false, err
 }
 
-func (g *g2) GetLocation(ip net.IP) (l *geo.Location, err error) {
+// GetLocation returns a geo.Location object for the given IP
+func (g *GeoIP2) GetLocation(ip net.IP) (l *geo.Location, err error) {
 	c, err := g.city.City(ip)
 	if err != nil {
 		log.Printf("Could not lookup CountryRegion for '%s': %s", ip.String(), err)
