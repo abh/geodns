@@ -61,5 +61,4 @@ func TestHealth(t *testing.T) {
 	if len(records) == 0 {
 		t.Log("didn't get any records")
 	}
-
 }

@@ -112,13 +112,10 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 	targets, netmask, location := z.Options.Targeting.GetTargets(ip, z.HasClosest)
 
-	if qle != nil {
-		qle.Targets = targets
-	}
-
 	m := new(dns.Msg)
 
 	if qle != nil {
+		qle.Targets = targets
 		defer func() {
 			qle.Rcode = m.Rcode
 			qle.Answers = len(m.Answer)

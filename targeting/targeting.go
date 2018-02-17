@@ -64,7 +64,7 @@ func (t TargetOptions) getGeoTargets(ip net.IP, hasClosest bool) ([]string, int,
 		if location == nil || err != nil {
 			return targets, 0, nil
 		}
-		log.Printf("Location for '%s' (%s): %+v", ip, err, location)
+		log.Printf("Location for '%s' (err: %s): %+v", ip, err, location)
 		country = location.Country
 		continent = location.Continent
 		region = location.Region
