@@ -1,28 +1,63 @@
-{ "serial": 3,
-  "ttl":    600,
+{
+  "serial": 3,
+  "ttl": 600,
   "max_hosts": 2,
   "targeting": "country continent @ regiongroup region",
-  "data" : {
-    "":  {
-      "ns": { "ns1.example.net.": null, "ns2.example.net.": null },
-      "mx": [ { "preference": 20, "mx": "mx2.example.net", "weight": 0 },
-              { "preference": 10, "mx": "mx.example.net.", "weight": 1 }
-            ]
+  "data": {
+    "": {
+      "ns": {
+        "ns1.example.net.": null,
+        "ns2.example.net.": null
+      },
+      "mx": [
+        {
+          "preference": 20,
+          "mx": "mx2.example.net",
+          "weight": 0
+        },
+        {
+          "preference": 10,
+          "mx": "mx.example.net.",
+          "weight": 1
+        }
+      ]
     },
     "tucs": {
-      "a": [ [ "194.106.223.155", 100 ], [ "199.15.176.188", 100 ],
-             [ "207.171.7.49", 100 ], [ "207.171.7.59", 100 ],
-             [ "207.171.7.64", 100 ], [ "207.171.7.65", 100 ]
-           ],
+      "a": [
+        [
+          "194.106.223.155",
+          100
+        ],
+        [
+          "199.15.176.188",
+          100
+        ],
+        [
+          "207.171.7.49",
+          100
+        ],
+        [
+          "207.171.7.59",
+          100
+        ],
+        [
+          "207.171.7.64",
+          100
+        ],
+        [
+          "207.171.7.65",
+          100
+        ]
+      ],
       "max_hosts": "1",
       "closest": true,
       "health": {
-         "type": "tcp",
-         "frequency": 15,
-         "retry_time": 5,
-         "retries": 2,
-         "timeout": 3,
-         "port": 80
+        "type": "tcp",
+        "frequency": 15,
+        "retry_time": 5,
+        "retries": 2,
+        "timeout": 3,
+        "port": 80
       }
     }
   }
