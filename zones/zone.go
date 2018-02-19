@@ -3,6 +3,7 @@ package zones
 import (
 	"encoding/json"
 	"log"
+	"net"
 	"strconv"
 	"strings"
 	"sync"
@@ -290,25 +291,37 @@ func (z *Zone) FindLabels(s string, targets []string, qts []uint16) []LabelMatch
 // Find the locations of all the A records within a zone. If we were being really clever
 // here we could use LOC records too. But for the time being we'll just use GeoIP
 func (z *Zone) SetLocations() {
-	log.Println("todo: SetLocations()")
-	// qtypes := []uint16{dns.TypeA}
-	// for _, label := range z.Labels {
-	// 	if label.Closest {
-	// 		for _, qtype := range qtypes {
-	// 			if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
-	// 				for i := range label.Records[qtype] {
-	// 					label.Records[qtype][i].Loc = nil
-	// 					rr := label.Records[qtype][i].RR
-	// 					if a, ok := rr.(*dns.A); ok {
-	// 						ip := a.A
-	// 						_, _, _, _, _, location := targeting.GeoIP().GetCountryRegion(ip)
-	// 						label.Records[qtype][i].Loc = location
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
+	geo := targeting.Geo()
+	qtypes := []uint16{dns.TypeA}
+	for _, label := range z.Labels {
+		if label.Closest {
+			for _, qtype := range qtypes {
+				if label.Records[qtype] != nil && len(label.Records[qtype]) > 0 {
+					for i := range label.Records[qtype] {
+						label.Records[qtype][i].Loc = nil
+						rr := label.Records[qtype][i].RR
+						var ip *net.IP
+						switch rr.(type) {
+						case *dns.A:
+							ip = &rr.(*dns.A).A
+						case *dns.AAAA:
+							ip = &rr.(*dns.AAAA).AAAA
+						default:
+							log.Printf("Can't lookup location of type %T", rr)
+						}
+						if ip != nil {
+							location, err := geo.GetLocation(*ip)
+							if err != nil {
+								// log.Printf("Could not get location for '%s': %s", ip.String(), err)
+								continue
+							}
+							label.Records[qtype][i].Loc = location
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 func (z *Zone) addHealthReference(l *Label, data interface{}) {

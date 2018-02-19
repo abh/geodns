@@ -6,14 +6,6 @@
   "targeting": "country continent @ regiongroup region ip asn",
   "contact": "support.bitnames.com",
   "data": {
-    "0": {
-      "a": [
-        [
-          "192.168.0.1",
-          10
-        ]
-      ]
-    },
     "": {
       "ns": {
         "ns1.example.net.": null,
@@ -162,6 +154,14 @@
         ]
       ]
     },
+    "0": {
+      "a": [
+        [
+          "192.168.0.1",
+          10
+        ]
+      ]
+    },
     "0-alias": {
       "alias": "0"
     },
@@ -199,6 +199,24 @@
     },
     "cname-internal-referal": {
       "cname": "bar"
+    },
+    "closest": {
+      "a": [
+        [
+          "194.106.223.155",
+          100
+        ],
+        [
+          "207.171.7.49",
+          100
+        ],
+        [
+          "207.171.7.59",
+          100
+        ]
+      ],
+      "max_hosts": "1",
+      "closest": true
     }
   }
 }
