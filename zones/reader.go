@@ -271,7 +271,9 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 					case map[string]interface{}:
 						r := rec.(map[string]interface{})
 
-						ip = r["ip"].(string)
+						if _, ok := r["ip"]; ok {
+							ip = r["ip"].(string)
+						}
 
 						if len(ip) == 0 || dnsType == dns.TypePTR {
 							switch dnsType {
@@ -303,13 +305,13 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 							record.RR = &dns.A{Hdr: h, A: x}
 							break
 						}
-						panic(fmt.Errorf("Bad A record %s for %s", ip, dk))
+						panic(fmt.Errorf("Bad A record %q for %q", ip, dk))
 					case dns.TypeAAAA:
 						if x := net.ParseIP(ip); x != nil {
 							record.RR = &dns.AAAA{Hdr: h, AAAA: x}
 							break
 						}
-						panic(fmt.Errorf("Bad AAAA record %s for %s", ip, dk))
+						panic(fmt.Errorf("Bad AAAA record %q for %q", ip, dk))
 					}
 
 				case dns.TypeMX:
