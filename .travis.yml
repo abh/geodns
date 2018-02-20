@@ -2,11 +2,9 @@ language: go
 go:
   - 1.7.4
   - 1.8.3
+  - 1.9.4
+  - 1.10
   - tip
-
-env:
-  global:
-  - GO15VENDOREXPERIMENT='1'
 
 before_install:
   # because travis-ci is running an older ubuntu, we add the maxmind repository
@@ -20,10 +18,10 @@ install:
   - curl -fso /tmp/GeoIP.conf http://geodns.bitnames.com/geoip/GeoIP.conf
   - sudo mv /tmp/GeoIP.conf /etc/
   - sudo geoipupdate
-  - sudo ln -s /usr/share/GeoIP $TRAVIS_BUILD_DIR/db
-  - sudo ln -s /usr/share/GeoIP/GeoLite2-Country.mmdb /usr/share/GeoIP/GeoIP2-Country.mmdb
-  - echo [geodns] >> dns/geodns.conf
-  - echo Directory=/usr/share/GeoIP/ >> dns/geodns.conf
+# - sudo ln -s /usr/share/GeoIP $TRAVIS_BUILD_DIR/db
+# - sudo ln -s /usr/share/GeoIP/GeoLite2-Country.mmdb /usr/share/GeoIP/GeoIP2-Country.mmdb
+# - echo [geodns] >> dns/geodns.conf
+# - echo Directory=/usr/share/GeoIP/ >> dns/geodns.conf
   - go build -v
   - go install
 
