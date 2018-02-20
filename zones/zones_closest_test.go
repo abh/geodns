@@ -17,10 +17,12 @@ func TestClosest(t *testing.T) {
 		Label     string
 		ClientIP  string
 		ExpectedA []string
+		QType     uint16
 		MaxHosts  int
 	}{
-		{"closest", "212.237.144.84", []string{"194.106.223.155"}, 1},
-		{"closest", "208.113.157.108", []string{"207.171.7.49", "207.171.7.59"}, 2},
+		{"closest", "212.237.144.84", []string{"194.106.223.155"}, dns.TypeA, 1},
+		{"closest", "208.113.157.108", []string{"207.171.7.49", "207.171.7.59"}, dns.TypeA, 2},
+		{"closest", "2620:0:872::1", []string{"2607:f238:3::1:45"}, dns.TypeAAAA, 1},
 		// {"closest", "208.113.157.108", []string{"207.171.7.59"}, 1},
 	}
 
@@ -40,7 +42,11 @@ func TestClosest(t *testing.T) {
 		// isn't super straight forward. Moving some of the exceptions from serve()
 		// into configuration and making the "find the best answer" code have
 		// a better API should be possible though. Some day.
-		labelMatches := tz.FindLabels(x.Label, targets, []uint16{dns.TypeMF, dns.TypeCNAME, dns.TypeA})
+		labelMatches := tz.FindLabels(
+			x.Label,
+			targets,
+			[]uint16{dns.TypeMF, dns.TypeCNAME, x.QType},
+		)
 
 		if len(labelMatches) == 0 {
 			t.Fatalf("no labelmatches")
@@ -61,6 +67,12 @@ func TestClosest(t *testing.T) {
 					t.Fail()
 				}
 			}
+
+			if len(x.ExpectedA) != len(records) {
+				t.Logf("Expected %d records, got %d", len(x.ExpectedA), len(records))
+				t.Fail()
+			}
+
 			ips := []string{}
 
 			for _, r := range records {
@@ -68,6 +80,8 @@ func TestClosest(t *testing.T) {
 				switch rr := r.RR.(type) {
 				case *dns.A:
 					ips = append(ips, rr.A.String())
+				case *dns.AAAA:
+					ips = append(ips, rr.AAAA.String())
 				default:
 					t.Fatalf("unexpected RR type: %s", rr.Header().String())
 				}

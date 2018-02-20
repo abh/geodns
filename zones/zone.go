@@ -288,11 +288,12 @@ func (z *Zone) FindLabels(s string, targets []string, qts []uint16) []LabelMatch
 	return matches
 }
 
-// Find the locations of all the A records within a zone. If we were being really clever
-// here we could use LOC records too. But for the time being we'll just use GeoIP
+// Find the locations of all the A and AAAA records within a zone. If we were
+// being really clever here we could use LOC records too. But for the time
+// being we'll just use GeoIP.
 func (z *Zone) SetLocations() {
 	geo := targeting.Geo()
-	qtypes := []uint16{dns.TypeA}
+	qtypes := []uint16{dns.TypeA, dns.TypeAAAA}
 	for _, label := range z.Labels {
 		if label.Closest {
 			for _, qtype := range qtypes {

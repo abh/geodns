@@ -107,7 +107,7 @@ func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *geo.Loca
 	// 5% thereof. What this means in practice is that if we have a nearby
 	// cluster of servers that are close, they all get included, so load
 	// balancing works
-	if qtype == dns.TypeA && location != nil && max < rrCount {
+	if location != nil && (qtype == dns.TypeA || qtype == dns.TypeAAAA) && max < rrCount {
 		// First we record the distance to each server
 		distances := make([]float64, rrCount)
 		for i, s := range servers {
