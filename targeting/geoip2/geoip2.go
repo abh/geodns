@@ -38,7 +38,7 @@ type GeoIP2 struct {
 func init() {
 	dbFiles = map[geoType][]string{
 		countryDB: []string{"GeoIP2-Country.mmdb", "GeoLite2-Country.mmdb"},
-		asnDB:     []string{"GeoIP2-ISP.mmdb"},
+		asnDB:     []string{"GeoIP2-ASN.mmdb", "GeoLite2-ASN.mmdb"},
 		cityDB:    []string{"GeoIP2-City.mmdb", "GeoLite2-City.mmdb"},
 	}
 }

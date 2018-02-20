@@ -52,7 +52,7 @@ func TestTargetParse(t *testing.T) {
 func TestGetTargets(t *testing.T) {
 	ip := net.ParseIP("207.171.1.1")
 
-	g, err := geoip2.New("../db")
+	g, err := geoip2.New(geoip2.FindDB())
 	if err != nil {
 		t.Fatalf("opening geoip2: %s", err)
 	}
