@@ -490,7 +490,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 
 	// Loop over exisiting labels, create zone records for missing sub-domains
 	// and set TTLs
-	for k := range zone.Labels {
+	for k, l := range zone.Labels {
 		if strings.Contains(k, ".") {
 			subLabels := strings.Split(k, ".")
 			for i := 1; i < len(subLabels); i++ {
@@ -500,10 +500,23 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 				}
 			}
 		}
-		for _, records := range zone.Labels[k].Records {
+
+		for qtype, records := range l.Records {
+
+			setWeight := false
+
+			if _, ok := alwaysWeighted[qtype]; ok && l.Weight[qtype] == 0 {
+				setWeight = true
+			}
+
 			for _, r := range records {
 				// We add the TTL as a last pass because we might not have
 				// processed it yet when we process the record data.
+
+				if setWeight {
+					r.Weight = 1
+					l.Weight[qtype] += r.Weight
+				}
 
 				var defaultTtl uint32 = 86400
 				if r.RR.Header().Rrtype != dns.TypeNS {

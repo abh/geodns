@@ -9,6 +9,21 @@ import (
 	"github.com/miekg/dns"
 )
 
+// AlwaysWeighted types always honors 'MaxHosts', even
+// without an explicit weight set. (This list is slightly arbitrary).
+var AlwaysWeighted = []uint16{
+	dns.TypeA, dns.TypeAAAA, dns.TypeCNAME,
+}
+
+var alwaysWeighted map[uint16]struct{}
+
+func init() {
+	alwaysWeighted = map[uint16]struct{}{}
+	for _, t := range AlwaysWeighted {
+		alwaysWeighted[t] = struct{}{}
+	}
+}
+
 func (zone *Zone) filterHealth(servers Records) (Records, int) {
 	// Remove any unhealthy servers
 	tmpServers := servers[:0]
@@ -71,6 +86,8 @@ func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *geo.Loca
 	// this way since the first prototype, it might not make
 	// sense anymore. This probably makes NS records and such
 	// work as expected.
+	// A, AAAA and CNAME records ("AlwaysWeighted") are always given
+	// a weight so MaxHosts works for those even if weight isn't set.
 	if label.Weight[qtype] == 0 {
 		return servers
 	}
