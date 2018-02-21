@@ -1,19 +1,16 @@
-# GeoDNS in Go
+# GeoDNS servers
 
-This is the DNS server powering the [NTP Pool](http://www.pool.ntp.org/) system and other
-similar services. It supersedes the [pgeodns](http://github.com/abh/pgeodns) server.
-[![Build Status](https://drone.io/github.com/abh/geodns/status.png)](https://drone.io/github.com/abh/geodns/latest)
+This is the DNS server powering the [NTP Pool](http://www.pool.ntp.org/) system
+and other similar services.
+[![Build Status](https://travis-ci.org/abh/geodns.svg?branch=dev)](https://travis-ci.org/abh/geodns)
 
 ## Installation
 
 If you already have go installed, just run `go get` to install the Go
-dependencies. GeoDNS requires Go 1.4 or later.
-
-You will also need the GeoIP C library, on RedHat derived systems
-that's `yum install geoip-devel`.
+dependencies. GeoDNS requires Go 1.8 or later.
 
 If you don't have Go installed the easiest way to build geodns from source is to
-download Go from http://code.google.com/p/go/downloads/list and untar'ing it in
+download Go from https://golang.org/dl/ and untar'ing it in
 `/usr/local/go` and then run the following from a regular user account:
 
 ```sh
