@@ -1,25 +1,25 @@
-/*
-Copyright 2014 Google Inc. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2014 Google Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package s2
 
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -55,16 +55,41 @@ import (
 // discrete point, it is better to use Cells.
 type CellID uint64
 
+// SentinelCellID is an invalid cell ID guaranteed to be larger than any
+// valid cell ID. It is used primarily by ShapeIndex. The value is also used
+// by some S2 types when encoding data.
+// Note that the sentinel's RangeMin == RangeMax == itself.
+const SentinelCellID = CellID(^uint64(0))
+
+// sortCellIDs sorts the slice of CellIDs in place.
+func sortCellIDs(ci []CellID) {
+	sort.Sort(cellIDs(ci))
+}
+
+// cellIDs implements the Sort interface for slices of CellIDs.
+type cellIDs []CellID
+
+func (c cellIDs) Len() int           { return len(c) }
+func (c cellIDs) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+func (c cellIDs) Less(i, j int) bool { return c[i] < c[j] }
+
 // TODO(dsymonds): Some of these constants should probably be exported.
 const (
 	faceBits = 3
 	numFaces = 6
+
+	// This is the number of levels needed to specify a leaf cell.
 	maxLevel = 30
+
 	// The extra position bit (61 rather than 60) lets us encode each cell as its
 	// Hilbert curve position at the cell center (which is halfway along the
 	// portion of the Hilbert curve that fills that cell).
-	posBits    = 2*maxLevel + 1
-	maxSize    = 1 << maxLevel
+	posBits = 2*maxLevel + 1
+
+	// The maximum index of a valid leaf cell plus one. The range of valid leaf
+	// cell indices is [0..maxSize-1].
+	maxSize = 1 << maxLevel
+
 	wrapOffset = uint64(numFaces) << posBits
 )
 
@@ -424,11 +449,33 @@ func (ci CellID) AdvanceWrap(steps int64) CellID {
 	return CellID(uint64(ci) + (uint64(steps) << shift))
 }
 
+// Encode encodes the CellID.
+func (ci CellID) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	ci.encode(e)
+	return e.err
+}
+
+func (ci CellID) encode(e *encoder) {
+	e.writeUint64(uint64(ci))
+}
+
+// Decode encodes the CellID.
+func (ci *CellID) Decode(r io.Reader) error {
+	d := &decoder{r: asByteReader(r)}
+	ci.decode(d)
+	return d.err
+}
+
+func (ci *CellID) decode(d *decoder) {
+	*ci = CellID(d.readUint64())
+}
+
 // TODO: the methods below are not exported yet.  Settle on the entire API design
 // before doing this.  Do we want to mirror the C++ one as closely as possible?
 
 // distanceFromBegin returns the number of steps that this cell is from the first
-// node in the S2 heirarchy at our level. (i.e., FromFace(0).ChildBeginAtLevel(ci.Level())).
+// node in the S2 hierarchy at our level. (i.e., FromFace(0).ChildBeginAtLevel(ci.Level())).
 // The return value is always non-negative.
 func (ci CellID) distanceFromBegin() int64 {
 	return int64(ci >> uint64(2*(maxLevel-ci.Level())+1))
@@ -442,7 +489,7 @@ func (ci CellID) rawPoint() r3.Vector {
 }
 
 // faceSiTi returns the Face/Si/Ti coordinates of the center of the cell.
-func (ci CellID) faceSiTi() (face, si, ti int) {
+func (ci CellID) faceSiTi() (face int, si, ti uint32) {
 	face, i, j, _ := ci.faceIJOrientation()
 	delta := 0
 	if ci.IsLeaf() {
@@ -452,7 +499,7 @@ func (ci CellID) faceSiTi() (face, si, ti int) {
 			delta = 2
 		}
 	}
-	return face, 2*i + delta, 2*j + delta
+	return face, uint32(2*i + delta), uint32(2*j + delta)
 }
 
 // faceIJOrientation uses the global lookupIJ table to unfiddle the bits of ci.
@@ -461,8 +508,16 @@ func (ci CellID) faceIJOrientation() (f, i, j, orientation int) {
 	orientation = f & swapMask
 	nbits := maxLevel - 7*lookupBits // first iteration
 
+	// Each iteration maps 8 bits of the Hilbert curve position into
+	// 4 bits of "i" and "j". The lookup table transforms a key of the
+	// form "ppppppppoo" to a value of the form "iiiijjjjoo", where the
+	// letters [ijpo] represents bits of "i", "j", the Hilbert curve
+	// position, and the Hilbert curve orientation respectively.
+	//
+	// On the first iteration we need to be careful to clear out the bits
+	// representing the cube face.
 	for k := 7; k >= 0; k-- {
-		orientation += (int(uint64(ci)>>uint64(k*2*lookupBits+1)) & ((1 << uint((2 * nbits))) - 1)) << 2
+		orientation += (int(uint64(ci)>>uint64(k*2*lookupBits+1)) & ((1 << uint(2*nbits)) - 1)) << 2
 		orientation = lookupIJ[orientation]
 		i += (orientation >> (lookupBits + 2)) << uint(k*lookupBits)
 		j += ((orientation >> 2) & ((1 << lookupBits) - 1)) << uint(k*lookupBits)
@@ -470,6 +525,13 @@ func (ci CellID) faceIJOrientation() (f, i, j, orientation int) {
 		nbits = lookupBits // following iterations
 	}
 
+	// The position of a non-leaf cell at level "n" consists of a prefix of
+	// 2*n bits that identifies the cell, followed by a suffix of
+	// 2*(maxLevel-n)+1 bits of the form 10*. If n==maxLevel, the suffix is
+	// just "1" and has no effect. Otherwise, it consists of "10", followed
+	// by (maxLevel-n-1) repetitions of "00", followed by "0". The "10" has
+	// no effect, while each occurrence of "00" has the effect of reversing
+	// the swapMask bit.
 	if ci.lsb()&0x1111111111111110 != 0 {
 		orientation ^= swapMask
 	}
@@ -506,8 +568,8 @@ func cellIDFromFaceIJWrap(f, i, j int) CellID {
 	// Convert i and j to the coordinates of a leaf cell just beyond the
 	// boundary of this face.  This prevents 32-bit overflow in the case
 	// of finding the neighbors of a face cell.
-	i = clamp(i, -1, maxSize)
-	j = clamp(j, -1, maxSize)
+	i = clampInt(i, -1, maxSize)
+	j = clampInt(j, -1, maxSize)
 
 	// We want to wrap these coordinates onto the appropriate adjacent face.
 	// The easiest way to do this is to convert the (i,j) coordinates to (x,y,z)
@@ -540,17 +602,6 @@ func cellIDFromFaceIJSame(f, i, j int, sameFace bool) CellID {
 	return cellIDFromFaceIJWrap(f, i, j)
 }
 
-// clamp returns number closest to x within the range min..max.
-func clamp(x, min, max int) int {
-	if x < min {
-		return min
-	}
-	if x > max {
-		return max
-	}
-	return x
-}
-
 // ijToSTMin converts the i- or j-index of a leaf cell to the minimum corresponding
 // s- or t-value contained by that cell. The argument must be in the range
 // [0..2**30], i.e. up to one position beyond the normal range of valid leaf
@@ -561,7 +612,7 @@ func ijToSTMin(i int) float64 {
 
 // stToIJ converts value in ST coordinates to a value in IJ coordinates.
 func stToIJ(s float64) int {
-	return clamp(int(math.Floor(maxSize*s)), 0, maxSize-1)
+	return clampInt(int(math.Floor(maxSize*s)), 0, maxSize-1)
 }
 
 // cellIDFromPoint returns a leaf cell containing point p. Usually there is
@@ -606,6 +657,21 @@ const (
 	invertMask = 0x02
 )
 
+// The following lookup tables are used to convert efficiently between an
+// (i,j) cell index and the corresponding position along the Hilbert curve.
+//
+// lookupPos maps 4 bits of "i", 4 bits of "j", and 2 bits representing the
+// orientation of the current cell into 8 bits representing the order in which
+// that subcell is visited by the Hilbert curve, plus 2 bits indicating the
+// new orientation of the Hilbert curve within that subcell. (Cell
+// orientations are represented as combination of swapMask and invertMask.)
+//
+// lookupIJ is an inverted table used for mapping in the opposite
+// direction.
+//
+// We also experimented with looking up 16 bits at a time (14 bits of position
+// plus 2 of orientation) but found that smaller lookup tables gave better
+// performance. (2KB fits easily in the primary cache.)
 var (
 	ijToPos = [4][4]int{
 		{0, 1, 3, 2}, // canonical order
@@ -668,40 +734,6 @@ func (ci CellID) CommonAncestorLevel(other CellID) (level int, ok bool) {
 	return (60 - msbPos) >> 1, true
 }
 
-// findMSBSetNonZero64 returns the index (between 0 and 63) of the most
-// significant set bit. Passing zero to this function has undefined behavior.
-func findMSBSetNonZero64(bits uint64) int {
-	val := []uint64{0x2, 0xC, 0xF0, 0xFF00, 0xFFFF0000, 0xFFFFFFFF00000000}
-	shift := []uint64{1, 2, 4, 8, 16, 32}
-	var msbPos uint64
-	for i := 5; i >= 0; i-- {
-		if bits&val[i] != 0 {
-			bits >>= shift[i]
-			msbPos |= shift[i]
-		}
-	}
-	return int(msbPos)
-}
-
-const deBruijn64 = 0x03f79d71b4ca8b09
-const digitMask = uint64(1<<64 - 1)
-
-var deBruijn64Lookup = []byte{
-	0, 1, 56, 2, 57, 49, 28, 3, 61, 58, 42, 50, 38, 29, 17, 4,
-	62, 47, 59, 36, 45, 43, 51, 22, 53, 39, 33, 30, 24, 18, 12, 5,
-	63, 55, 48, 27, 60, 41, 37, 16, 46, 35, 44, 21, 52, 32, 23, 11,
-	54, 26, 40, 15, 34, 20, 31, 10, 25, 14, 19, 9, 13, 8, 7, 6,
-}
-
-// findLSBSetNonZero64 returns the index (between 0 and 63) of the least
-// significant set bit. Passing zero to this function has undefined behavior.
-//
-// This code comes from trailingZeroBits in https://golang.org/src/math/big/nat.go
-// which references (Knuth, volume 4, section 7.3.1).
-func findLSBSetNonZero64(bits uint64) int {
-	return int(deBruijn64Lookup[((bits&-bits)*(deBruijn64&digitMask))>>58])
-}
-
 // Advance advances or retreats the indicated number of steps along the
 // Hilbert curve at the current level, and returns the new position. The
 // position is never advanced past End() or before Begin().
@@ -731,7 +763,7 @@ func (ci CellID) Advance(steps int64) CellID {
 // centerST return the center of the CellID in (s,t)-space.
 func (ci CellID) centerST() r2.Point {
 	_, si, ti := ci.faceSiTi()
-	return r2.Point{siTiToST(uint64(si)), siTiToST(uint64(ti))}
+	return r2.Point{siTiToST(si), siTiToST(ti)}
 }
 
 // sizeST returns the edge length of this CellID in (s,t)-space at the given level.
@@ -751,7 +783,7 @@ func (ci CellID) boundST() r2.Rect {
 // the (u,v) rectangle covered by the cell.
 func (ci CellID) centerUV() r2.Point {
 	_, si, ti := ci.faceSiTi()
-	return r2.Point{stToUV(siTiToST(uint64(si))), stToUV(siTiToST(uint64(ti)))}
+	return r2.Point{stToUV(siTiToST(si)), stToUV(siTiToST(ti))}
 }
 
 // boundUV returns the bound of this CellID in (u,v)-space.

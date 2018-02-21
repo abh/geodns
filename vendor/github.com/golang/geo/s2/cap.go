@@ -1,23 +1,22 @@
-/*
-Copyright 2014 Google Inc. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2014 Google Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package s2
 
 import (
 	"fmt"
+	"io"
 	"math"
 
 	"github.com/golang/geo/r1"
@@ -416,6 +415,30 @@ func (c Cap) intersects(cell Cell, vertices [4]Point) bool {
 	return false
 }
 
+// CellUnionBound computes a covering of the Cap. In general the covering
+// consists of at most 4 cells except for very large caps, which may need
+// up to 6 cells. The output is not sorted.
+func (c Cap) CellUnionBound() []CellID {
+	// TODO(roberts): The covering could be made quite a bit tighter by mapping
+	// the cap to a rectangle in (i,j)-space and finding a covering for that.
+
+	// Find the maximum level such that the cap contains at most one cell vertex
+	// and such that CellID.AppendVertexNeighbors() can be called.
+	level := MinWidthMetric.MaxLevel(c.Radius().Radians()) - 1
+
+	// If level < 0, more than three face cells are required.
+	if level < 0 {
+		cellIDs := make([]CellID, 6)
+		for face := 0; face < 6; face++ {
+			cellIDs[face] = CellIDFromFace(face)
+		}
+		return cellIDs
+	}
+	// The covering consists of the 4 cells at the given level that share the
+	// cell vertex that is closest to the cap center.
+	return cellIDFromPoint(c.center).VertexNeighbors(level)
+}
+
 // Centroid returns the true centroid of the cap multiplied by its surface area
 // The result lies on the ray from the origin through the cap's center, but it
 // is not unit length. Note that if you just want the "surface centroid", i.e.
@@ -465,4 +488,32 @@ func (c Cap) Union(other Cap) Cap {
 	resRadius := 0.5 * (distance + cRadius + otherRadius)
 	resCenter := InterpolateAtDistance(0.5*(distance-cRadius+otherRadius), c.center, other.center)
 	return CapFromCenterAngle(resCenter, resRadius)
+}
+
+// Encode encodes the Cap.
+func (c Cap) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	c.encode(e)
+	return e.err
+}
+
+func (c Cap) encode(e *encoder) {
+	e.writeFloat64(c.center.X)
+	e.writeFloat64(c.center.Y)
+	e.writeFloat64(c.center.Z)
+	e.writeFloat64(float64(c.radius))
+}
+
+// Decode decodes the Cap.
+func (c *Cap) Decode(r io.Reader) error {
+	d := &decoder{r: asByteReader(r)}
+	c.decode(d)
+	return d.err
+}
+
+func (c *Cap) decode(d *decoder) {
+	c.center.X = d.readFloat64()
+	c.center.Y = d.readFloat64()
+	c.center.Z = d.readFloat64()
+	c.radius = s1.ChordAngle(d.readFloat64())
 }

@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -118,8 +120,9 @@ func NewHTTPClient(conf HTTPConfig) (Client, error) {
 // Ping returns how long the request took, the version of the server it connected to, and an error if one occurred.
 func (c *client) Ping(timeout time.Duration) (time.Duration, string, error) {
 	now := time.Now()
+
 	u := c.url
-	u.Path = "ping"
+	u.Path = path.Join(u.Path, "ping")
 
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
@@ -168,7 +171,7 @@ func (c *client) Close() error {
 // once the client is instantiated.
 type client struct {
 	// N.B - if url.UserInfo is accessed in future modifications to the
-	// methods on client, you will need to syncronise access to url.
+	// methods on client, you will need to synchronize access to url.
 	url        url.URL
 	username   string
 	password   string
@@ -318,13 +321,13 @@ func (p *Point) String() string {
 
 // PrecisionString returns a line-protocol string of the Point,
 // with the timestamp formatted for the given precision.
-func (p *Point) PrecisionString(precison string) string {
-	return p.pt.PrecisionString(precison)
+func (p *Point) PrecisionString(precision string) string {
+	return p.pt.PrecisionString(precision)
 }
 
 // Name returns the measurement name of the point.
 func (p *Point) Name() string {
-	return p.pt.Name()
+	return string(p.pt.Name())
 }
 
 // Tags returns the tags associated with the point.
@@ -366,7 +369,8 @@ func (c *client) Write(bp BatchPoints) error {
 	}
 
 	u := c.url
-	u.Path = "write"
+	u.Path = path.Join(u.Path, "write")
+
 	req, err := http.NewRequest("POST", u.String(), &b)
 	if err != nil {
 		return err
@@ -472,7 +476,7 @@ type Result struct {
 // Query sends a command to the server and returns the Response.
 func (c *client) Query(q Query) (*Response, error) {
 	u := c.url
-	u.Path = "query"
+	u.Path = path.Join(u.Path, "query")
 
 	jsonParameters, err := json.Marshal(q.Parameters)
 
@@ -514,6 +518,31 @@ func (c *client) Query(q Query) (*Response, error) {
 	}
 	defer resp.Body.Close()
 
+	// If we lack a X-Influxdb-Version header, then we didn't get a response from influxdb
+	// but instead some other service. If the error code is also a 500+ code, then some
+	// downstream loadbalancer/proxy/etc had an issue and we should report that.
+	if resp.Header.Get("X-Influxdb-Version") == "" && resp.StatusCode >= http.StatusInternalServerError {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil || len(body) == 0 {
+			return nil, fmt.Errorf("received status code %d from downstream server", resp.StatusCode)
+		}
+
+		return nil, fmt.Errorf("received status code %d from downstream server, with response body: %q", resp.StatusCode, body)
+	}
+
+	// If we get an unexpected content type, then it is also not from influx direct and therefore
+	// we want to know what we received and what status code was returned for debugging purposes.
+	if cType, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type")); cType != "application/json" {
+		// Read up to 1kb of the body to help identify downstream errors and limit the impact of things
+		// like downstream serving a large file
+		body, err := ioutil.ReadAll(io.LimitReader(resp.Body, 1024))
+		if err != nil || len(body) == 0 {
+			return nil, fmt.Errorf("expected json response, got empty body, with status: %v", resp.StatusCode)
+		}
+
+		return nil, fmt.Errorf("expected json response, got %q, with status: %v and response body: %q", cType, resp.StatusCode, body)
+	}
+
 	var response Response
 	if q.Chunked {
 		cr := NewChunkedResponse(resp.Body)
@@ -548,11 +577,11 @@ func (c *client) Query(q Query) (*Response, error) {
 			return nil, fmt.Errorf("unable to decode json: received status code %d err: %s", resp.StatusCode, decErr)
 		}
 	}
+
 	// If we don't have an error in our json response, and didn't get statusOK
 	// then send back an error
 	if resp.StatusCode != http.StatusOK && response.Error() == nil {
-		return &response, fmt.Errorf("received status code %d from server",
-			resp.StatusCode)
+		return &response, fmt.Errorf("received status code %d from server", resp.StatusCode)
 	}
 	return &response, nil
 }

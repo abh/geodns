@@ -1,18 +1,16 @@
-/*
-Copyright 2014 Google Inc. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2014 Google Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package s2
 
@@ -22,15 +20,139 @@ import (
 	"github.com/golang/geo/r3"
 )
 
+//
+// This file contains documentation of the various coordinate systems used
+// throughout the library. Most importantly, S2 defines a framework for
+// decomposing the unit sphere into a hierarchy of "cells". Each cell is a
+// quadrilateral bounded by four geodesics. The top level of the hierarchy is
+// obtained by projecting the six faces of a cube onto the unit sphere, and
+// lower levels are obtained by subdividing each cell into four children
+// recursively. Cells are numbered such that sequentially increasing cells
+// follow a continuous space-filling curve over the entire sphere. The
+// transformation is designed to make the cells at each level fairly uniform
+// in size.
+//
+////////////////////////// S2 Cell Decomposition /////////////////////////
+//
+// The following methods define the cube-to-sphere projection used by
+// the Cell decomposition.
+//
+// In the process of converting a latitude-longitude pair to a 64-bit cell
+// id, the following coordinate systems are used:
+//
+//  (id)
+//    An CellID is a 64-bit encoding of a face and a Hilbert curve position
+//    on that face. The Hilbert curve position implicitly encodes both the
+//    position of a cell and its subdivision level (see s2cellid.go).
+//
+//  (face, i, j)
+//    Leaf-cell coordinates. "i" and "j" are integers in the range
+//    [0,(2**30)-1] that identify a particular leaf cell on the given face.
+//    The (i, j) coordinate system is right-handed on each face, and the
+//    faces are oriented such that Hilbert curves connect continuously from
+//    one face to the next.
+//
+//  (face, s, t)
+//    Cell-space coordinates. "s" and "t" are real numbers in the range
+//    [0,1] that identify a point on the given face. For example, the point
+//    (s, t) = (0.5, 0.5) corresponds to the center of the top-level face
+//    cell. This point is also a vertex of exactly four cells at each
+//    subdivision level greater than zero.
+//
+//  (face, si, ti)
+//    Discrete cell-space coordinates. These are obtained by multiplying
+//    "s" and "t" by 2**31 and rounding to the nearest unsigned integer.
+//    Discrete coordinates lie in the range [0,2**31]. This coordinate
+//    system can represent the edge and center positions of all cells with
+//    no loss of precision (including non-leaf cells). In binary, each
+//    coordinate of a level-k cell center ends with a 1 followed by
+//    (30 - k) 0s. The coordinates of its edges end with (at least)
+//    (31 - k) 0s.
+//
+//  (face, u, v)
+//    Cube-space coordinates in the range [-1,1]. To make the cells at each
+//    level more uniform in size after they are projected onto the sphere,
+//    we apply a nonlinear transformation of the form u=f(s), v=f(t).
+//    The (u, v) coordinates after this transformation give the actual
+//    coordinates on the cube face (modulo some 90 degree rotations) before
+//    it is projected onto the unit sphere.
+//
+//  (face, u, v, w)
+//    Per-face coordinate frame. This is an extension of the (face, u, v)
+//    cube-space coordinates that adds a third axis "w" in the direction of
+//    the face normal. It is always a right-handed 3D coordinate system.
+//    Cube-space coordinates can be converted to this frame by setting w=1,
+//    while (u,v,w) coordinates can be projected onto the cube face by
+//    dividing by w, i.e. (face, u/w, v/w).
+//
+//  (x, y, z)
+//    Direction vector (Point). Direction vectors are not necessarily unit
+//    length, and are often chosen to be points on the biunit cube
+//    [-1,+1]x[-1,+1]x[-1,+1]. They can be be normalized to obtain the
+//    corresponding point on the unit sphere.
+//
+//  (lat, lng)
+//    Latitude and longitude (LatLng). Latitudes must be between -90 and
+//    90 degrees inclusive, and longitudes must be between -180 and 180
+//    degrees inclusive.
+//
+// Note that the (i, j), (s, t), (si, ti), and (u, v) coordinate systems are
+// right-handed on all six faces.
+//
+//
+// There are a number of different projections from cell-space (s,t) to
+// cube-space (u,v): linear, quadratic, and tangent. They have the following
+// tradeoffs:
+//
+//   Linear - This is the fastest transformation, but also produces the least
+//   uniform cell sizes. Cell areas vary by a factor of about 5.2, with the
+//   largest cells at the center of each face and the smallest cells in
+//   the corners.
+//
+//   Tangent - Transforming the coordinates via Atan makes the cell sizes
+//   more uniform. The areas vary by a maximum ratio of 1.4 as opposed to a
+//   maximum ratio of 5.2. However, each call to Atan is about as expensive
+//   as all of the other calculations combined when converting from points to
+//   cell ids, i.e. it reduces performance by a factor of 3.
+//
+//   Quadratic - This is an approximation of the tangent projection that
+//   is much faster and produces cells that are almost as uniform in size.
+//   It is about 3 times faster than the tangent projection for converting
+//   cell ids to points or vice versa. Cell areas vary by a maximum ratio of
+//   about 2.1.
+//
+// Here is a table comparing the cell uniformity using each projection. Area
+// Ratio is the maximum ratio over all subdivision levels of the largest cell
+// area to the smallest cell area at that level, Edge Ratio is the maximum
+// ratio of the longest edge of any cell to the shortest edge of any cell at
+// the same level, and Diag Ratio is the ratio of the longest diagonal of
+// any cell to the shortest diagonal of any cell at the same level.
+//
+//               Area    Edge    Diag
+//              Ratio   Ratio   Ratio
+// -----------------------------------
+// Linear:      5.200   2.117   2.959
+// Tangent:     1.414   1.414   1.704
+// Quadratic:   2.082   1.802   1.932
+//
+// The worst-case cell aspect ratios are about the same with all three
+// projections. The maximum ratio of the longest edge to the shortest edge
+// within the same cell is about 1.4 and the maximum ratio of the diagonals
+// within the same cell is about 1.7.
+//
+// For Go we have chosen to use only the Quadratic approach. Other language
+// implementations may offer other choices.
+
 const (
 	// maxSiTi is the maximum value of an si- or ti-coordinate.
-	// It is one shift more than maxSize.
+	// It is one shift more than maxSize. The range of valid (si,ti)
+	// values is [0..maxSiTi].
 	maxSiTi = maxSize << 1
 )
 
 // siTiToST converts an si- or ti-value to the corresponding s- or t-value.
 // Value is capped at 1.0 because there is no DCHECK in Go.
-func siTiToST(si uint64) float64 {
+func siTiToST(si uint32) float64 {
 	if si > maxSiTi {
 		return 1.0
 	}
@@ -40,11 +162,11 @@ func siTiToST(si uint64) float64 {
 // stToSiTi converts the s- or t-value to the nearest si- or ti-coordinate.
 // The result may be outside the range of valid (si,ti)-values. Value of
 // 0.49999999999999994 (math.NextAfter(0.5, -1)), will be incorrectly rounded up.
-func stToSiTi(s float64) uint64 {
+func stToSiTi(s float64) uint32 {
 	if s < 0 {
-		return uint64(s*maxSiTi - 0.5)
+		return uint32(s*maxSiTi - 0.5)
 	}
-	return uint64(s*maxSiTi + 0.5)
+	return uint32(s*maxSiTi + 0.5)
 }
 
 // stToUV converts an s or t value to the corresponding u or v value.
@@ -71,21 +193,16 @@ func uvToST(u float64) float64 {
 // face returns face ID from 0 to 5 containing the r. For points on the
 // boundary between faces, the result is arbitrary but deterministic.
 func face(r r3.Vector) int {
-	abs := r.Abs()
-	id := 0
-	value := r.X
-	if abs.Y > abs.X {
-		id = 1
-		value = r.Y
+	f := r.LargestComponent()
+	switch {
+	case f == r3.XAxis && r.X < 0:
+		f += 3
+	case f == r3.YAxis && r.Y < 0:
+		f += 3
+	case f == r3.ZAxis && r.Z < 0:
+		f += 3
 	}
-	if abs.Z > math.Abs(value) {
-		id = 2
-		value = r.Z
-	}
-	if value < 0 {
-		id += 3
-	}
-	return id
+	return int(f)
 }
 
 // validFaceXYZToUV given a valid face for the given point r (meaning that
@@ -190,13 +307,13 @@ func faceXYZtoUVW(face int, p Point) Point {
 
 // faceSiTiToXYZ transforms the (si, ti) coordinates to a (not necessarily
 // unit length) Point on the given face.
-func faceSiTiToXYZ(face int, si, ti uint64) Point {
+func faceSiTiToXYZ(face int, si, ti uint32) Point {
 	return Point{faceUVToXYZ(face, stToUV(siTiToST(si)), stToUV(siTiToST(ti)))}
 }
 
 // xyzToFaceSiTi transforms the (not necessarily unit length) Point to
 // (face, si, ti) coordinates and the level the Point is at.
-func xyzToFaceSiTi(p Point) (face int, si, ti uint64, level int) {
+func xyzToFaceSiTi(p Point) (face int, si, ti uint32, level int) {
 	face, u, v := xyzToFaceUV(p.Vector)
 	si = stToSiTi(uvToST(u))
 	ti = stToSiTi(uvToST(v))
@@ -205,8 +322,8 @@ func xyzToFaceSiTi(p Point) (face int, si, ti uint64, level int) {
 	// center. The si,ti values of 0 and maxSiTi need to be handled specially
 	// because they do not correspond to cell centers at any valid level; they
 	// are mapped to level -1 by the code at the end.
-	level = maxLevel - findLSBSetNonZero64(si|maxSiTi)
-	if level < 0 || level != maxLevel-findLSBSetNonZero64(ti|maxSiTi) {
+	level = maxLevel - findLSBSetNonZero64(uint64(si|maxSiTi))
+	if level < 0 || level != maxLevel-findLSBSetNonZero64(uint64(ti|maxSiTi)) {
 		return face, si, ti, -1
 	}
 

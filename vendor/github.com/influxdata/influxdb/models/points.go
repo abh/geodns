@@ -43,10 +43,20 @@ const (
 	MaxKeyLength = 65535
 )
 
+// enableUint64Support will enable uint64 support if set to true.
+var enableUint64Support = false
+
+// EnableUintSupport manually enables uint support for the point parser.
+// This function will be removed in the future and only exists for unit tests during the
+// transition.
+func EnableUintSupport() {
+	enableUint64Support = true
+}
+
 // Point defines the values that will be written to the database.
 type Point interface {
 	// Name return the measurement name for the point.
-	Name() string
+	Name() []byte
 
 	// SetName updates the measurement name for the point.
 	SetName(string)
@@ -59,6 +69,9 @@ type Point interface {
 
 	// SetTags replaces the tags for the point.
 	SetTags(tags Tags)
+
+	// HasTag returns true if the tag exists for the point.
+	HasTag(tag []byte) bool
 
 	// Fields returns the fields for the point.
 	Fields() (Fields, error)
@@ -134,6 +147,9 @@ const (
 
 	// Empty is used to indicate that there is no field.
 	Empty
+
+	// Unsigned indicates the field's type is an unsigned integer.
+	Unsigned
 )
 
 // FieldIterator provides a low-allocation interface to iterate through a point's fields.
@@ -152,6 +168,9 @@ type FieldIterator interface {
 
 	// IntegerValue returns the integer value of the current field.
 	IntegerValue() (int64, error)
+
+	// UnsignedValue returns the unsigned value of the current field.
+	UnsignedValue() (uint64, error)
 
 	// BooleanValue returns the boolean value of the current field.
 	BooleanValue() (bool, error)
@@ -202,12 +221,21 @@ type point struct {
 	it fieldIterator
 }
 
+// type assertions
+var (
+	_ Point         = (*point)(nil)
+	_ FieldIterator = (*point)(nil)
+)
+
 const (
 	// the number of characters for the largest possible int64 (9223372036854775807)
 	maxInt64Digits = 19
 
 	// the number of characters for the smallest possible int64 (-9223372036854775808)
 	minInt64Digits = 20
+
+	// the number of characters for the largest possible uint64 (18446744073709551615)
+	maxUint64Digits = 20
 
 	// the number of characters required for the largest float64 before a range check
 	// would occur during parsing
@@ -234,7 +262,12 @@ func ParsePointsString(buf string) ([]Point, error) {
 //
 // NOTE: to minimize heap allocations, the returned Tags will refer to subslices of buf.
 // This can have the unintended effect preventing buf from being garbage collected.
-func ParseKey(buf []byte) (string, Tags, error) {
+func ParseKey(buf []byte) (string, Tags) {
+	meas, tags := ParseKeyBytes(buf)
+	return string(meas), tags
+}
+
+func ParseKeyBytes(buf []byte) ([]byte, Tags) {
 	// Ignore the error because scanMeasurement returns "missing fields" which we ignore
 	// when just parsing a key
 	state, i, _ := scanMeasurement(buf, 0)
@@ -243,9 +276,23 @@ func ParseKey(buf []byte) (string, Tags, error) {
 	if state == tagKeyState {
 		tags = parseTags(buf)
 		// scanMeasurement returns the location of the comma if there are tags, strip that off
-		return string(buf[:i-1]), tags, nil
+		return buf[:i-1], tags
 	}
-	return string(buf[:i]), tags, nil
+	return buf[:i], tags
+}
+
+func ParseTags(buf []byte) Tags {
+	return parseTags(buf)
+}
+
+func ParseName(buf []byte) ([]byte, error) {
+	// Ignore the error because scanMeasurement returns "missing fields" which we ignore
+	// when just parsing a key
+	state, i, _ := scanMeasurement(buf, 0)
+	if state == tagKeyState {
+		return buf[:i-1], nil
+	}
+	return buf[:i], nil
 }
 
 // ParsePointsWithPrecision is similar to ParsePoints, but allows the
@@ -325,6 +372,19 @@ func parsePoint(buf []byte, defaultTime time.Time, precision string) (Point, err
 	// at least one field is required
 	if len(fields) == 0 {
 		return nil, fmt.Errorf("missing fields")
+	}
+
+	var maxKeyErr error
+	walkFields(fields, func(k, v []byte) bool {
+		if sz := seriesKeySize(key, k); sz > MaxKeyLength {
+			maxKeyErr = fmt.Errorf("max key length exceeded: %v > %v", sz, MaxKeyLength)
+			return false
+		}
+		return true
+	})
+
+	if maxKeyErr != nil {
+		return nil, maxKeyErr
 	}
 
 	// scan the last block which is an optional integer timestamp
@@ -785,7 +845,7 @@ func isNumeric(b byte) bool {
 // error if a invalid number is scanned.
 func scanNumber(buf []byte, i int) (int, error) {
 	start := i
-	var isInt bool
+	var isInt, isUnsigned bool
 
 	// Is negative number?
 	if i < len(buf) && buf[i] == '-' {
@@ -811,8 +871,12 @@ func scanNumber(buf []byte, i int) (int, error) {
 			break
 		}
 
-		if buf[i] == 'i' && i > start && !isInt {
+		if buf[i] == 'i' && i > start && !(isInt || isUnsigned) {
 			isInt = true
+			i++
+			continue
+		} else if buf[i] == 'u' && i > start && !(isInt || isUnsigned) {
+			isUnsigned = true
 			i++
 			continue
 		}
@@ -849,7 +913,7 @@ func scanNumber(buf []byte, i int) (int, error) {
 		i++
 	}
 
-	if isInt && (decimal || scientific) {
+	if (isInt || isUnsigned) && (decimal || scientific) {
 		return i, ErrInvalidNumber
 	}
 
@@ -882,6 +946,26 @@ func scanNumber(buf []byte, i int) (int, error) {
 		if len(buf[start:i-1]) >= maxInt64Digits || len(buf[start:i-1]) >= minInt64Digits {
 			if _, err := parseIntBytes(buf[start:i-1], 10, 64); err != nil {
 				return i, fmt.Errorf("unable to parse integer %s: %s", buf[start:i-1], err)
+			}
+		}
+	} else if isUnsigned {
+		// Return an error if uint64 support has not been enabled.
+		if !enableUint64Support {
+			return i, ErrInvalidNumber
+		}
+		// Make sure the last char is a 'u' for unsigned
+		if buf[i-1] != 'u' {
+			return i, ErrInvalidNumber
+		}
+		// Make sure the first char is not a '-' for unsigned
+		if buf[start] == '-' {
+			return i, ErrInvalidNumber
+		}
+		// Parse the uint to check bounds the number of digits could be larger than the max range
+		// We subtract 1 from the index to remove the `u` from our tests
+		if len(buf[start:i-1]) >= maxUint64Digits {
+			if _, err := parseUintBytes(buf[start:i-1], 10, 64); err != nil {
+				return i, fmt.Errorf("unable to parse unsigned %s: %s", buf[start:i-1], err)
 			}
 		}
 	} else {
@@ -985,7 +1069,7 @@ func scanLine(buf []byte, i int) (int, []byte) {
 		}
 
 		// skip past escaped characters
-		if buf[i] == '\\' {
+		if buf[i] == '\\' && i+2 < len(buf) {
 			i += 2
 			continue
 		}
@@ -1114,7 +1198,7 @@ func scanFieldValue(buf []byte, i int) (int, []byte) {
 	return i, buf[start:i]
 }
 
-func escapeMeasurement(in []byte) []byte {
+func EscapeMeasurement(in []byte) []byte {
 	for b, esc := range measurementEscapeCodes {
 		in = bytes.Replace(in, []byte{b}, esc, -1)
 	}
@@ -1242,11 +1326,20 @@ func pointKey(measurement string, tags Tags, fields Fields, t time.Time) ([]byte
 	}
 
 	key := MakeKey([]byte(measurement), tags)
-	if len(key) > MaxKeyLength {
-		return nil, fmt.Errorf("max key length exceeded: %v > %v", len(key), MaxKeyLength)
+	for field := range fields {
+		sz := seriesKeySize(key, []byte(field))
+		if sz > MaxKeyLength {
+			return nil, fmt.Errorf("max key length exceeded: %v > %v", sz, MaxKeyLength)
+		}
 	}
 
 	return key, nil
+}
+
+func seriesKeySize(key, field []byte) int {
+	// 4 is the length of the tsm1.fieldKeySeparator constant.  It's inlined here to avoid a circular
+	// dependency.
+	return len(key) + 4 + len(field)
 }
 
 // NewPointFromBytes returns a new Point from a marshalled Point.
@@ -1273,6 +1366,11 @@ func NewPointFromBytes(b []byte) (Point, error) {
 			}
 		case Integer:
 			_, err := iter.IntegerValue()
+			if err != nil {
+				return nil, fmt.Errorf("unable to unmarshal field %s: %s", string(iter.FieldKey()), err)
+			}
+		case Unsigned:
+			_, err := iter.UnsignedValue()
 			if err != nil {
 				return nil, fmt.Errorf("unable to unmarshal field %s: %s", string(iter.FieldKey()), err)
 			}
@@ -1313,13 +1411,8 @@ func (p *point) name() []byte {
 	return name
 }
 
-// Name return the measurement name for the point.
-func (p *point) Name() string {
-	if p.cachedName != "" {
-		return p.cachedName
-	}
-	p.cachedName = string(escape.Unescape(p.name()))
-	return p.cachedName
+func (p *point) Name() []byte {
+	return escape.Unescape(p.name())
 }
 
 // SetName updates the measurement name for the point.
@@ -1352,21 +1445,36 @@ func (p *point) Tags() Tags {
 	return p.cachedTags
 }
 
-func parseTags(buf []byte) Tags {
+func (p *point) HasTag(tag []byte) bool {
+	if len(p.key) == 0 {
+		return false
+	}
+
+	var exists bool
+	walkTags(p.key, func(key, value []byte) bool {
+		if bytes.Equal(tag, key) {
+			exists = true
+			return false
+		}
+		return true
+	})
+
+	return exists
+}
+
+func walkTags(buf []byte, fn func(key, value []byte) bool) {
 	if len(buf) == 0 {
-		return nil
+		return
 	}
 
 	pos, name := scanTo(buf, 0, ',')
 
 	// it's an empty key, so there are no tags
 	if len(name) == 0 {
-		return nil
+		return
 	}
 
-	tags := make(Tags, 0, bytes.Count(buf, []byte(",")))
 	hasEscape := bytes.IndexByte(buf, '\\') != -1
-
 	i := pos + 1
 	var key, value []byte
 	for {
@@ -1381,14 +1489,53 @@ func parseTags(buf []byte) Tags {
 		}
 
 		if hasEscape {
-			tags = append(tags, NewTag(unescapeTag(key), unescapeTag(value)))
+			if !fn(unescapeTag(key), unescapeTag(value)) {
+				return
+			}
 		} else {
-			tags = append(tags, NewTag(key, value))
+			if !fn(key, value) {
+				return
+			}
 		}
 
 		i++
 	}
+}
 
+// walkFields walks each field key and value via fn.  If fn returns false, the iteration
+// is stopped.  The values are the raw byte slices and not the converted types.
+func walkFields(buf []byte, fn func(key, value []byte) bool) {
+	var i int
+	var key, val []byte
+	for len(buf) > 0 {
+		i, key = scanTo(buf, 0, '=')
+		buf = buf[i+1:]
+		i, val = scanFieldValue(buf, 0)
+		buf = buf[i:]
+		if !fn(key, val) {
+			break
+		}
+
+		// slice off comma
+		if len(buf) > 0 {
+			buf = buf[1:]
+		}
+	}
+}
+
+func parseTags(buf []byte) Tags {
+	if len(buf) == 0 {
+		return nil
+	}
+
+	tags := make(Tags, bytes.Count(buf, []byte(",")))
+	p := 0
+	walkTags(buf, func(key, value []byte) bool {
+		tags[p].Key = key
+		tags[p].Value = value
+		p++
+		return true
+	})
 	return tags
 }
 
@@ -1396,12 +1543,12 @@ func parseTags(buf []byte) Tags {
 func MakeKey(name []byte, tags Tags) []byte {
 	// unescape the name and then re-escape it to avoid double escaping.
 	// The key should always be stored in escaped form.
-	return append(escapeMeasurement(unescapeMeasurement(name)), tags.HashKey()...)
+	return append(EscapeMeasurement(unescapeMeasurement(name)), tags.HashKey()...)
 }
 
 // SetTags replaces the tags for the point.
 func (p *point) SetTags(tags Tags) {
-	p.key = MakeKey([]byte(p.Name()), tags)
+	p.key = MakeKey(p.Name(), tags)
 	p.cachedTags = tags
 }
 
@@ -1411,7 +1558,7 @@ func (p *point) AddTag(key, value string) {
 	tags = append(tags, Tag{Key: []byte(key), Value: []byte(value)})
 	sort.Sort(tags)
 	p.cachedTags = tags
-	p.key = MakeKey([]byte(p.Name()), tags)
+	p.key = MakeKey(p.Name(), tags)
 }
 
 // Fields returns the fields for the point.
@@ -1545,10 +1692,7 @@ func (p *point) UnmarshalBinary(b []byte) error {
 	p.fields, b = b[:n], b[n:]
 
 	// Read timestamp.
-	if err := p.time.UnmarshalBinary(b); err != nil {
-		return err
-	}
-	return nil
+	return p.time.UnmarshalBinary(b)
 }
 
 // PrecisionString returns a string representation of the point. If there
@@ -1593,6 +1737,12 @@ func (p *point) unmarshalBinary() (Fields, error) {
 				return nil, fmt.Errorf("unable to unmarshal field %s: %s", string(iter.FieldKey()), err)
 			}
 			fields[string(iter.FieldKey())] = v
+		case Unsigned:
+			v, err := iter.UnsignedValue()
+			if err != nil {
+				return nil, fmt.Errorf("unable to unmarshal field %s: %s", string(iter.FieldKey()), err)
+			}
+			fields[string(iter.FieldKey())] = v
 		case String:
 			fields[string(iter.FieldKey())] = iter.StringValue()
 		case Boolean:
@@ -1623,7 +1773,7 @@ func (p *point) UnixNano() int64 {
 // string representations are no longer than size. Points with a single field or
 // a point without a timestamp may exceed the requested size.
 func (p *point) Split(size int) []Point {
-	if p.time.IsZero() || len(p.String()) <= size {
+	if p.time.IsZero() || p.StringSize() <= size {
 		return []Point{p}
 	}
 
@@ -1716,6 +1866,30 @@ func NewTags(m map[string]string) Tags {
 	}
 	sort.Sort(a)
 	return a
+}
+
+// Keys returns the list of keys for a tag set.
+func (a Tags) Keys() []string {
+	if len(a) == 0 {
+		return nil
+	}
+	keys := make([]string, len(a))
+	for i, tag := range a {
+		keys[i] = string(tag.Key)
+	}
+	return keys
+}
+
+// Values returns the list of values for a tag set.
+func (a Tags) Values() []string {
+	if len(a) == 0 {
+		return nil
+	}
+	values := make([]string, len(a))
+	for i, tag := range a {
+		values[i] = string(tag.Value)
+	}
+	return values
 }
 
 // String returns the string representation of the tags.
@@ -1986,9 +2160,12 @@ func (p *point) Next() bool {
 		return true
 	}
 
-	if strings.IndexByte(`0123456789-.nNiI`, c) >= 0 {
+	if strings.IndexByte(`0123456789-.nNiIu`, c) >= 0 {
 		if p.it.valueBuf[len(p.it.valueBuf)-1] == 'i' {
 			p.it.fieldType = Integer
+			p.it.valueBuf = p.it.valueBuf[:len(p.it.valueBuf)-1]
+		} else if p.it.valueBuf[len(p.it.valueBuf)-1] == 'u' {
+			p.it.fieldType = Unsigned
 			p.it.valueBuf = p.it.valueBuf[:len(p.it.valueBuf)-1]
 		} else {
 			p.it.fieldType = Float
@@ -2021,6 +2198,15 @@ func (p *point) IntegerValue() (int64, error) {
 	n, err := parseIntBytes(p.it.valueBuf, 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("unable to parse integer value %q: %v", p.it.valueBuf, err)
+	}
+	return n, nil
+}
+
+// UnsignedValue returns the unsigned value of the current field.
+func (p *point) UnsignedValue() (uint64, error) {
+	n, err := parseUintBytes(p.it.valueBuf, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("unable to parse unsigned value %q: %v", p.it.valueBuf, err)
 	}
 	return n, nil
 }
@@ -2107,6 +2293,9 @@ func appendField(b []byte, k string, v interface{}) []byte {
 	case int:
 		b = strconv.AppendInt(b, int64(v), 10)
 		b = append(b, 'i')
+	case uint64:
+		b = strconv.AppendUint(b, v, 10)
+		b = append(b, 'u')
 	case uint32:
 		b = strconv.AppendInt(b, int64(v), 10)
 		b = append(b, 'i')
@@ -2116,10 +2305,9 @@ func appendField(b []byte, k string, v interface{}) []byte {
 	case uint8:
 		b = strconv.AppendInt(b, int64(v), 10)
 		b = append(b, 'i')
-	// TODO: 'uint' should be considered just as "dangerous" as a uint64,
-	// perhaps the value should be checked and capped at MaxInt64? We could
-	// then include uint64 as an accepted value
 	case uint:
+		// TODO: 'uint' should be converted to writing as an unsigned integer,
+		// but we cannot since that would break backwards compatibility.
 		b = strconv.AppendInt(b, int64(v), 10)
 		b = append(b, 'i')
 	case float32:
@@ -2138,9 +2326,3 @@ func appendField(b []byte, k string, v interface{}) []byte {
 
 	return b
 }
-
-type byteSlices [][]byte
-
-func (a byteSlices) Len() int           { return len(a) }
-func (a byteSlices) Less(i, j int) bool { return bytes.Compare(a[i], a[j]) == -1 }
-func (a byteSlices) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }

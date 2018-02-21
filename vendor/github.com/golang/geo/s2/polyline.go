@@ -1,22 +1,22 @@
-/*
-Copyright 2016 Google Inc. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2016 Google Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package s2
 
 import (
+	"fmt"
+	"io"
 	"math"
 
 	"github.com/golang/geo/s1"
@@ -73,8 +73,8 @@ func (p *Polyline) Centroid() Point {
 	return centroid
 }
 
-// Equals reports whether the given Polyline is exactly the same as this one.
-func (p *Polyline) Equals(b *Polyline) bool {
+// Equal reports whether the given Polyline is exactly the same as this one.
+func (p *Polyline) Equal(b *Polyline) bool {
 	if len(*p) != len(*b) {
 		return false
 	}
@@ -141,6 +141,16 @@ func (p *Polyline) IntersectsCell(cell Cell) bool {
 	return false
 }
 
+// ContainsPoint returns false since Polylines are not closed.
+func (p *Polyline) ContainsPoint(point Point) bool {
+	return false
+}
+
+// CellUnionBound computes a covering of the Polyline.
+func (p *Polyline) CellUnionBound() []CellID {
+	return p.CapBound().CellUnionBound()
+}
+
 // NumEdges returns the number of edges in this shape.
 func (p *Polyline) NumEdges() int {
 	if len(*p) == 0 {
@@ -150,28 +160,8 @@ func (p *Polyline) NumEdges() int {
 }
 
 // Edge returns endpoints for the given edge index.
-func (p *Polyline) Edge(i int) (a, b Point) {
-	return (*p)[i], (*p)[i+1]
-}
-
-// dimension returns the dimension of the geometry represented by this Polyline.
-func (p *Polyline) dimension() dimension { return polylineGeometry }
-
-// numChains reports the number of contiguous edge chains in this Polyline.
-func (p *Polyline) numChains() int {
-	if p.NumEdges() >= 1 {
-		return 1
-	}
-	return 0
-}
-
-// chainStart returns the id of the first edge in the i-th edge chain in this Polyline.
-func (p *Polyline) chainStart(i int) int {
-	if i == 0 {
-		return 0
-	}
-
-	return p.NumEdges()
+func (p *Polyline) Edge(i int) Edge {
+	return Edge{(*p)[i], (*p)[i+1]}
 }
 
 // HasInterior returns false as Polylines are not closed.
@@ -179,9 +169,213 @@ func (p *Polyline) HasInterior() bool {
 	return false
 }
 
-// ContainsOrigin returns false because there is no interior to contain s2.Origin.
-func (p *Polyline) ContainsOrigin() bool {
-	return false
+// ReferencePoint returns the default reference point with negative containment because Polylines are not closed.
+func (p *Polyline) ReferencePoint() ReferencePoint {
+	return OriginReferencePoint(false)
+}
+
+// NumChains reports the number of contiguous edge chains in this Polyline.
+func (p *Polyline) NumChains() int {
+	return minInt(1, p.NumEdges())
+}
+
+// Chain returns the i-th edge Chain in the Shape.
+func (p *Polyline) Chain(chainID int) Chain {
+	return Chain{0, p.NumEdges()}
+}
+
+// ChainEdge returns the j-th edge of the i-th edge Chain.
+func (p *Polyline) ChainEdge(chainID, offset int) Edge {
+	return Edge{(*p)[offset], (*p)[offset+1]}
+}
+
+// ChainPosition returns a pair (i, j) such that edgeID is the j-th edge
+func (p *Polyline) ChainPosition(edgeID int) ChainPosition {
+	return ChainPosition{0, edgeID}
+}
+
+// dimension returns the dimension of the geometry represented by this Polyline.
+func (p *Polyline) dimension() dimension { return polylineGeometry }
+
+// findEndVertex reports the maximal end index such that the line segment between
+// the start index and this one such that the line segment between these two
+// vertices passes within the given tolerance of all interior vertices, in order.
+func findEndVertex(p Polyline, tolerance s1.Angle, index int) int {
+	// The basic idea is to keep track of the "pie wedge" of angles
+	// from the starting vertex such that a ray from the starting
+	// vertex at that angle will pass through the discs of radius
+	// tolerance centered around all vertices processed so far.
+	//
+	// First we define a coordinate frame for the tangent and normal
+	// spaces at the starting vertex. Essentially this means picking
+	// three orthonormal vectors X,Y,Z such that X and Y span the
+	// tangent plane at the starting vertex, and Z is up. We use
+	// the coordinate frame to define a mapping from 3D direction
+	// vectors to a one-dimensional ray angle in the range (-π,
+	// π]. The angle of a direction vector is computed by
+	// transforming it into the X,Y,Z basis, and then calculating
+	// atan2(y,x). This mapping allows us to represent a wedge of
+	// angles as a 1D interval. Since the interval wraps around, we
+	// represent it as an Interval, i.e. an interval on the unit
+	// circle.
+	origin := p[index]
+	frame := getFrame(origin)
+
+	// As we go along, we keep track of the current wedge of angles
+	// and the distance to the last vertex (which must be
+	// non-decreasing).
+	currentWedge := s1.FullInterval()
+	var lastDistance s1.Angle
+
+	for index++; index < len(p); index++ {
+		candidate := p[index]
+		distance := origin.Distance(candidate)
+
+		// We don't allow simplification to create edges longer than
+		// 90 degrees, to avoid numeric instability as lengths
+		// approach 180 degrees. We do need to allow for original
+		// edges longer than 90 degrees, though.
+		if distance > math.Pi/2 && lastDistance > 0 {
+			break
+		}
+
+		// Vertices must be in increasing order along the ray, except
+		// for the initial disc around the origin.
+		if distance < lastDistance && lastDistance > tolerance {
+			break
+		}
+
+		lastDistance = distance
+
+		// Points that are within the tolerance distance of the origin
+		// do not constrain the ray direction, so we can ignore them.
+		if distance <= tolerance {
+			continue
+		}
+
+		// If the current wedge of angles does not contain the angle
+		// to this vertex, then stop right now. Note that the wedge
+		// of possible ray angles is not necessarily empty yet, but we
+		// can't continue unless we are willing to backtrack to the
+		// last vertex that was contained within the wedge (since we
+		// don't create new vertices). This would be more complicated
+		// and also make the worst-case running time more than linear.
+		direction := toFrame(frame, candidate)
+		center := math.Atan2(direction.Y, direction.X)
+		if !currentWedge.Contains(center) {
+			break
+		}
+
+		// To determine how this vertex constrains the possible ray
+		// angles, consider the triangle ABC where A is the origin, B
+		// is the candidate vertex, and C is one of the two tangent
+		// points between A and the spherical cap of radius
+		// tolerance centered at B. Then from the spherical law of
+		// sines, sin(a)/sin(A) = sin(c)/sin(C), where a and c are
+		// the lengths of the edges opposite A and C. In our case C
+		// is a 90 degree angle, therefore A = asin(sin(a) / sin(c)).
+		// Angle A is the half-angle of the allowable wedge.
+		halfAngle := math.Asin(math.Sin(tolerance.Radians()) / math.Sin(distance.Radians()))
+		target := s1.IntervalFromPointPair(center, center).Expanded(halfAngle)
+		currentWedge = currentWedge.Intersection(target)
+	}
+
+	// We break out of the loop when we reach a vertex index that
+	// can't be included in the line segment, so back up by one
+	// vertex.
+	return index - 1
+}
+
+// SubsampleVertices returns a subsequence of vertex indices such that the
+// polyline connecting these vertices is never further than the given tolerance from
+// the original polyline. Provided the first and last vertices are distinct,
+// they are always preserved; if they are not, the subsequence may contain
+// only a single index.
+//
+// Some useful properties of the algorithm:
+//
+//  - It runs in linear time.
+//
+//  - The output always represents a valid polyline. In particular, adjacent
+//    output vertices are never identical or antipodal.
+//
+//  - The method is not optimal, but it tends to produce 2-3% fewer
+//    vertices than the Douglas-Peucker algorithm with the same tolerance.
+//
+//  - The output is parametrically equivalent to the original polyline to
+//    within the given tolerance. For example, if a polyline backtracks on
+//    itself and then proceeds onwards, the backtracking will be preserved
+//    (to within the given tolerance). This is different than the
+//    Douglas-Peucker algorithm which only guarantees geometric equivalence.
+func (p *Polyline) SubsampleVertices(tolerance s1.Angle) []int {
+	var result []int
+
+	if len(*p) < 1 {
+		return result
+	}
+
+	result = append(result, 0)
+	clampedTolerance := s1.Angle(math.Max(tolerance.Radians(), 0))
+
+	for index := 0; index+1 < len(*p); {
+		nextIndex := findEndVertex(*p, clampedTolerance, index)
+		// Don't create duplicate adjacent vertices.
+		if (*p)[nextIndex] != (*p)[index] {
+			result = append(result, nextIndex)
+		}
+		index = nextIndex
+	}
+
+	return result
+}
+
+// Encode encodes the Polyline.
+func (p Polyline) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	p.encode(e)
+	return e.err
+}
+
+func (p Polyline) encode(e *encoder) {
+	e.writeInt8(encodingVersion)
+	e.writeUint32(uint32(len(p)))
+	for _, v := range p {
+		e.writeFloat64(v.X)
+		e.writeFloat64(v.Y)
+		e.writeFloat64(v.Z)
+	}
+}
+
+// Decode decodes the polyline.
+func (p *Polyline) Decode(r io.Reader) error {
+	d := decoder{r: asByteReader(r)}
+	p.decode(d)
+	return d.err
+}
+
+func (p *Polyline) decode(d decoder) {
+	version := d.readInt8()
+	if d.err != nil {
+		return
+	}
+	if int(version) != int(encodingVersion) {
+		d.err = fmt.Errorf("can't decode version %d; my version: %d", version, encodingVersion)
+		return
+	}
+	nvertices := d.readUint32()
+	if d.err != nil {
+		return
+	}
+	if nvertices > maxEncodedVertices {
+		d.err = fmt.Errorf("too many vertices (%d; max is %d)", nvertices, maxEncodedVertices)
+		return
+	}
+	*p = make([]Point, nvertices)
+	for i := range *p {
+		(*p)[i].X = d.readFloat64()
+		(*p)[i].Y = d.readFloat64()
+		(*p)[i].Z = d.readFloat64()
+	}
 }
 
 // TODO(roberts): Differences from C++.
@@ -190,8 +384,7 @@ func (p *Polyline) ContainsOrigin() bool {
 // Interpolate/UnInterpolate
 // Project
 // IsPointOnRight
-// Intersects
+// Intersects(Polyline)
 // Reverse
-// SubsampleVertices
 // ApproxEqual
 // NearlyCoversPolyline

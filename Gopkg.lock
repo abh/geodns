@@ -2,33 +2,34 @@
 
 
 [[projects]]
+  branch = "master"
   name = "github.com/abh/errorutil"
   packages = ["."]
   revision = "f9bd360d00b902548fbb80837aef90dca2c8285e"
 
 [[projects]]
-  branch = "master"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
   name = "github.com/golang/geo"
   packages = ["r1","r2","r3","s1","s2"]
-  revision = "5747e9816367bd031622778e3e538f9737814005"
+  revision = "a8523298cefedcf7b70bbbf4eeef24cbb3258376"
 
 [[projects]]
   branch = "master"
   name = "github.com/hpcloud/tail"
   packages = [".","ratelimiter","util","watch","winfile"]
-  revision = "faf842bde7ed83bbc3c65a2c454fae39bc29a95f"
+  revision = "37f4271387456dd1bf82ab1ad9229f060cc45386"
 
 [[projects]]
   branch = "master"
   name = "github.com/influxdata/influxdb"
   packages = ["client/v2","models","pkg/escape"]
-  revision = "38735b24f67ed462a310d490cf23c1b3953e53e8"
+  revision = "b228fc5f0d0aa523be7c39f0ee28187084a1e271"
 
 [[projects]]
   branch = "master"
@@ -43,27 +44,28 @@
   revision = "7cafcd837844e784b526369c9bce262804aebc60"
 
 [[projects]]
-  branch = "master"
   name = "github.com/miekg/dns"
   packages = ["."]
-  revision = "f282f80e243cc2bf8f6410c30d821b93b794e168"
+  revision = "5364553f1ee9cddc7ac8b62dce148309c386695b"
+  version = "v1.0.4"
 
 [[projects]]
-  branch = "master"
   name = "github.com/oschwald/geoip2-golang"
   packages = ["."]
-  revision = "5b1dc16861f81d05d9836bb21c2d0d65282fc0b8"
+  revision = "b1581f42de7092eb285fa413a1310f90c4f328fb"
+  version = "v1.2.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/oschwald/maxminddb-golang"
   packages = ["."]
-  revision = "d19f6d453e836d12ee8fe895d0494421e93ef8c1"
+  revision = "8727e98aa1b91610eb184ed1ab615943b8d9deb0"
+  version = "v1.2.1"
 
 [[projects]]
   name = "github.com/pborman/uuid"
   packages = ["."]
-  revision = "cccd189d45f7ac3368a0d127efb7f4d08ae0b655"
+  revision = "e790cca94e6cc75c7064b1332e63811d4aae1a53"
+  version = "v1.1"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -72,45 +74,52 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/rcrowley/go-metrics"
   packages = ["."]
-  revision = "eeba7bd0dd01ace6e690fa833b3f22aaec29af43"
+  revision = "8732c616f52954686704c8645fe1a9d59e9df7c1"
 
 [[projects]]
   branch = "master"
   name = "github.com/stretchr/testify"
   packages = ["assert","require"]
-  revision = "4d4bfba8f1d1027c4fdbe371823030df51419987"
+  revision = "be8372ae8ec5c6daaed3cc28ebf73c54b737c240"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+  packages = ["ed25519","ed25519/internal/edwards25519"]
+  revision = "432090b8f568c018896cd8a0fb0345872bbac6ce"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["websocket"]
-  revision = "fcc8ed8e87ee07a511396864dad3960b9632e44f"
+  packages = ["bpf","internal/iana","internal/socket","ipv4","ipv6","websocket"]
+  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "9ccfe848b9db8435a24c424abbc07a921adf1df5"
+  revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
 
 [[projects]]
-  branch = "master"
   name = "gopkg.in/fsnotify.v1"
   packages = ["."]
-  revision = "629574ca2a5df945712d3079857300b5e4da0236"
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
 
 [[projects]]
-  branch = "master"
   name = "gopkg.in/gcfg.v1"
   packages = [".","scanner","token","types"]
-  revision = "27e4946190b4a327b539185f2b5b1f7c84730728"
+  revision = "298b7a6a3838f79debfaee8bd3bfb2b8d779e756"
+  version = "v1.2.1"
 
 [[projects]]
   branch = "v2.0"
   name = "gopkg.in/natefinch/lumberjack.v2"
   packages = ["."]
-  revision = "514cbda263a734ae8caac038dadf05f8f3f9f738"
+  revision = "aee4629129445bbdfb69aa565537dcfa16544311"
 
 [[projects]]
   branch = "v1"
@@ -119,14 +128,14 @@
   revision = "dd632973f1e7218eb1089048e0798ec9ae7dceb8"
 
 [[projects]]
-  branch = "master"
   name = "gopkg.in/warnings.v0"
   packages = ["."]
-  revision = "8a331561fe74dadba6edfc59f3be66c22c3b065d"
+  revision = "ec4a0fea49c7b46c2aeb0b51aac55779c607e52b"
+  version = "v0.1.2"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "da057b40b78dea546d93310e141024db552a5a898a38576f408bbddb7297a5ae"
+  inputs-digest = "f0c6f2e8ea3e595a7d2b5733fcff121dda3c3022a45d5dee81b2b30b54e5b260"
   solver-name = "gps-cdcl"
   solver-version = 1

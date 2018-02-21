@@ -1,18 +1,16 @@
-/*
-Copyright 2015 Google Inc. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2015 Google Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package s1
 
@@ -40,8 +38,8 @@ type ChordAngle float64
 
 const (
 	// NegativeChordAngle represents a chord angle smaller than the zero angle.
-	// The only valid operations on a NegativeChordAngle are comparisons and
-	// Angle conversions.
+	// The only valid operations on a NegativeChordAngle are comparisons,
+	// Angle conversions, and Successor/Predecessor.
 	NegativeChordAngle = ChordAngle(-1)
 
 	// RightChordAngle represents a chord angle of 90 degrees (a "right angle").
@@ -50,6 +48,9 @@ const (
 	// StraightChordAngle represents a chord angle of 180 degrees (a "straight angle").
 	// This is the maximum finite chord angle.
 	StraightChordAngle = ChordAngle(4)
+
+	// maxLength2 is the square of the maximum length allowed in a ChordAngle.
+	maxLength2 = 4.0
 )
 
 // ChordAngleFromAngle returns a ChordAngle from the given Angle.
@@ -65,10 +66,10 @@ func ChordAngleFromAngle(a Angle) ChordAngle {
 }
 
 // ChordAngleFromSquaredLength returns a ChordAngle from the squared chord length.
-// Note that the argument is automatically clamped to a maximum of 4.0 to
+// Note that the argument is automatically clamped to a maximum of 4 to
 // handle possible roundoff errors. The argument must be non-negative.
 func ChordAngleFromSquaredLength(length2 float64) ChordAngle {
-	if length2 > 4 {
+	if length2 > maxLength2 {
 		return StraightChordAngle
 	}
 	return ChordAngle(length2)
@@ -84,7 +85,7 @@ func (c ChordAngle) Expanded(e float64) ChordAngle {
 	if c.isSpecial() {
 		return c
 	}
-	return ChordAngle(math.Max(0.0, math.Min(4.0, float64(c)+e)))
+	return ChordAngle(math.Max(0.0, math.Min(maxLength2, float64(c)+e)))
 }
 
 // Angle converts this ChordAngle to an Angle.
@@ -99,7 +100,8 @@ func (c ChordAngle) Angle() Angle {
 }
 
 // InfChordAngle returns a chord angle larger than any finite chord angle.
-// The only valid operations on an InfChordAngle are comparisons and Angle conversions.
+// The only valid operations on an InfChordAngle are comparisons, Angle
+// conversions, and Successor/Predecessor.
 func InfChordAngle() ChordAngle {
 	return ChordAngle(math.Inf(1))
 }
@@ -116,7 +118,41 @@ func (c ChordAngle) isSpecial() bool {
 
 // isValid reports whether this ChordAngle is valid or not.
 func (c ChordAngle) isValid() bool {
-	return (c >= 0 && c <= 4) || c.isSpecial()
+	return (c >= 0 && c <= maxLength2) || c.isSpecial()
+}
+
+// Successor returns the smallest representable ChordAngle larger than this one.
+// This can be used to convert a "<" comparison to a "<=" comparison.
+//
+// Note the following special cases:
+//   NegativeChordAngle.Successor == 0
+//   StraightChordAngle.Successor == InfChordAngle
+//   InfChordAngle.Successor == InfChordAngle
+func (c ChordAngle) Successor() ChordAngle {
+	if c >= maxLength2 {
+		return InfChordAngle()
+	}
+	if c < 0 {
+		return 0
+	}
+	return ChordAngle(math.Nextafter(float64(c), 10.0))
+}
+
+// Predecessor returns the largest representable ChordAngle less than this one.
+//
+// Note the following special cases:
+//   InfChordAngle.Predecessor == StraightChordAngle
+//   ChordAngle(0).Predecessor == NegativeChordAngle
+//   NegativeChordAngle.Predecessor == NegativeChordAngle
+func (c ChordAngle) Predecessor() ChordAngle {
+	if c <= 0 {
+		return NegativeChordAngle
+	}
+	if c > maxLength2 {
+		return StraightChordAngle
+	}
+
+	return ChordAngle(math.Nextafter(float64(c), -10.0))
 }
 
 // MaxPointError returns the maximum error size for a ChordAngle constructed
@@ -150,7 +186,7 @@ func (c ChordAngle) Add(other ChordAngle) ChordAngle {
 	}
 
 	// Clamp the angle sum to at most 180 degrees.
-	if c+other >= 4 {
+	if c+other >= maxLength2 {
 		return StraightChordAngle
 	}
 
@@ -161,7 +197,7 @@ func (c ChordAngle) Add(other ChordAngle) ChordAngle {
 	//                 cos(X) = sqrt(1 - sin^2(X))
 	x := float64(c * (1 - 0.25*other))
 	y := float64(other * (1 - 0.25*c))
-	return ChordAngle(math.Min(4.0, x+y+2*math.Sqrt(x*y)))
+	return ChordAngle(math.Min(maxLength2, x+y+2*math.Sqrt(x*y)))
 }
 
 // Sub subtracts the other ChordAngle from this one and returns the resulting

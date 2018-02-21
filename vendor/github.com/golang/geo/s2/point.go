@@ -1,23 +1,24 @@
-/*
-Copyright 2014 Google Inc. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2014 Google Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package s2
 
 import (
+	"fmt"
+	"io"
 	"math"
+	"sort"
 
 	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
@@ -28,6 +29,18 @@ import (
 type Point struct {
 	r3.Vector
 }
+
+// sortPoints sorts the slice of Points in place.
+func sortPoints(e []Point) {
+	sort.Sort(points(e))
+}
+
+// points implements the Sort interface for slices of Point.
+type points []Point
+
+func (p points) Len() int           { return len(p) }
+func (p points) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p points) Less(i, j int) bool { return p[i].Cmp(p[j].Vector) == -1 }
 
 // PointFromCoords creates a new normalized point from coordinates.
 //
@@ -160,11 +173,7 @@ func PointArea(a, b, c Point) float64 {
 		dmin := s - math.Max(sa, math.Max(sb, sc))
 		if dmin < 1e-2*s*s*s*s*s {
 			// This triangle is skinny enough to use Girard's formula.
-			ab := a.PointCross(b)
-			bc := b.PointCross(c)
-			ac := a.PointCross(c)
-			area := math.Max(0.0, float64(ab.Angle(ac.Vector)-ab.Angle(bc.Vector)+bc.Angle(ac.Vector)))
-
+			area := GirardArea(a, b, c)
 			if dmin < s*0.1*area {
 				return area
 			}
@@ -174,6 +183,37 @@ func PointArea(a, b, c Point) float64 {
 	// Use l'Huilier's formula.
 	return 4 * math.Atan(math.Sqrt(math.Max(0.0, math.Tan(0.5*s)*math.Tan(0.5*(s-sa))*
 		math.Tan(0.5*(s-sb))*math.Tan(0.5*(s-sc)))))
+}
+
+// GirardArea returns the area of the triangle computed using Girard's formula.
+// All points should be unit length, and no two points should be antipodal.
+//
+// This method is about twice as fast as PointArea() but has poor relative
+// accuracy for small triangles. The maximum error is about 5e-15 (about
+// 0.25 square meters on the Earth's surface) and the average error is about
+// 1e-15. These bounds apply to triangles of any size, even as the maximum
+// edge length of the triangle approaches 180 degrees. But note that for
+// such triangles, tiny perturbations of the input points can change the
+// true mathematical area dramatically.
+func GirardArea(a, b, c Point) float64 {
+	// This is equivalent to the usual Girard's formula but is slightly more
+	// accurate, faster to compute, and handles a == b == c without a special
+	// case. PointCross is necessary to get good accuracy when two of
+	// the input points are very close together.
+	ab := a.PointCross(b)
+	bc := b.PointCross(c)
+	ac := a.PointCross(c)
+	area := float64(ab.Angle(ac.Vector) - ab.Angle(bc.Vector) + bc.Angle(ac.Vector))
+	if area < 0 {
+		area = 0
+	}
+	return area
+}
+
+// SignedArea returns a positive value for counterclockwise triangles and a negative
+// value otherwise (similar to PointArea).
+func SignedArea(a, b, c Point) float64 {
+	return float64(RobustSign(a, b, c)) * PointArea(a, b, c)
 }
 
 // TrueCentroid returns the true centroid of the spherical triangle ABC multiplied by the
@@ -301,11 +341,103 @@ func (p Point) IntersectsCell(c Cell) bool {
 	return c.ContainsPoint(p)
 }
 
+// ContainsPoint reports if this Point contains the other Point.
+// (This method is named to satisfy the Region interface.)
+func (p Point) ContainsPoint(other Point) bool {
+	return p.Contains(other)
+}
+
+// CellUnionBound computes a covering of the Point.
+func (p Point) CellUnionBound() []CellID {
+	return p.CapBound().CellUnionBound()
+}
+
 // Contains reports if this Point contains the other Point.
+// (This method matches all other s2 types where the reflexive Contains
+// method does not contain the type's name.)
 func (p Point) Contains(other Point) bool { return p == other }
 
-// TODO: Differences from C++
-// Rotate
-// Angle
-// TurnAngle
-// SignedArea
+// Encode encodes the Point.
+func (p Point) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	p.encode(e)
+	return e.err
+}
+
+func (p Point) encode(e *encoder) {
+	e.writeInt8(encodingVersion)
+	e.writeFloat64(p.X)
+	e.writeFloat64(p.Y)
+	e.writeFloat64(p.Z)
+}
+
+// Decode decodes the Point.
+func (p *Point) Decode(r io.Reader) error {
+	d := &decoder{r: asByteReader(r)}
+	p.decode(d)
+	return d.err
+}
+
+func (p *Point) decode(d *decoder) {
+	version := d.readInt8()
+	if d.err != nil {
+		return
+	}
+	if version != encodingVersion {
+		d.err = fmt.Errorf("only version %d is supported", encodingVersion)
+		return
+	}
+	p.X = d.readFloat64()
+	p.Y = d.readFloat64()
+	p.Z = d.readFloat64()
+}
+
+// Angle returns the interior angle at the vertex B in the triangle ABC. The
+// return value is always in the range [0, pi]. All points should be
+// normalized. Ensures that Angle(a,b,c) == Angle(c,b,a) for all a,b,c.
+//
+// The angle is undefined if A or C is diametrically opposite from B, and
+// becomes numerically unstable as the length of edge AB or BC approaches
+// 180 degrees.
+func Angle(a, b, c Point) s1.Angle {
+	return a.PointCross(b).Angle(c.PointCross(b).Vector)
+}
+
+// TurnAngle returns the exterior angle at vertex B in the triangle ABC. The
+// return value is positive if ABC is counterclockwise and negative otherwise.
+// If you imagine an ant walking from A to B to C, this is the angle that the
+// ant turns at vertex B (positive = left = CCW, negative = right = CW).
+// This quantity is also known as the "geodesic curvature" at B.
+//
+// Ensures that TurnAngle(a,b,c) == -TurnAngle(c,b,a) for all distinct
+// a,b,c. The result is undefined if (a == b || b == c), but is either
+// -Pi or Pi if (a == c). All points should be normalized.
+func TurnAngle(a, b, c Point) s1.Angle {
+	// We use PointCross to get good accuracy when two points are very
+	// close together, and RobustSign to ensure that the sign is correct for
+	// turns that are close to 180 degrees.
+	angle := a.PointCross(b).Angle(b.PointCross(c).Vector)
+
+	// Don't return RobustSign * angle because it is legal to have (a == c).
+	if RobustSign(a, b, c) == CounterClockwise {
+		return angle
+	}
+	return -angle
+}
+
+// Rotate the given point about the given axis by the given angle. p and
+// axis must be unit length; angle has no restrictions (e.g., it can be
+// positive, negative, greater than 360 degrees, etc).
+func Rotate(p, axis Point, angle s1.Angle) Point {
+	// Let M be the plane through P that is perpendicular to axis, and let
+	// center be the point where M intersects axis. We construct a
+	// right-handed orthogonal frame (dx, dy, center) such that dx is the
+	// vector from center to P, and dy has the same length as dx. The
+	// result can then be expressed as (cos(angle)*dx + sin(angle)*dy + center).
+	center := axis.Mul(p.Dot(axis.Vector))
+	dx := p.Sub(center)
+	dy := axis.Cross(p.Vector)
+	// Mathematically the result is unit length, but normalization is necessary
+	// to ensure that numerical errors don't accumulate.
+	return Point{dx.Mul(math.Cos(angle.Radians())).Add(dy.Mul(math.Sin(angle.Radians()))).Add(center).Normalize()}
+}

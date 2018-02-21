@@ -1,18 +1,16 @@
-/*
-Copyright 2016 Google Inc. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2016 Google Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package s2
 
@@ -118,8 +116,8 @@ func (p PaddedCell) Level() int {
 // Center returns the center of this cell.
 func (p PaddedCell) Center() Point {
 	ijSize := sizeIJ(p.level)
-	si := uint64(2*p.iLo + ijSize)
-	ti := uint64(2*p.jLo + ijSize)
+	si := uint32(2*p.iLo + ijSize)
+	ti := uint32(2*p.jLo + ijSize)
 	return Point{faceSiTiToXYZ(p.id.Face(), si, ti).Normalize()}
 }
 
@@ -130,8 +128,8 @@ func (p *PaddedCell) Middle() r2.Rect {
 	// time (i.e., for cells where the recursion terminates).
 	if p.middle.IsEmpty() {
 		ijSize := sizeIJ(p.level)
-		u := stToUV(siTiToST(uint64(2*p.iLo + ijSize)))
-		v := stToUV(siTiToST(uint64(2*p.jLo + ijSize)))
+		u := stToUV(siTiToST(uint32(2*p.iLo + ijSize)))
+		v := stToUV(siTiToST(uint32(2*p.jLo + ijSize)))
 		p.middle = r2.Rect{
 			r1.Interval{u - p.padding, u + p.padding},
 			r1.Interval{v - p.padding, v + p.padding},
@@ -164,7 +162,7 @@ func (p PaddedCell) EntryVertex() Point {
 		i += ijSize
 		j += ijSize
 	}
-	return Point{faceSiTiToXYZ(p.id.Face(), uint64(2*i), uint64(2*j)).Normalize()}
+	return Point{faceSiTiToXYZ(p.id.Face(), uint32(2*i), uint32(2*j)).Normalize()}
 }
 
 // ExitVertex returns the vertex where the space-filling curve exits this cell.
@@ -179,7 +177,7 @@ func (p PaddedCell) ExitVertex() Point {
 	} else {
 		j += ijSize
 	}
-	return Point{faceSiTiToXYZ(p.id.Face(), uint64(2*i), uint64(2*j)).Normalize()}
+	return Point{faceSiTiToXYZ(p.id.Face(), uint32(2*i), uint32(2*j)).Normalize()}
 }
 
 // ShrinkToFit returns the smallest CellID that contains all descendants of this
@@ -205,8 +203,8 @@ func (p *PaddedCell) ShrinkToFit(rect r2.Rect) CellID {
 	}
 
 	ijSize := sizeIJ(p.level)
-	if rect.X.Contains(stToUV(siTiToST(uint64(2*p.iLo+ijSize)))) ||
-		rect.Y.Contains(stToUV(siTiToST(uint64(2*p.jLo+ijSize)))) {
+	if rect.X.Contains(stToUV(siTiToST(uint32(2*p.iLo+ijSize)))) ||
+		rect.Y.Contains(stToUV(siTiToST(uint32(2*p.jLo+ijSize)))) {
 		return p.id
 	}
 

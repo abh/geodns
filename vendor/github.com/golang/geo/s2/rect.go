@@ -1,23 +1,22 @@
-/*
-Copyright 2014 Google Inc. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2014 Google Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package s2
 
 import (
 	"fmt"
+	"io"
 	"math"
 
 	"github.com/golang/geo/r1"
@@ -292,6 +291,11 @@ func (r Rect) ContainsPoint(p Point) bool {
 	return r.ContainsLatLng(LatLngFromPoint(p))
 }
 
+// CellUnionBound computes a covering of the Rect.
+func (r Rect) CellUnionBound() []CellID {
+	return r.CapBound().CellUnionBound()
+}
+
 // intersectsLatEdge reports whether the edge AB intersects the given edge of constant
 // latitude. Requires the points to have unit length.
 func intersectsLatEdge(a, b Point, lat s1.Angle, lng s1.Interval) bool {
@@ -354,8 +358,8 @@ func intersectsLatEdge(a, b Point, lat s1.Angle, lng s1.Interval) bool {
 func intersectsLngEdge(a, b Point, lat r1.Interval, lng s1.Angle) bool {
 	// The nice thing about edges of constant longitude is that
 	// they are straight lines on the sphere (geodesics).
-	return SimpleCrossing(a, b, PointFromLatLng(LatLng{s1.Angle(lat.Lo), lng}),
-		PointFromLatLng(LatLng{s1.Angle(lat.Hi), lng}))
+	return CrossingSign(a, b, PointFromLatLng(LatLng{s1.Angle(lat.Lo), lng}),
+		PointFromLatLng(LatLng{s1.Angle(lat.Hi), lng})) == Cross
 }
 
 // IntersectsCell reports whether this rectangle intersects the given cell. This is an
@@ -421,6 +425,40 @@ func (r Rect) IntersectsCell(c Cell) bool {
 		}
 	}
 	return false
+}
+
+// Encode encodes the Rect.
+func (r Rect) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	r.encode(e)
+	return e.err
+}
+
+func (r Rect) encode(e *encoder) {
+	e.writeInt8(encodingVersion)
+	e.writeFloat64(r.Lat.Lo)
+	e.writeFloat64(r.Lat.Hi)
+	e.writeFloat64(r.Lng.Lo)
+	e.writeFloat64(r.Lng.Hi)
+}
+
+// Decode decodes a rectangle.
+func (r *Rect) Decode(rd io.Reader) error {
+	d := &decoder{r: asByteReader(rd)}
+	r.decode(d)
+	return d.err
+}
+
+func (r *Rect) decode(d *decoder) {
+	if version := d.readUint8(); int(version) != int(encodingVersion) && d.err == nil {
+		d.err = fmt.Errorf("can't decode version %d; my version: %d", version, encodingVersion)
+		return
+	}
+	r.Lat.Lo = d.readFloat64()
+	r.Lat.Hi = d.readFloat64()
+	r.Lng.Lo = d.readFloat64()
+	r.Lng.Hi = d.readFloat64()
+	return
 }
 
 // BUG: The major differences from the C++ version are:
