@@ -112,6 +112,7 @@ func main() {
 var extraValidLabels = map[string]struct{}{
 	"uk":       struct{}{},
 	"_status":  struct{}{},
+	"_country": struct{}{},
 	"www":      struct{}{},
 	"nag-test": struct{}{},
 }
