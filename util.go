@@ -42,12 +42,16 @@ func getInterfaces() []string {
 
 		// default to the first interfaces
 		// todo: skip 127.0.0.1 and ::1 ?
-		if len(serverInfo.ID) == 0 {
-			serverInfo.ID = ip
+
+		if ip != "127.0.0.1" {
+			if len(serverInfo.ID) == 0 {
+				serverInfo.ID = ip
+			}
+			if len(serverInfo.IP) == 0 {
+				serverInfo.IP = ip
+			}
 		}
-		if len(serverInfo.IP) == 0 {
-			serverInfo.IP = ip
-		}
+
 		inter = append(inter, host)
 
 	}
