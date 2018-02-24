@@ -11,12 +11,11 @@ testrace: .PHONY
 	go test -v -race $(shell go list ./... | grep -v /vendor/)
 
 docker-test: .PHONY
-	mkdir -p .cache/pkg
+	# test that we don't have missing dependencies
 	docker run --rm -v `pwd`:/go/src/github.com/abh/geodns \
-		-v `pwd`/.cache/pkg:/go/pkg \
-		geodns-build \
-		make test
-		# go test -i ./...
+		-v /opt/local/share/GeoIP:/opt/local/share/GeoIP \
+		golang:1.10-alpine3.7 \
+		go test ./...
 
 devel:
 	go build -tags devel
@@ -27,18 +26,18 @@ bench:
 TARS=$(wildcard geodns-*-*.tar)
 
 push: $(TARS) tmp-install.sh
-	rsync -avz tmp-install.sh $(TARS)  x3.dev:webtmp/2016/07/
+	rsync -avz tmp-install.sh $(TARS)  x3.dev:webtmp/2018/02/
 
 builds: linux-build linux-build-i386 freebsd-build push
 
 linux-build:
-	docker run --rm -v `pwd`:/go/src/github.com/abh/geodns geodns-build ./build
+	GOOS=linux GOARCH=amd64 ./build
 
 linux-build-i386:
-	docker run --rm -v `pwd`:/go/src/github.com/abh/geodns geodns-build-i386 ./build
+	GOOS=linux GOARCH=386 ./build
 
 freebsd-build:
-	ssh 192.168.64.5 'cd go/src/github.com/abh/geodns; GOPATH=~/go ./build'
-	ssh root@192.168.64.5 'jexec -U ask fbsd32 /home/ask/build'
+	GOOS=freebsd GOARCH=amd64 ./build
+	GOOS=freebsd GOARCH=386 ./build
 
 .PHONY:
