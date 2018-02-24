@@ -229,11 +229,9 @@ func (hs *httpServer) mainServer(w http.ResponseWriter, req *http.Request) {
 		http.NotFound(w, req)
 		return
 	}
-	log.Printf("serverInfo: %+v", hs.serverInfo)
-	io.WriteString(w, `<html><head><title>GeoDNS `+
-		hs.serverInfo.Version+`</title><body>`+
-		`GeoDNS Server`+
-		`</body></html>`)
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(200)
+	io.WriteString(w, `GeoDNS `+hs.serverInfo.Version+`\n`)
 }
 
 type basicauth struct {

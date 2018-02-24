@@ -43,8 +43,8 @@ func TestHTTP(t *testing.T) {
 	require.Nil(t, err)
 	page, _ := ioutil.ReadAll(res.Body)
 
-	if !bytes.Contains(page, []byte("<title>GeoDNS")) {
-		t.Log("/version didn't include '<title>GeoDNS'")
+	if !bytes.HasPrefix(page, []byte("GeoDNS ")) {
+		t.Log("/version didn't start with 'GeoDNS '")
 		t.Fail()
 	}
 
