@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -263,7 +262,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 	err := w.WriteMsg(m)
 	if err != nil {
 		// if Pack'ing fails the Write fails. Return SERVFAIL.
-		log.Println("Error writing packet", m)
+		applog.Printf("Error writing packet: %q, %s", err, m)
 		dns.HandleFailed(w, req)
 	}
 	return
