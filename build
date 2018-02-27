@@ -14,4 +14,4 @@ go build -o geodns-$OS-$ARCH \
   -ldflags "-X main.gitVersion=$REVISION -X main.buildTime=$BUILDTIME" \
   -v && \
   (cd geodns-influxdb && go build -v -o geodns-influxdb-$OS-$ARCH && cd ..) && \
-tar cvf geodns-$OS-$ARCH.tar geodns-$OS-$ARCH geodns-influxdb/geodns-influxdb-$OS-$ARCH service service-influxdb
+tar -cvf geodns-$OS-$ARCH.tar --exclude \*~ geodns-$OS-$ARCH geodns-influxdb/geodns-influxdb-$OS-$ARCH service service-influxdb
