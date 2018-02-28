@@ -180,7 +180,7 @@ func processChan(in chan string, out chan<- *Stats, wg *sync.WaitGroup) error {
 
 		if len(stats.Map) == 0 {
 			lastMinute = eMinute
-			log.Printf("Last MInute: %d", lastMinute)
+			log.Printf("Last Minute: %d", lastMinute)
 		} else {
 			if eMinute > lastMinute {
 				fmt.Printf("eMinute %d\nlastMin %d - should summarize\n", eMinute, lastMinute)
