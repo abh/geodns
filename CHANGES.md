@@ -1,5 +1,19 @@
 # GeoDNS Changelog
 
+## 3.0.0 February 2018
+
+(dev branch; still in testing)
+
+* Support "closest" matching (instead of geo/asn labels) for A and AAAA records (Alex Bligh)
+* Support for GeoIP2 databases (including IPv6 data and ASN databases)
+* "Pluggable" targeting data support
+* Support for "health status" in an external file (not documented)
+* Integrated health check support coming later (integrated work done by Alex Bligh, but not functional in this release - his branch on Github has/had it working)
+* Remove minimum TTL for NS records (Alex Bligh)
+* More/updated tests
+* Don't let the server ID be 127.0.0.1
+* Use 'dep' to manage dependencies
+
 ## 2.7.0 February 13, 2017
 
 * Add support for PTR records (Florent AIDE)
