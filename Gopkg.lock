@@ -8,58 +8,64 @@
   revision = "f9bd360d00b902548fbb80837aef90dca2c8285e"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/beorn7/perks"
+  packages = ["quantile"]
+  revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
+
+[[projects]]
   branch = "master"
   name = "github.com/golang/geo"
-  packages = ["r1","r2","r3","s1","s2"]
-  revision = "a8523298cefedcf7b70bbbf4eeef24cbb3258376"
+  packages = [
+    "r1",
+    "r2",
+    "r3",
+    "s1",
+    "s2"
+  ]
+  revision = "fb250ae94fbe10f86b4f1a9b70a19925da3410b9"
+
+[[projects]]
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/matttproud/golang_protobuf_extensions"
+  packages = ["pbutil"]
+  revision = "3247c84500bff8d9fb6d579d800f20b3e091582c"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
-  name = "github.com/hpcloud/tail"
-  packages = [".","ratelimiter","util","watch","winfile"]
-  revision = "37f4271387456dd1bf82ab1ad9229f060cc45386"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/influxdata/influxdb"
-  packages = ["client/v2","models","pkg/escape"]
-  revision = "b228fc5f0d0aa523be7c39f0ee28187084a1e271"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/kr/pretty"
-  packages = ["."]
-  revision = "cfb55aafdaf3ec08f0db22699ab822c50091b1c4"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/kr/text"
-  packages = ["."]
-  revision = "7cafcd837844e784b526369c9bce262804aebc60"
-
-[[projects]]
   name = "github.com/miekg/dns"
   packages = ["."]
-  revision = "5364553f1ee9cddc7ac8b62dce148309c386695b"
-  version = "v1.0.4"
+  revision = "01d59357d468872339068bcd5d55a00e2463051f"
 
 [[projects]]
   name = "github.com/oschwald/geoip2-golang"
   packages = ["."]
-  revision = "b1581f42de7092eb285fa413a1310f90c4f328fb"
-  version = "v1.2.0"
+  revision = "7118115686e16b77967cdbf55d1b944fe14ad312"
+  version = "v1.2.1"
 
 [[projects]]
   name = "github.com/oschwald/maxminddb-golang"
   packages = ["."]
-  revision = "8727e98aa1b91610eb184ed1ab615943b8d9deb0"
-  version = "v1.2.1"
+  revision = "c5bec84d1963260297932a1b7a1753c8420717a7"
+  version = "v1.3.0"
 
 [[projects]]
   name = "github.com/pborman/uuid"
@@ -74,58 +80,102 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/prometheus/client_golang"
+  packages = [
+    "prometheus",
+    "prometheus/promhttp"
+  ]
+  revision = "c5b7fccd204277076155f10851dad72b76a49317"
+  version = "v0.8.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/prometheus/client_model"
+  packages = ["go"]
+  revision = "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/prometheus/common"
+  packages = [
+    "expfmt",
+    "internal/bitbucket.org/ww/goautoneg",
+    "model"
+  ]
+  revision = "d811d2e9bf898806ecfb6ef6296774b13ffc314c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/prometheus/procfs"
+  packages = [
+    ".",
+    "internal/util",
+    "nfs",
+    "xfs"
+  ]
+  revision = "8b1c2da0d56deffdbb9e48d4414b4e674bd8083e"
+
+[[projects]]
   branch = "master"
   name = "github.com/rcrowley/go-metrics"
   packages = ["."]
-  revision = "8732c616f52954686704c8645fe1a9d59e9df7c1"
+  revision = "d932a24a8ccb8fcadc993e5c6c58f93dac168294"
 
 [[projects]]
   branch = "master"
   name = "github.com/stretchr/testify"
-  packages = ["assert","require"]
-  revision = "be8372ae8ec5c6daaed3cc28ebf73c54b737c240"
+  packages = [
+    "assert",
+    "require"
+  ]
+  revision = "c679ae2cc0cb27ec3293fea7e254e47386f05d69"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["ed25519","ed25519/internal/edwards25519"]
-  revision = "432090b8f568c018896cd8a0fb0345872bbac6ce"
+  packages = [
+    "ed25519",
+    "ed25519/internal/edwards25519"
+  ]
+  revision = "b49d69b5da943f7ef3c9cf91c8777c1f78a0cc3c"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["bpf","internal/iana","internal/socket","ipv4","ipv6","websocket"]
-  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
+  packages = [
+    "bpf",
+    "internal/iana",
+    "internal/socket",
+    "ipv4",
+    "ipv6"
+  ]
+  revision = "5f9ae10d9af5b1c89ae6904293b14b064d4ada23"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix","windows"]
-  revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
-
-[[projects]]
-  name = "gopkg.in/fsnotify.v1"
-  packages = ["."]
-  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
-  version = "v1.4.7"
+  packages = [
+    "unix",
+    "windows"
+  ]
+  revision = "bb9c189858d91f42db229b04d45a4c3d23a7662a"
 
 [[projects]]
   name = "gopkg.in/gcfg.v1"
-  packages = [".","scanner","token","types"]
-  revision = "298b7a6a3838f79debfaee8bd3bfb2b8d779e756"
-  version = "v1.2.1"
+  packages = [
+    ".",
+    "scanner",
+    "token",
+    "types"
+  ]
+  revision = "f02745ab41b9d54a9d495f3356e76f7396da404c"
+  version = "v1.2.2"
 
 [[projects]]
   branch = "v2.0"
   name = "gopkg.in/natefinch/lumberjack.v2"
   packages = ["."]
   revision = "aee4629129445bbdfb69aa565537dcfa16544311"
-
-[[projects]]
-  branch = "v1"
-  name = "gopkg.in/tomb.v1"
-  packages = ["."]
-  revision = "dd632973f1e7218eb1089048e0798ec9ae7dceb8"
 
 [[projects]]
   name = "gopkg.in/warnings.v0"
@@ -136,6 +186,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f0c6f2e8ea3e595a7d2b5733fcff121dda3c3022a45d5dee81b2b30b54e5b260"
+  inputs-digest = "7190fccfeab013147857f68f6b40036db654c4e57e5f830c5601d873fa9d299c"
   solver-name = "gps-cdcl"
   solver-version = 1

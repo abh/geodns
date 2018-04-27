@@ -52,10 +52,12 @@ func Open(file string) (*Reader, error) {
 // resources to the system. If called on a Reader opened using FromBytes
 // or Open on Google App Engine, this method does nothing.
 func (r *Reader) Close() error {
-	if !r.hasMappedFile {
-		return nil
+	var err error
+	if r.hasMappedFile {
+		runtime.SetFinalizer(r, nil)
+		r.hasMappedFile = false
+		err = munmap(r.buffer)
 	}
-	runtime.SetFinalizer(r, nil)
-	r.hasMappedFile = false
-	return munmap(r.buffer)
+	r.buffer = nil
+	return err
 }

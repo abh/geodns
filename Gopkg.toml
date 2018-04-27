@@ -32,12 +32,8 @@
   name = "github.com/stretchr/testify"
 
 [[constraint]]
-  branch = "master"
-  name = "golang.org/x/net"
-
-[[constraint]]
-  version = "v1.4.7"
-  name = "gopkg.in/fsnotify.v1"
+  version = "^v1.4.7"
+  name = "github.com/fsnotify/fsnotify"
 
 [[constraint]]
   version = "v1.2.1"

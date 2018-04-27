@@ -43,7 +43,7 @@ func IsDistanceLess(x, a, b Point, limit s1.ChordAngle) bool {
 }
 
 // UpdateMinDistance checks if the distance from X to the edge AB is less
-// then minDist, and if so, returns the updated value and true.
+// than minDist, and if so, returns the updated value and true.
 // The case A == B is handled correctly.
 //
 // Use this method when you want to compute many distances and keep track of
@@ -53,6 +53,22 @@ func IsDistanceLess(x, a, b Point, limit s1.ChordAngle) bool {
 // obviously larger than the current minimum.
 func UpdateMinDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAngle, bool) {
 	return updateMinDistance(x, a, b, minDist, false)
+}
+
+// UpdateMaxDistance checks if the distance from X to the edge AB is greater
+// than maxDist, and if so, returns the updated value and true.
+// Otherwise it returns false. The case A == B is handled correctly.
+func UpdateMaxDistance(x, a, b Point, maxDist s1.ChordAngle) (s1.ChordAngle, bool) {
+	dist := maxChordAngle(ChordAngleBetweenPoints(x, a), ChordAngleBetweenPoints(x, b))
+	if dist > s1.RightChordAngle {
+		dist, _ = updateMinDistance(Point{x.Mul(-1)}, a, b, dist, true)
+		dist = s1.StraightChordAngle - dist
+	}
+	if maxDist < dist {
+		return dist, true
+	}
+
+	return maxDist, false
 }
 
 // IsInteriorDistanceLess reports whether the minimum distance from X to the
@@ -155,12 +171,30 @@ func minUpdateDistanceMaxError(dist s1.ChordAngle) float64 {
 // UpdateMinInteriorDistance, assuming that all input points are normalized
 // to within the bounds guaranteed by Point's Normalize. The error can be added
 // or subtracted from an s1.ChordAngle using its Expanded method.
+//
+// Note that accuracy goes down as the distance approaches 0 degrees or 180
+// degrees (for different reasons). Near 0 degrees the error is acceptable
+// for all practical purposes (about 1.2e-15 radians ~= 8 nanometers).  For
+// exactly antipodal points the maximum error is quite high (0.5 meters),
+// but this error drops rapidly as the points move away from antipodality
+// (approximately 1 millimeter for points that are 50 meters from antipodal,
+// and 1 micrometer for points that are 50km from antipodal).
+//
+// TODO(roberts): Currently the error bound does not hold for edges whose endpoints
+// are antipodal to within about 1e-15 radians (less than 1 micron). This could
+// be fixed by extending PointCross to use higher precision when necessary.
 func minUpdateInteriorDistanceMaxError(dist s1.ChordAngle) float64 {
+	// If a point is more than 90 degrees from an edge, then the minimum
+	// distance is always to one of the endpoints, not to the edge interior.
+	if dist >= s1.RightChordAngle {
+		return 0.0
+	}
+
 	// This bound includes all source of error, assuming that the input points
 	// are normalized. a and b are components of chord length that are
 	// perpendicular and parallel to a plane containing the edge respectively.
-	b := 0.5 * float64(dist) * float64(dist)
-	a := float64(dist) * math.Sqrt(1-0.5*b)
+	b := math.Min(1.0, 0.5*float64(dist)*float64(dist))
+	a := math.Sqrt(b * (2 - b))
 	return ((2.5+2*math.Sqrt(3)+8.5*a)*a +
 		(2+2*math.Sqrt(3)/3+6.5*(1-b))*b +
 		(23+16/math.Sqrt(3))*dblEpsilon) * dblEpsilon
@@ -256,6 +290,9 @@ func interiorDist(x, a, b Point, minDist s1.ChordAngle, alwaysUpdate bool) (s1.C
 	return dist, true
 }
 
+// updateEdgePairMinDistance computes the minimum distance between the given
+// pair of edges. If the two edges cross, the distance is zero. The cases
+// a0 == a1 and b0 == b1 are handled correctly.
 func updateEdgePairMinDistance(a0, a1, b0, b1 Point, minDist s1.ChordAngle) (s1.ChordAngle, bool) {
 	if minDist == 0 {
 		return 0, false
@@ -276,6 +313,29 @@ func updateEdgePairMinDistance(a0, a1, b0, b1 Point, minDist s1.ChordAngle) (s1.
 	minDist, ok3 = UpdateMinDistance(b0, a0, a1, minDist)
 	minDist, ok4 = UpdateMinDistance(b1, a0, a1, minDist)
 	return minDist, ok1 || ok2 || ok3 || ok4
+}
+
+// updateEdgePairMaxDistance reports the minimum distance between the given pair of edges.
+// If one edge crosses the antipodal reflection of the other, the distance is pi.
+func updateEdgePairMaxDistance(a0, a1, b0, b1 Point, maxDist s1.ChordAngle) (s1.ChordAngle, bool) {
+	if maxDist == s1.StraightChordAngle {
+		return s1.StraightChordAngle, false
+	}
+	if CrossingSign(a0, a1, Point{b0.Mul(-1)}, Point{b1.Mul(-1)}) == Cross {
+		return s1.StraightChordAngle, true
+	}
+
+	// Otherwise, the maximum distance is achieved at an endpoint of at least
+	// one of the two edges. We ensure that all four possibilities are always checked.
+	//
+	// The calculation below computes each of the six vertex-vertex distances
+	// twice (this could be optimized).
+	var ok1, ok2, ok3, ok4 bool
+	maxDist, ok1 = UpdateMaxDistance(a0, b0, b1, maxDist)
+	maxDist, ok2 = UpdateMaxDistance(a1, b0, b1, maxDist)
+	maxDist, ok3 = UpdateMaxDistance(b0, a0, a1, maxDist)
+	maxDist, ok4 = UpdateMaxDistance(b1, a0, a1, maxDist)
+	return maxDist, ok1 || ok2 || ok3 || ok4
 }
 
 // EdgePairClosestPoints returns the pair of points (a, b) that achieves the
