@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/abh/geodns/server"
 	"github.com/abh/geodns/targeting"
 	"github.com/abh/geodns/targeting/geoip2"
 	"github.com/abh/geodns/zones"
@@ -21,9 +20,6 @@ func TestHTTP(t *testing.T) {
 	if err == nil {
 		targeting.Setup(geoprovider)
 	}
-
-	// todo: less global metrics ...
-	server.NewMetrics()
 
 	mm, err := zones.NewMuxManager("dns", &zones.NilReg{})
 	if err != nil {
@@ -48,13 +44,4 @@ func TestHTTP(t *testing.T) {
 		t.Fail()
 	}
 
-	res, err = http.Get(baseurl + "/status")
-	require.Nil(t, err)
-	page, _ = ioutil.ReadAll(res.Body)
-
-	// just check that template basically works
-	if !bytes.Contains(page, []byte("<html>")) {
-		t.Log("/status didn't include <html>")
-		t.Fail()
-	}
 }

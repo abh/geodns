@@ -20,10 +20,6 @@ const (
 )
 
 func TestServe(t *testing.T) {
-	// setup and register global metrics for serve()
-	metrics := NewMetrics()
-	go metrics.Updater()
-
 	serverInfo := &monitor.ServerInfo{}
 
 	srv := NewServer(serverInfo)

@@ -4,6 +4,9 @@
 
 (dev branch; still in testing)
 
+* Added Prometheus metrics support
+* Removed /monitor websocket interface
+* Removed /status and /status.json pages
 * Support "closest" matching (instead of geo/asn labels) for A and AAAA records (Alex Bligh)
 * Support for GeoIP2 databases (including IPv6 data and ASN databases)
 * "Pluggable" targeting data support

@@ -14,7 +14,7 @@ docker-test: .PHONY
 	# test that we don't have missing dependencies
 	docker run --rm -v `pwd`:/go/src/github.com/abh/geodns \
 		-v /opt/local/share/GeoIP:/opt/local/share/GeoIP \
-		golang:1.10-alpine3.7 \
+		golang:1.10.1-alpine3.7 \
 		go test ./...
 
 devel:
@@ -26,7 +26,9 @@ bench:
 TARS=$(wildcard geodns-*-*.tar)
 
 push: $(TARS) tmp-install.sh
-	rsync -avz tmp-install.sh $(TARS)  x3.dev:webtmp/2018/02/
+	#rsync -avz tmp-install.sh $(TARS)  x3.dev:webtmp/2018/04/
+	rsync tmp-install.sh $(TARS) $(DIST)/$(DISTSUB)/
+	$(DIST)/push
 
 builds: linux-build linux-build-i386 freebsd-build push
 

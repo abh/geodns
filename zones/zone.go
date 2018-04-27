@@ -14,7 +14,6 @@ import (
 	"github.com/abh/geodns/targeting/geo"
 
 	"github.com/miekg/dns"
-	"github.com/rcrowley/go-metrics"
 )
 
 type ZoneOptions struct {
@@ -69,9 +68,6 @@ type LabelMatch struct {
 type labelmap map[string]*Label
 
 type ZoneMetrics struct {
-	Queries     metrics.Meter
-	EdnsQueries metrics.Meter
-	Registry    metrics.Registry
 	LabelStats  *zoneLabelStats
 	ClientStats *zoneLabelStats
 }
@@ -112,17 +108,6 @@ func (z *Zone) SetupMetrics(old *Zone) {
 	if old != nil {
 		z.Metrics = old.Metrics
 	}
-	if z.Metrics.Registry == nil {
-		z.Metrics.Registry = metrics.NewRegistry()
-	}
-	if z.Metrics.Queries == nil {
-		z.Metrics.Queries = metrics.NewMeter()
-		z.Metrics.Registry.Register("queries", z.Metrics.Queries)
-	}
-	if z.Metrics.EdnsQueries == nil {
-		z.Metrics.EdnsQueries = metrics.NewMeter()
-		z.Metrics.Registry.Register("queries-edns", z.Metrics.EdnsQueries)
-	}
 	if z.Metrics.LabelStats == nil {
 		z.Metrics.LabelStats = NewZoneLabelStats(10000)
 	}
@@ -132,7 +117,8 @@ func (z *Zone) SetupMetrics(old *Zone) {
 }
 
 func (z *Zone) Close() {
-	z.Metrics.Registry.UnregisterAll()
+	// todo: prune prometheus metrics for the zone ...
+
 	if z.Metrics.LabelStats != nil {
 		z.Metrics.LabelStats.Close()
 	}

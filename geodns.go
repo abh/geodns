@@ -66,7 +66,7 @@ var (
 	flagLogFile      = flag.String("logfile", "", "log to file")
 	flagPrivateDebug = flag.Bool("privatedebug", false, "Make debugging queries accepted only on loopback")
 
-	flagShowVersion = flag.Bool("version", false, "Show dnsconfig version")
+	flagShowVersion = flag.Bool("version", false, "Show GeoDNS version")
 
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile = flag.String("memprofile", "", "write memory profile to this file")
@@ -214,9 +214,6 @@ func main() {
 			targeting.Setup(geoProvider)
 		}
 	}
-
-	mon := monitor.NewMonitor(serverInfo)
-	go mon.Run()
 
 	srv := server.NewServer(serverInfo)
 

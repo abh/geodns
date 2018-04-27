@@ -8,24 +8,64 @@ import (
 	"github.com/abh/geodns/zones"
 
 	"github.com/miekg/dns"
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+type serverMetrics struct {
+	Queries *prometheus.CounterVec
+}
 
 type Server struct {
 	queryLogger        querylog.QueryLogger
 	mux                *dns.ServeMux
 	PublicDebugQueries bool
 	info               *monitor.ServerInfo
+	metrics            *serverMetrics
 }
 
 func NewServer(si *monitor.ServerInfo) *Server {
 	mux := dns.NewServeMux()
 
-	// todo: this should be in the monitor package, or somewhere else.
-	// Also if we can stop the server later, need to stop the server too.
-	metrics := NewMetrics()
-	go metrics.Updater()
+	queries := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "dns_queries_total",
+			Help: "Number of served queries",
+		},
+		[]string{"zone", "qtype", "qname", "rcode"},
+	)
+	prometheus.MustRegister(queries)
 
-	return &Server{mux: mux, info: si}
+	buildInfo := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "geodns_build_info",
+			Help: "GeoDNS build information (in labels)",
+		},
+		[]string{"Version", "ID", "IP", "Group"},
+	)
+	prometheus.MustRegister(buildInfo)
+
+	group := ""
+	if len(si.Groups) > 0 {
+		group = si.Groups[0]
+	}
+	buildInfo.WithLabelValues(si.Version, si.ID, si.IP, group).Set(1)
+
+	startTime := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "geodns_start_time_seconds",
+			Help: "Unix time process started",
+		},
+	)
+	prometheus.MustRegister(startTime)
+
+	nano := si.Started.UnixNano()
+	startTime.Set(float64(nano) / 1e9)
+
+	metrics := &serverMetrics{
+		Queries: queries,
+	}
+
+	return &Server{mux: mux, info: si, metrics: metrics}
 }
 
 // Setup the QueryLogger. For now it only supports writing to a file (and all

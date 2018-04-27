@@ -12,9 +12,9 @@ import (
 	"github.com/abh/geodns/applog"
 	"github.com/abh/geodns/querylog"
 	"github.com/abh/geodns/zones"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/miekg/dns"
-	"github.com/rcrowley/go-metrics"
 )
 
 func getQuestionName(z *zones.Zone, fqdn string) string {
@@ -34,7 +34,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		qle = &querylog.Entry{
 			Time:   time.Now().UnixNano(),
 			Origin: z.Origin,
-			Name:   qnamefqdn,
+			Name:   strings.ToLower(qnamefqdn),
 			Qtype:  qtype,
 		}
 		defer srv.queryLogger.Write(qle)
@@ -42,12 +42,6 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 	applog.Printf("[zone %s] incoming  %s %s (id %d) from %s\n", z.Origin, qnamefqdn,
 		dns.TypeToString[qtype], req.Id, w.RemoteAddr())
-
-	// Global meter
-	metrics.Get("queries").(metrics.Meter).Mark(1)
-
-	// Zone meter
-	z.Metrics.Queries.Mark(1)
 
 	applog.Println("Got request", req)
 
@@ -86,7 +80,6 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 				case *dns.EDNS0_NSID:
 					// do stuff with e.Nsid
 				case *dns.EDNS0_SUBNET:
-					z.Metrics.EdnsQueries.Mark(1)
 					applog.Println("Got edns", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
 					if e.Address != nil {
 						edns = e
@@ -191,7 +184,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 				if location != nil {
 					txt = append(txt, fmt.Sprintf("(%.3f,%.3f)", location.Latitude, location.Longitude))
 				} else {
-					txt = append(txt, "(?,?)")
+					txt = append(txt, "()")
 				}
 
 				m.Answer = []dns.RR{&dns.TXT{Hdr: h,
@@ -209,6 +202,13 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 		// return NXDOMAIN
 		m.SetRcode(req, dns.RcodeNameError)
+		srv.metrics.Queries.With(
+			prometheus.Labels{
+				"zone":  z.Origin,
+				"qtype": dns.TypeToString[qtype],
+				"qname": "_error",
+				"rcode": dns.RcodeToString[m.Rcode],
+			}).Inc()
 		m.Authoritative = true
 
 		m.Ns = []dns.RR{z.SoaRR()}
@@ -253,6 +253,14 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		m.Ns = append(m.Ns, z.SoaRR())
 	}
 
+	srv.metrics.Queries.With(
+		prometheus.Labels{
+			"zone":  z.Origin,
+			"qtype": dns.TypeToString[qtype],
+			"qname": qlabel,
+			"rcode": dns.RcodeToString[m.Rcode],
+		}).Inc()
+
 	applog.Println(m)
 
 	if qle != nil {
@@ -279,10 +287,7 @@ func (srv *Server) statusRR(label string) []dns.RR {
 		status["h"] = hostname
 	}
 
-	qCounter := metrics.Get("queries").(metrics.Meter)
 	status["up"] = strconv.Itoa(int(time.Since(srv.info.Started).Seconds()))
-	status["qs"] = strconv.FormatInt(qCounter.Count(), 10)
-	status["qps1"] = fmt.Sprintf("%.4f", qCounter.Rate1())
 
 	js, err := json.Marshal(status)
 
