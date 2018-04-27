@@ -9,6 +9,7 @@
 
 [[constraint]]
   branch = "master"
+  source = "https://github.com/abh/tail.git"
   name = "github.com/hpcloud/tail"
 
 [[constraint]]

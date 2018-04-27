@@ -9,7 +9,7 @@ import (
 
 	"github.com/abh/geodns/targeting/geoip2"
 
-	"gopkg.in/fsnotify.v1"
+	"github.com/fsnotify/fsnotify"
 	gcfg "gopkg.in/gcfg.v1"
 )
 
