@@ -3,7 +3,7 @@ go:
   - "1.7.4"
   - "1.8.3"
   - "1.9.4"
-  - "1.10"
+  - "1.10.1"
   - tip
 
 before_install:
@@ -15,8 +15,8 @@ before_install:
   - sudo apt-get -y update && sudo apt-get -y install libgeoip-dev geoipupdate curl
 
 install:
-  - curl -fso /tmp/GeoIP.conf http://geodns.bitnames.com/geoip/GeoIP.conf
-  - sudo mv /tmp/GeoIP.conf /etc/
+# - curl -fso /tmp/GeoIP.conf http://geodns.bitnames.com/geoip/GeoIP.conf
+# - sudo mv /tmp/GeoIP.conf /etc/
   - sudo geoipupdate
 # - sudo ln -s /usr/share/GeoIP $TRAVIS_BUILD_DIR/db
 # - sudo ln -s /usr/share/GeoIP/GeoLite2-Country.mmdb /usr/share/GeoIP/GeoIP2-Country.mmdb
