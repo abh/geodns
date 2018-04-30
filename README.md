@@ -4,6 +4,14 @@ This is the DNS server powering the [NTP Pool](http://www.pool.ntp.org/) system
 and other similar services.
 [![Build Status](https://travis-ci.org/abh/geodns.svg?branch=dev)](https://travis-ci.org/abh/geodns)
 
+## Questions or suggestions?
+
+For bug reports or feature requests, please create [an
+issue](https://github.com/abh/geodns/issues). For questions or
+discussion, you can post to the [GeoDNS
+category](https://community.ntppool.org/c/geodns) on the NTP Pool
+forum.
+
 ## Installation
 
 If you already have go installed, just run `go get` to install the Go
