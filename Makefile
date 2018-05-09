@@ -1,8 +1,7 @@
-all: templates.go
-	./build
 
-templates.go: templates/*.html monitor.go
-	go generate
+# where to rsync builds
+DIST?=dist/publish
+DISTSUB=2018/04
 
 test: .PHONY
 	go test -v $(shell go list ./... | grep -v /vendor/)
@@ -27,7 +26,7 @@ TARS=$(wildcard geodns-*-*.tar)
 
 push: $(TARS) tmp-install.sh
 	#rsync -avz tmp-install.sh $(TARS)  x3.dev:webtmp/2018/04/
-	rsync tmp-install.sh $(TARS) $(DIST)/$(DISTSUB)/
+	rsync --exclude publish tmp-install.sh $(TARS) $(DIST)/$(DISTSUB)/
 	$(DIST)/push
 
 builds: linux-build linux-build-i386 freebsd-build push

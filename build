@@ -1,4 +1,7 @@
 #!/bin/sh
+
+set -ex
+
 echo building
 # git describe --always --tags --dirty --long)
 REVISION=`git rev-parse --short=5  HEAD`
@@ -10,8 +13,11 @@ ARCH=${GOARCH:-`go env GOARCH`}
 
 set -ex
 
-go build -o geodns-$OS-$ARCH \
+go build -o dist/geodns-$OS-$ARCH \
   -ldflags "-X main.gitVersion=$REVISION -X main.buildTime=$BUILDTIME" \
   -v && \
-  (cd geodns-influxdb && go build -v -o geodns-influxdb-$OS-$ARCH && cd ..) && \
-tar -cvf geodns-$OS-$ARCH.tar --exclude \*~ geodns-$OS-$ARCH geodns-influxdb/geodns-influxdb-$OS-$ARCH service service-influxdb
+  (cd geodns-influxdb && go build -v -o ../dist/geodns-influxdb-$OS-$ARCH && cd ..) && \
+cd dist && \
+tar -cvHf geodns-$OS-$ARCH.tar \
+ --exclude \*~ geodns-$OS-$ARCH \
+ geodns-influxdb-$OS-$ARCH service service-influxdb
