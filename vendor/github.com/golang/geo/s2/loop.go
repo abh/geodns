@@ -203,21 +203,16 @@ func (l *Loop) initBound() {
 	l.subregionBound = ExpandForSubregions(l.bound)
 }
 
-// IsValid reports whether this is a valid loop or not.
-func (l *Loop) IsValid() bool {
-	return l.findValidationError() == nil
-}
-
-// findValidationError reports whether this is not a valid loop and if so
-// returns an error describing why. This function requires the Loops ShapeIndex
-// to have been intialized.
-func (l *Loop) findValidationError() error {
+// Validate checks whether this is a valid loop.
+func (l *Loop) Validate() error {
 	if err := l.findValidationErrorNoIndex(); err != nil {
 		return err
 	}
+
 	// Check for intersections between non-adjacent edges (including at vertices)
 	// TODO(roberts): Once shapeutil gets findAnyCrossing uncomment this.
 	// return findAnyCrossing(l.index)
+
 	return nil
 }
 
@@ -476,7 +471,7 @@ func (l *Loop) Edge(i int) Edge {
 
 // NumChains reports the number of contiguous edge chains in the Loop.
 func (l *Loop) NumChains() int {
-	if l.isEmptyOrFull() {
+	if l.IsEmpty() {
 		return 0
 	}
 	return 1
@@ -501,12 +496,12 @@ func (l *Loop) ChainPosition(edgeID int) ChainPosition {
 // dimension returns the dimension of the geometry represented by this Loop.
 func (l *Loop) dimension() dimension { return polygonGeometry }
 
-// IsEmpty reports true if this is the special "empty" loop that contains no points.
+// IsEmpty reports true if this is the special empty loop that contains no points.
 func (l *Loop) IsEmpty() bool {
 	return l.isEmptyOrFull() && !l.ContainsOrigin()
 }
 
-// IsFull reports true if this is the special "full" loop that contains all points.
+// IsFull reports true if this is the special full loop that contains all points.
 func (l *Loop) IsFull() bool {
 	return l.isEmptyOrFull() && l.ContainsOrigin()
 }

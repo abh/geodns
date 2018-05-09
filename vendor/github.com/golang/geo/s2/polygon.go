@@ -330,18 +330,9 @@ func FullPolygon() *Polygon {
 	return ret
 }
 
-// IsValid reports whether this is a valid polygon (including checking whether all
-// the loops are themselves valid).
-func (p *Polygon) IsValid() bool {
-	// TODO(roberts): If we want to expose the error, add a Validate() error method.
-	return p.validate() == nil
-}
-
-// validate reports any error if this is not a valid polygon.
-//
-// Note that in the returned error messages, loops that represent holes have their
-// edges numbered in reverse order, starting from the last vertex of the loop.
-func (p *Polygon) validate() error {
+// Validate checks whether this is a valid polygon,
+// including checking whether all the loops are themselves valid.
+func (p *Polygon) Validate() error {
 	for i, l := range p.loops {
 		// Check for loop errors that don't require building a ShapeIndex.
 		if err := l.findValidationErrorNoIndex(); err != nil {
@@ -671,10 +662,6 @@ func (p *Polygon) ReferencePoint() ReferencePoint {
 
 // NumChains reports the number of contiguous edge chains in the Polygon.
 func (p *Polygon) NumChains() int {
-	if p.IsFull() {
-		return 0
-	}
-
 	return p.NumLoops()
 }
 
@@ -687,7 +674,13 @@ func (p *Polygon) Chain(chainID int) Chain {
 	for j := 0; j < chainID; j++ {
 		e += len(p.Loop(j).vertices)
 	}
-	return Chain{e, len(p.Loop(chainID).vertices)}
+
+	// Polygon represents a full loop as a loop with one vertex, while
+	// Shape represents a full loop as a chain with no vertices.
+	if numVertices := p.Loop(chainID).NumVertices(); numVertices != 1 {
+		return Chain{e, numVertices}
+	}
+	return Chain{e, 0}
 }
 
 // ChainEdge returns the j-th edge of the i-th edge Chain (loop).
@@ -906,6 +899,16 @@ func (p *Polygon) anyLoopIntersects(o *Loop) bool {
 	return false
 }
 
+// Area returns the area of the polygon interior, i.e. the region on the left side
+// of an odd number of loops. The return value is between 0 and 4*Pi.
+func (p *Polygon) Area() float64 {
+	var area float64
+	for _, loop := range p.loops {
+		area += float64(loop.Sign()) * loop.Area()
+	}
+	return area
+}
+
 // Encode encodes the Polygon
 func (p *Polygon) Encode(w io.Writer) error {
 	e := &encoder{w: w}
@@ -1087,7 +1090,6 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 }
 
 // TODO(roberts): Differences from C++
-// Area
 // Centroid
 // SnapLevel
 // DistanceToPoint

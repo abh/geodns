@@ -59,6 +59,42 @@ func (e edges) Len() int           { return len(e) }
 func (e edges) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
 func (e edges) Less(i, j int) bool { return e[i].Cmp(e[j]) == -1 }
 
+// ShapeEdgeID is a unique identifier for an Edge within an ShapeIndex,
+// consisting of a (shapeID, edgeID) pair.
+type ShapeEdgeID struct {
+	ShapeID int32
+	EdgeID  int32
+}
+
+// Cmp compares the two ShapeEdgeIDs and returns
+//
+//   -1 if s <  other
+//    0 if s == other
+//   +1 if s >  other
+//
+// The two are compared first by shape id and then by edge id.
+func (s ShapeEdgeID) Cmp(other ShapeEdgeID) int {
+	switch {
+	case s.ShapeID < other.ShapeID:
+		return -1
+	case s.ShapeID > other.ShapeID:
+		return 1
+	}
+	switch {
+	case s.EdgeID < other.EdgeID:
+		return -1
+	case s.EdgeID > other.EdgeID:
+		return 1
+	}
+	return 0
+}
+
+// ShapeEdge represents a ShapeEdgeID with the two endpoints of that Edge.
+type ShapeEdge struct {
+	ID   ShapeEdgeID
+	Edge Edge
+}
+
 // Chain represents a range of edge IDs corresponding to a chain of connected
 // edges, specified as a (start, length) pair. The chain is defined to consist of
 // edge IDs {start, start + 1, ..., start + length - 1}.
@@ -179,11 +215,31 @@ type Shape interface {
 	//      of edge chains where each chain represents one polygon loop.
 	//      Polygons may have degeneracies (e.g., degenerate edges or sibling
 	//      pairs consisting of an edge and its corresponding reversed edge).
+	//      A polygon loop may also be full (containing all points on the
+	//      sphere); by convention this is represented as a chain with no edges.
+	//      (See laxPolygon for more details.)
 	//
 	// Note that this method allows degenerate geometry of different dimensions
 	// to be distinguished, e.g. it allows a point to be distinguished from a
 	// polyline or polygon that has been simplified to a single point.
 	dimension() dimension
+
+	// IsEmpty reports whether the Shape contains no points. (Note that the full
+	// polygon is represented as a chain with zero edges.)
+	IsEmpty() bool
+
+	// IsFull reports whether the Shape contains all points on the sphere.
+	IsFull() bool
+}
+
+// defaultShapeIsEmpty reports whether this shape contains no points.
+func defaultShapeIsEmpty(s Shape) bool {
+	return s.NumEdges() == 0 && (!s.HasInterior() || s.NumChains() == 0)
+}
+
+// defaultShapeIsFull reports whether this shape contains all points on the sphere.
+func defaultShapeIsFull(s Shape) bool {
+	return s.NumEdges() == 0 && s.HasInterior() && s.NumChains() > 0
 }
 
 // A minimal check for types that should satisfy the Shape interface.
