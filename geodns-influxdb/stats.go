@@ -8,6 +8,7 @@ import (
 
 	"github.com/abh/geodns/querylog"
 	"github.com/miekg/dns"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type statsEntry struct {
@@ -25,6 +26,8 @@ type Stats struct {
 	Count int
 	Map   map[string]*statsEntry
 }
+
+var queries *prometheus.CounterVec
 
 func NewStats() *Stats {
 	return &Stats{
@@ -88,6 +91,19 @@ func (stats *Stats) Add(e *querylog.Entry) error {
 
 	stats.Count++
 
+	qtypeString := dns.TypeToString[e.Qtype]
+
+	userCC := ""
+	for _, cc := range e.Targets {
+		if len(cc) == 2 {
+			userCC = cc
+			break
+		}
+	}
+
+	// []string{"zone", "vendor",  "usercc", "poolcc", "qtype"},
+	queries.WithLabelValues(e.Origin, vendor, userCC, poolCC, qtypeString).Inc()
+
 	key := stats.Key(e)
 
 	if s, ok := stats.Map[key]; ok {
@@ -101,7 +117,7 @@ func (stats *Stats) Add(e *querylog.Entry) error {
 			Vendor: vendor,
 			Label:  e.LabelName,
 			PoolCC: poolCC,
-			Qtype:  dns.TypeToString[e.Qtype],
+			Qtype:  qtypeString,
 			Count:  1,
 		}
 	}

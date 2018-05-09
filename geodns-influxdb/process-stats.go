@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/hpcloud/tail"
 	"github.com/miekg/dns"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/abh/geodns/countries"
 	"github.com/abh/geodns/querylog"
@@ -48,6 +51,18 @@ func main() {
 			os.Exit(2)
 		}
 	}
+
+	queries = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "dns_logs_total",
+			Help: "Number of served queries",
+		},
+		[]string{"zone", "vendor", "usercc", "poolcc", "qtype"},
+	)
+	prometheus.MustRegister(queries)
+
+	http.Handle("/metrics", promhttp.Handler())
+	go http.ListenAndServe(":8054", nil)
 
 	influx := NewInfluxClient()
 	influx.URL = os.Getenv("INFLUXDB_URL")
@@ -174,6 +189,7 @@ func processChan(in chan string, out chan<- *Stats, wg *sync.WaitGroup) error {
 			log.Printf("Can't unmarshal '%s': %s", line, err)
 			return err
 		}
+		e.Name = strings.ToLower(e.Name)
 
 		eMinute := ((e.Time - e.Time%int64(submitInterval)) / int64(time.Second))
 		e.Time = eMinute
@@ -192,7 +208,6 @@ func processChan(in chan string, out chan<- *Stats, wg *sync.WaitGroup) error {
 			}
 		}
 
-		e.Name = strings.ToLower(e.Name)
 		// fmt.Printf("%s %s\n", e.Origin, e.Name)
 
 		err = stats.Add(&e)

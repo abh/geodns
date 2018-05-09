@@ -10,7 +10,7 @@ import (
 	"github.com/kr/pretty"
 )
 
-const UserAgent = "geodns-logs/1.1"
+const UserAgent = "geodns-logs/1.2"
 
 type influxClient struct {
 	ServerID     string

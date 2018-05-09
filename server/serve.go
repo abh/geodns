@@ -12,9 +12,9 @@ import (
 	"github.com/abh/geodns/applog"
 	"github.com/abh/geodns/querylog"
 	"github.com/abh/geodns/zones"
-	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/miekg/dns"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func getQuestionName(z *zones.Zone, fqdn string) string {
