@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -26,6 +25,8 @@ import (
 // add server region tag (identifier)?
 
 func main() {
+
+	log.Printf("Starting %q", UserAgent)
 
 	tailFlag := flag.Bool("tail", false, "tail the log file instead of processing all arguments")
 	identifierFlag := flag.String("identifier", "", "identifier (hostname, pop name or similar)")
@@ -61,8 +62,23 @@ func main() {
 	)
 	prometheus.MustRegister(queries)
 
+	buildInfo := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "geodns_logs_build_info",
+			Help: "GeoDNS logs build information (in labels)",
+		},
+		[]string{"Version"},
+	)
+	prometheus.MustRegister(buildInfo)
+	buildInfo.WithLabelValues(UserAgent).Set(1)
+
 	http.Handle("/metrics", promhttp.Handler())
-	go http.ListenAndServe(":8054", nil)
+	go func() {
+		err := http.ListenAndServe(":8054", nil)
+		if err != nil {
+			log.Printf("could not start http server: %s", err)
+		}
+	}()
 
 	influx := NewInfluxClient()
 	influx.URL = os.Getenv("INFLUXDB_URL")
@@ -196,11 +212,10 @@ func processChan(in chan string, out chan<- *Stats, wg *sync.WaitGroup) error {
 
 		if len(stats.Map) == 0 {
 			lastMinute = eMinute
-			log.Printf("Last Minute: %d", lastMinute)
+			// log.Printf("Last Minute: %d", lastMinute)
 		} else {
 			if eMinute > lastMinute {
-				fmt.Printf("eMinute %d\nlastMin %d - should summarize\n", eMinute, lastMinute)
-
+				// fmt.Printf("eMinute %d\nlastMin %d - should summarize\n", eMinute, lastMinute)
 				stats.Summarize()
 				out <- stats
 				stats = NewStats()
