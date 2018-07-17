@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abh/geodns/applog"
-
 	"github.com/miekg/dns"
 )
 
@@ -95,10 +93,10 @@ func (mm *MuxManager) reload() error {
 		if _, ok := mm.lastRead[zoneName]; !ok || file.ModTime().After(mm.lastRead[zoneName].time) {
 			modTime := file.ModTime()
 			if ok {
-				applog.Printf("Reloading %s\n", fileName)
+				log.Printf("Reloading %s\n", fileName)
 				mm.lastRead[zoneName].time = modTime
 			} else {
-				applog.Printf("Reading new file %s\n", fileName)
+				log.Printf("Reading new file %s\n", fileName)
 				mm.lastRead[zoneName] = &zoneReadRecord{time: modTime}
 			}
 
@@ -127,7 +125,7 @@ func (mm *MuxManager) reload() error {
 
 			sha256 := sha256File(filename)
 			if mm.lastRead[zoneName].hash == sha256 {
-				applog.Printf("Skipping new file %s as hash is unchanged\n", filename)
+				log.Printf("Skipping new file %s as hash is unchanged\n", filename)
 				continue
 			}
 

@@ -1,7 +1,7 @@
 
 # where to rsync builds
 DIST?=dist/publish
-DISTSUB=2018/04
+DISTSUB=2018/07
 
 test: .PHONY
 	go test -v $(shell go list ./... | grep -v /vendor/)
@@ -22,12 +22,12 @@ devel:
 bench:
 	go test -check.b -check.bmem
 
-TARS=$(wildcard geodns-*-*.tar)
+TARS=$(wildcard dist/geodns-*-*.tar)
 
 push: $(TARS) tmp-install.sh
 	#rsync -avz tmp-install.sh $(TARS)  x3.dev:webtmp/2018/04/
 	rsync --exclude publish tmp-install.sh $(TARS) $(DIST)/$(DISTSUB)/
-	$(DIST)/push
+	$(DIST)/../push
 
 builds: linux-build linux-build-i386 freebsd-build push
 
