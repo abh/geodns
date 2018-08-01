@@ -27,7 +27,7 @@ TARS=$(wildcard dist/geodns-*-*.tar)
 push: $(TARS) tmp-install.sh
 	#rsync -avz tmp-install.sh $(TARS)  x3.dev:webtmp/2018/04/
 	rsync --exclude publish tmp-install.sh $(TARS) $(DIST)/$(DISTSUB)/
-	$(DIST)/../push
+	$(DIST)/push
 
 builds: linux-build linux-build-i386 freebsd-build push
 
