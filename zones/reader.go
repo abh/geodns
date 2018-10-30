@@ -391,8 +391,17 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 
 				case dns.TypeMF:
 					rec := records[rType][i]
+					var target string
+					var weight int
+					switch rec.(type) {
+					case string:
+						target = rec.(string)
+					case []interface{}:
+						target, weight = getStringWeight(rec.([]interface{}))
+					}
+					record.Weight = weight
 					// MF records (how we store aliases) are not FQDNs
-					record.RR = &dns.MF{Hdr: h, Mf: rec.(string)}
+					record.RR = &dns.MF{Hdr: h, Mf: target}
 
 				case dns.TypeNS:
 					rec := records[rType][i]

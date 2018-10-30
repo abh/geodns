@@ -246,7 +246,8 @@ func (z *Zone) FindLabels(s string, targets []string, qts []uint16) []LabelMatch
 					continue
 				case dns.TypeMF:
 					if label.Records[dns.TypeMF] != nil {
-						name = label.FirstRR(dns.TypeMF).(*dns.MF).Mf
+						rr := z.Picker(label, dns.TypeMF, 1, nil)[0].RR
+						name = rr.(*dns.MF).Mf
 						// TODO: need to avoid loops here somehow
 						aliases := z.FindLabels(name, targets, qts)
 						matches = append(matches, aliases...)
