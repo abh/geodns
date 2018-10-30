@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/miekg/dns"
 	"github.com/abh/errorutil"
+	"github.com/miekg/dns"
 	"io/ioutil"
 	"log"
 	"net"
@@ -367,17 +367,17 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 				case dns.TypeMF:
 					rec := records[rType][i]
-                                        var target string
-                                        var weight int
+					var target string
+					var weight int
 					active := true
 					backup := false
-                                        switch rec.(type) {
-                                        case string:
-                                                target = rec.(string)
-                                        case []interface{}:
-                                                target, weight, active, backup = getStringWeight(rec.([]interface{}))
-                                        }
-                                        record.Weight = weight
+					switch rec.(type) {
+					case string:
+						target = rec.(string)
+					case []interface{}:
+						target, weight, active, backup = getStringWeight(rec.([]interface{}))
+					}
+					record.Weight = weight
 					record.Active = active
 					record.Backup = backup
 
@@ -511,34 +511,34 @@ func setupZoneData(data map[string]interface{}, Zone *Zone) {
 
 func getStringWeight(rec []interface{}) (string, int, bool, bool) {
 
-        str := rec[0].(string)
+	str := rec[0].(string)
 	var weight int
-        var err error
+	var err error
 	backup := false
-        active := true
+	active := true
 
 	len := len(rec)
-        if len > 1 && len < 5 {
-               	for i := 1; i < len; i++ {
-                       	switch rec[i].(type) {
-                       	case string:
-				if (rec[i].(string) == "backup") {
+	if len > 1 && len < 5 {
+		for i := 1; i < len; i++ {
+			switch rec[i].(type) {
+			case string:
+				if rec[i].(string) == "backup" {
 					backup = true
 				} else {
-	                                weight, err = strconv.Atoi(rec[i].(string))
-	                               	if err != nil {
-	                                       	panic("Error converting weight to integer")
-	                               	}
+					weight, err = strconv.Atoi(rec[i].(string))
+					if err != nil {
+						panic("Error converting weight to integer")
+					}
 				}
-                       	case float64:
-                               	weight = int(rec[i].(float64))
-                       	case bool:
-                               	active = rec[i].(bool)
-                       	}
-                }
-        }
-	
-        return str, weight, active, backup
+			case float64:
+				weight = int(rec[i].(float64))
+			case bool:
+				active = rec[i].(bool)
+			}
+		}
+	}
+
+	return str, weight, active, backup
 }
 
 func setupSOA(Zone *Zone) {

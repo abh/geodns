@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/abh/go-metrics"
+	"github.com/gorilla/mux"
+	"github.com/miekg/dns"
 	"html/template"
 	"io"
 	"log"
@@ -14,8 +16,6 @@ import (
 	"sort"
 	"strconv"
 	"time"
-	"github.com/miekg/dns"
-	"github.com/gorilla/mux"
 )
 
 // Initial status message on websocket
@@ -38,12 +38,12 @@ type statusStreamMsgUpdate struct {
 }
 
 type SetActiveMsg struct {
-	Record          string `json:"record"`
-	Active	        bool   `json:"active"`
-	FoundTypeA      int    `json:"foundtypeA"`
-	FoundTypeAAAA   int    `json:"foundtypeAAAA"`
-	FoundTypeCNAME  int    `json:"foundtypeCNAME"`
-	FoundTypeMF     int    `json:"foundtypeMF"`
+	Record         string `json:"record"`
+	Active         bool   `json:"active"`
+	FoundTypeA     int    `json:"foundtypeA"`
+	FoundTypeAAAA  int    `json:"foundtypeAAAA"`
+	FoundTypeCNAME int    `json:"foundtypeCNAME"`
+	FoundTypeMF    int    `json:"foundtypeMF"`
 }
 
 type wsConnection struct {
@@ -363,28 +363,28 @@ func SetActive(zones Zones, action bool) func(http.ResponseWriter, *http.Request
 			for li, l := range z.Labels {
 				for t, rs := range l.Records {
 					switch t {
-						case dns.TypeA:
+					case dns.TypeA:
 						for ri, r := range rs {
 							if r.RR.(*dns.A).A.String() == record {
 								zones[zi].Labels[li].Records[t][ri].Active = action
 								result.FoundTypeA++
 							}
 						}
-						case dns.TypeAAAA:
+					case dns.TypeAAAA:
 						for ri, r := range rs {
 							if r.RR.(*dns.AAAA).AAAA.String() == record {
 								zones[zi].Labels[li].Records[t][ri].Active = action
 								result.FoundTypeAAAA++
 							}
 						}
-						case dns.TypeMF:
+					case dns.TypeMF:
 						for ri, r := range rs {
 							if r.RR.(*dns.MF).Mf == record {
 								zones[zi].Labels[li].Records[t][ri].Active = action
 								result.FoundTypeMF++
 							}
 						}
-						case dns.TypeCNAME:
+					case dns.TypeCNAME:
 						for ri, r := range rs {
 							if r.RR.(*dns.CNAME).Target == record {
 								zones[zi].Labels[li].Records[t][ri].Active = action
@@ -398,11 +398,11 @@ func SetActive(zones Zones, action bool) func(http.ResponseWriter, *http.Request
 
 		bytes, err := json.MarshalIndent(result, "", "   ")
 		if err != nil {
-	               	log.Println("result json error", err)
-	               	return
-	        }
+			log.Println("result json error", err)
+			return
+		}
 
-	        fmt.Fprintf(w, "%s", bytes)
+		fmt.Fprintf(w, "%s", bytes)
 
 	}
 }

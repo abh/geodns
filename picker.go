@@ -41,17 +41,17 @@ func (label *Label) Picker(qtype uint16, max int) Records {
 			if tmpservers[i].Backup {
 				backupcount++
 			}
-		}		
-		
+		}
+
 		// not "balanced", just return all
 		if sum == 0 {
-			if (backupcount > 0) {
-                		for i := range tmpservers {
-                        		if tmpservers[i].Backup {
-                                		sum += tmpservers[i].Weight
-                	                	servers = append(servers, tmpservers[i])
-                		        }
-                		}
+			if backupcount > 0 {
+				for i := range tmpservers {
+					if tmpservers[i].Backup {
+						sum += tmpservers[i].Weight
+						servers = append(servers, tmpservers[i])
+					}
+				}
 			} else {
 				return label_rr
 			}

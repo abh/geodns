@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/miekg/dns"
 	"github.com/abh/go-metrics"
+	"github.com/miekg/dns"
 	"strings"
 	"time"
 )
@@ -81,11 +81,11 @@ func NewZone(name string) *Zone {
 }
 
 func (z *Zone) SetupMetrics(old *Zone) {
-	if old != nil && 
-	old.Metrics.Queries != nil && 
-	old.Metrics.EdnsQueries != nil && 
-	old.Metrics.LabelStats != nil && 
-	old.Metrics.ClientStats != nil {
+	if old != nil &&
+		old.Metrics.Queries != nil &&
+		old.Metrics.EdnsQueries != nil &&
+		old.Metrics.LabelStats != nil &&
+		old.Metrics.ClientStats != nil {
 		z.Metrics = old.Metrics
 	} else {
 		z.Metrics.Queries = metrics.NewMeter()

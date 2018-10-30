@@ -160,26 +160,26 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 					rrs = rrs[:0]
 					break
 				}
-        			msg := new(dns.Msg)
-			        msg.SetQuestion(rr.(*dns.CNAME).Target, dns.TypeA)
-				msg.CheckGlue = true
-				dns.DefaultServeMux.ServeDNS(w, msg)
+				msg := new(dns.Msg)
+				msg.SetQuestion(rr.(*dns.CNAME).Target, dns.TypeA)
+				msg.RecursionAvailable = true
+				//dns.DefaultServeMux.ServeDNS(w, msg)
 				for _, gluerr := range msg.Answer {
-                                    rrs = append(rrs, gluerr)
+					rrs = append(rrs, gluerr)
 				}
 			} else if rr.Header().Rrtype == dns.TypeNS {
 				msg := new(dns.Msg)
 				msg.SetQuestion(rr.(*dns.NS).Ns, dns.TypeA)
-				msg.CheckGlue = true
-				dns.DefaultServeMux.ServeDNS(w, msg)
+				msg.RecursionAvailable = true
+				//dns.DefaultServeMux.ServeDNS(w, msg)
 				for _, gluerr := range msg.Answer {
 					m.Extra = append(m.Extra, gluerr)
 				}
 			} else if rr.Header().Rrtype == dns.TypeMX {
 				msg := new(dns.Msg)
 				msg.SetQuestion(rr.(*dns.MX).Mx, dns.TypeA)
-				msg.CheckGlue = true
-				dns.DefaultServeMux.ServeDNS(w, msg)
+				msg.RecursionAvailable = true
+				//dns.DefaultServeMux.ServeDNS(w, msg)
 				for _, gluerr := range msg.Answer {
 					m.Extra = append(m.Extra, gluerr)
 				}
@@ -202,7 +202,7 @@ func serve(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	return
 }
 
-func setGlueMsg(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
+func serveWithAdditionalAnswer(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 	qtype := req.Question[0].Qtype
 
 	logPrintf("[zone %s] incoming %s %s %d from %s\n", z.Origin, req.Question[0].Name,
@@ -296,8 +296,8 @@ func setGlueMsg(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 				}
 				msg := new(dns.Msg)
 				msg.SetQuestion(rr.(*dns.CNAME).Target, dns.TypeA)
-				msg.CheckGlue = true
-				dns.DefaultServeMux.ServeDNS(w, msg)
+				msg.RecursionAvailable = true
+				//dns.DefaultServeMux.ServeDNS(w, msg)
 				for _, gluerr := range msg.Answer {
 					rrs = append(rrs, gluerr)
 				}
@@ -307,7 +307,7 @@ func setGlueMsg(w dns.ResponseWriter, req *dns.Msg, z *Zone) {
 		m.Answer = rrs
 	}
 
-        req.Answer = m.Answer
+	req.Answer = m.Answer
 
 	return
 }
@@ -333,11 +333,11 @@ func statusRR(label string) []dns.RR {
 
 func setupServerFunc(Zone *Zone) func(dns.ResponseWriter, *dns.Msg) {
 	return func(w dns.ResponseWriter, r *dns.Msg) {
-                if r.CheckGlue {
-                    setGlueMsg(w, r, Zone)
-                } else {
-		    serve(w, r, Zone)
-                }
+		if r.RecursionAvailable {
+			serveWithAdditionalAnswer(w, r, Zone)
+		} else {
+			serve(w, r, Zone)
+		}
 	}
 }
 
