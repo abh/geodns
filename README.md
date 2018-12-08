@@ -15,7 +15,7 @@ forum.
 ## Installation
 
 If you already have go installed, just run `go get` to install the Go
-dependencies. GeoDNS requires Go 1.8 or later.
+dependencies. GeoDNS requires Go 1.9 or later.
 
 If you don't have Go installed the easiest way to build geodns from source is to
 download Go from https://golang.org/dl/ and untar'ing it in
