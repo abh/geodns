@@ -16,7 +16,11 @@ func loadZones(t *testing.T) *MuxManager {
 
 	if targeting.Geo() == nil {
 		t.Logf("Setting up geo provider")
-		geoprovider, err := geoip2.New(geoip2.FindDB())
+		dbDir := geoip2.FindDB()
+		if len(dbDir) == 0 {
+			t.Fatalf("Could not find geoip directory")
+		}
+		geoprovider, err := geoip2.New(dbDir)
 		if err == nil {
 			targeting.Setup(geoprovider)
 		} else {
