@@ -130,6 +130,8 @@ func (s *ShapeIndexCell) numEdges() int {
 
 // add adds the given clipped shape to this index cell.
 func (s *ShapeIndexCell) add(c *clippedShape) {
+	// C++ uses a set, so it's ordered and unique. We don't currently catch
+	// the case when a duplicate value is added.
 	s.shapes = append(s.shapes, c)
 }
 
@@ -168,7 +170,7 @@ type faceEdge struct {
 	shapeID     int32    // The ID of shape that this edge belongs to
 	edgeID      int      // Edge ID within that shape
 	maxLevel    int      // Not desirable to subdivide this edge beyond this level
-	hasInterior bool     // Belongs to a shape that has an interior
+	hasInterior bool     // Belongs to a shape that has a dimension of 2
 	a, b        r2.Point // The edge endpoints, clipped to a given face
 	edge        Edge     // The original edge.
 }
@@ -681,6 +683,28 @@ func (s *ShapeIndex) NumEdges() int {
 	return numEdges
 }
 
+// NumEdgesUpTo returns the number of edges in the given index, up to the given
+// limit. If the limit is encountered, the current running total is returned,
+// which may be more than the limit.
+func (s *ShapeIndex) NumEdgesUpTo(limit int) int {
+	var numEdges int
+	// We choose to iterate over the shapes in order to match the counting
+	// up behavior in C++ and for test compatibility instead of using a
+	// more idiomatic range over the shape map.
+	for i := int32(0); i <= s.nextID; i++ {
+		s := s.Shape(i)
+		if s == nil {
+			continue
+		}
+		numEdges += s.NumEdges()
+		if numEdges >= limit {
+			break
+		}
+	}
+
+	return numEdges
+}
+
 // Shape returns the shape with the given ID, or nil if the shape has been removed from the index.
 func (s *ShapeIndex) Shape(id int32) Shape { return s.shapes[id] }
 
@@ -731,7 +755,7 @@ func (s *ShapeIndex) Remove(shape Shape) {
 	numEdges := shape.NumEdges()
 	removed := &removedShape{
 		shapeID:               id,
-		hasInterior:           shape.HasInterior(),
+		hasInterior:           shape.Dimension() == 2,
 		containsTrackerOrigin: shape.ReferencePoint().Contained,
 		edges:                 make([]Edge, numEdges),
 	}
@@ -825,7 +849,7 @@ func (s *ShapeIndex) addShapeInternal(shapeID int32, allEdges [][]faceEdge, t *t
 
 	faceEdge := faceEdge{
 		shapeID:     shapeID,
-		hasInterior: shape.HasInterior(),
+		hasInterior: shape.Dimension() == 2,
 	}
 
 	if faceEdge.hasInterior {
@@ -1169,7 +1193,7 @@ func (s *ShapeIndex) makeIndexCell(p *PaddedCell, edges []*clippedEdge, t *track
 		if eNext != len(edges) {
 			eshapeID = edges[eNext].faceEdge.shapeID
 		}
-		if cNextIdx != len(cshapeIDs) {
+		if cNextIdx < len(cshapeIDs) {
 			cshapeID = cshapeIDs[cNextIdx]
 		}
 		eBegin := eNext
@@ -1374,7 +1398,7 @@ func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, ed
 		// line segment from the cell center to the entry vertex.
 		edge := &faceEdge{
 			shapeID:     shapeID,
-			hasInterior: shape.HasInterior(),
+			hasInterior: shape.Dimension() == 2,
 		}
 
 		if edge.hasInterior {
@@ -1444,7 +1468,11 @@ func (s *ShapeIndex) testAllEdges(edges []*clippedEdge, t *tracker) {
 func (s *ShapeIndex) countShapes(edges []*clippedEdge, shapeIDs []int32) int {
 	count := 0
 	lastShapeID := int32(-1)
-	cNext := int32(0)
+
+	// next clipped shape id in the shapeIDs list.
+	clippedNext := int32(0)
+	// index of the current element in the shapeIDs list.
+	shapeIDidx := 0
 	for _, edge := range edges {
 		if edge.faceEdge.shapeID == lastShapeID {
 			continue
@@ -1455,18 +1483,19 @@ func (s *ShapeIndex) countShapes(edges []*clippedEdge, shapeIDs []int32) int {
 
 		// Skip over any containing shapes up to and including this one,
 		// updating count as appropriate.
-		for ; cNext < int32(len(shapeIDs)); cNext++ {
-			if cNext > lastShapeID {
+		for ; shapeIDidx < len(shapeIDs); shapeIDidx++ {
+			clippedNext = shapeIDs[shapeIDidx]
+			if clippedNext > lastShapeID {
 				break
 			}
-			if cNext < lastShapeID {
+			if clippedNext < lastShapeID {
 				count++
 			}
 		}
 	}
 
 	// Count any remaining containing shapes.
-	count += int(len(shapeIDs) - int(cNext))
+	count += int(len(shapeIDs)) - int(shapeIDidx)
 	return count
 }
 

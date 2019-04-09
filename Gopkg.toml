@@ -14,14 +14,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/influxdata/influxdb"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/kr/pretty"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/miekg/dns"
 
 [[constraint]]

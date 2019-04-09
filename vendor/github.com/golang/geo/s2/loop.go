@@ -356,6 +356,21 @@ func (l *Loop) Intersects(o *Loop) bool {
 	return false
 }
 
+// Equal reports whether two loops have the same vertices in the same linear order
+// (i.e., cyclic rotations are not allowed).
+func (l *Loop) Equal(other *Loop) bool {
+	if len(l.vertices) != len(other.vertices) {
+		return false
+	}
+
+	for i, v := range l.vertices {
+		if v != other.Vertex(i) {
+			return false
+		}
+	}
+	return true
+}
+
 // BoundaryEqual reports whether the two loops have the same boundary. This is
 // true if and only if the loops have the same vertices in the same cyclic order
 // (i.e., the vertices may be cyclically rotated). The empty and full loops are
@@ -451,11 +466,6 @@ func (l *Loop) ReferencePoint() ReferencePoint {
 	return OriginReferencePoint(l.originInside)
 }
 
-// HasInterior returns true because all loops have an interior.
-func (l *Loop) HasInterior() bool {
-	return true
-}
-
 // NumEdges returns the number of edges in this shape.
 func (l *Loop) NumEdges() int {
 	if l.isEmptyOrFull() {
@@ -493,8 +503,10 @@ func (l *Loop) ChainPosition(edgeID int) ChainPosition {
 	return ChainPosition{0, edgeID}
 }
 
-// dimension returns the dimension of the geometry represented by this Loop.
-func (l *Loop) dimension() dimension { return polygonGeometry }
+// Dimension returns the dimension of the geometry represented by this Loop.
+func (l *Loop) Dimension() int { return 2 }
+
+func (l *Loop) privateInterface() {}
 
 // IsEmpty reports true if this is the special empty loop that contains no points.
 func (l *Loop) IsEmpty() bool {
@@ -550,7 +562,7 @@ func (l *Loop) OrientedVertex(i int) Point {
 	if l.IsHole() {
 		j = len(l.vertices) - 1 - j
 	}
-	return l.Vertex(i)
+	return l.Vertex(j)
 }
 
 // NumVertices returns the number of vertices in this loop.
@@ -1798,7 +1810,5 @@ func (l *Loop) containsNonCrossingBoundary(other *Loop, reverseOther bool) bool 
 // DistanceToBoundary
 // Project
 // ProjectToBoundary
-// Equal
-// BoundaryEqual
 // BoundaryApproxEqual
 // BoundaryNear

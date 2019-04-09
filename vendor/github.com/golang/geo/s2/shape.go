@@ -18,15 +18,6 @@ import (
 	"sort"
 )
 
-// dimension defines the types of geometry dimensions that a Shape supports.
-type dimension int
-
-const (
-	pointGeometry dimension = iota
-	polylineGeometry
-	polygonGeometry
-)
-
 // Edge represents a geodesic edge consisting of two vertices. Zero-length edges are
 // allowed, and can be used to represent points.
 type Edge struct {
@@ -157,9 +148,6 @@ type Shape interface {
 	// Edge returns the edge for the given edge index.
 	Edge(i int) Edge
 
-	// HasInterior reports whether this shape has an interior.
-	HasInterior() bool
-
 	// ReferencePoint returns an arbitrary reference point for the shape. (The
 	// containment boolean value must be false for shapes that do not have an interior.)
 	//
@@ -202,14 +190,15 @@ type Shape interface {
 	// where pos == shape.ChainPosition(edgeID).
 	ChainPosition(edgeID int) ChainPosition
 
-	// dimension returns the dimension of the geometry represented by this shape.
+	// Dimension returns the dimension of the geometry represented by this shape,
+	// either 0, 1 or 2 for point, polyline and polygon geometry respectively.
 	//
-	//  pointGeometry: Each point is represented as a degenerate edge.
+	//  0 - Point geometry. Each point is represented as a degenerate edge.
 	//
-	//  polylineGeometry:  Polyline edges may be degenerate. A shape may
+	//  1 - Polyline geometry. Polyline edges may be degenerate. A shape may
 	//      represent any number of polylines. Polylines edges may intersect.
 	//
-	//  polygonGeometry:  Edges should be oriented such that the polygon
+	//  2 - Polygon geometry. Edges should be oriented such that the polygon
 	//      interior is always on the left. In theory the edges may be returned
 	//      in any order, but typically the edges are organized as a collection
 	//      of edge chains where each chain represents one polygon loop.
@@ -217,12 +206,12 @@ type Shape interface {
 	//      pairs consisting of an edge and its corresponding reversed edge).
 	//      A polygon loop may also be full (containing all points on the
 	//      sphere); by convention this is represented as a chain with no edges.
-	//      (See laxPolygon for more details.)
+	//      (See laxPolygon for details.)
 	//
-	// Note that this method allows degenerate geometry of different dimensions
+	// This method allows degenerate geometry of different dimensions
 	// to be distinguished, e.g. it allows a point to be distinguished from a
 	// polyline or polygon that has been simplified to a single point.
-	dimension() dimension
+	Dimension() int
 
 	// IsEmpty reports whether the Shape contains no points. (Note that the full
 	// polygon is represented as a chain with zero edges.)
@@ -230,16 +219,19 @@ type Shape interface {
 
 	// IsFull reports whether the Shape contains all points on the sphere.
 	IsFull() bool
+
+	// We do not support implementations of this interface outside this package.
+	privateInterface()
 }
 
 // defaultShapeIsEmpty reports whether this shape contains no points.
 func defaultShapeIsEmpty(s Shape) bool {
-	return s.NumEdges() == 0 && (!s.HasInterior() || s.NumChains() == 0)
+	return s.NumEdges() == 0 && (s.Dimension() != 2 || s.NumChains() == 0)
 }
 
 // defaultShapeIsFull reports whether this shape contains all points on the sphere.
 func defaultShapeIsFull(s Shape) bool {
-	return s.NumEdges() == 0 && s.HasInterior() && s.NumChains() > 0
+	return s.NumEdges() == 0 && s.Dimension() == 2 && s.NumChains() > 0
 }
 
 // A minimal check for types that should satisfy the Shape interface.

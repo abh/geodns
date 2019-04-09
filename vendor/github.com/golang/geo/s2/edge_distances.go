@@ -34,7 +34,8 @@ func DistanceFromSegment(x, a, b Point) s1.Angle {
 }
 
 // IsDistanceLess reports whether the distance from X to the edge AB is less
-// than limit. This method is faster than DistanceFromSegment(). If you want to
+// than limit. (For less than or equal to, specify limit.Successor()).
+// This method is faster than DistanceFromSegment(). If you want to
 // compare against a fixed s1.Angle, you should convert it to an s1.ChordAngle
 // once and save the value, since this conversion is relatively expensive.
 func IsDistanceLess(x, a, b Point, limit s1.ChordAngle) bool {
@@ -71,9 +72,9 @@ func UpdateMaxDistance(x, a, b Point, maxDist s1.ChordAngle) (s1.ChordAngle, boo
 	return maxDist, false
 }
 
-// IsInteriorDistanceLess reports whether the minimum distance from X to the
-// edge AB is attained at an interior point of AB (i.e., not an endpoint), and
-// that distance is less than limit.
+// IsInteriorDistanceLess reports whether the minimum distance from X to the edge
+// AB is attained at an interior point of AB (i.e., not an endpoint), and that
+// distance is less than limit. (Specify limit.Successor() for less than or equal to).
 func IsInteriorDistanceLess(x, a, b Point, limit s1.ChordAngle) bool {
 	_, less := UpdateMinInteriorDistance(x, a, b, limit)
 	return less
@@ -193,7 +194,7 @@ func minUpdateInteriorDistanceMaxError(dist s1.ChordAngle) float64 {
 	// This bound includes all source of error, assuming that the input points
 	// are normalized. a and b are components of chord length that are
 	// perpendicular and parallel to a plane containing the edge respectively.
-	b := math.Min(1.0, 0.5*float64(dist)*float64(dist))
+	b := math.Min(1.0, 0.5*float64(dist))
 	a := math.Sqrt(b * (2 - b))
 	return ((2.5+2*math.Sqrt(3)+8.5*a)*a +
 		(2+2*math.Sqrt(3)/3+6.5*(1-b))*b +
@@ -262,8 +263,11 @@ func interiorDist(x, a, b Point, minDist s1.ChordAngle, alwaysUpdate bool) (s1.C
 	c2 := c.Norm2()
 	xDotC := x.Dot(c.Vector)
 	xDotC2 := xDotC * xDotC
-	if !alwaysUpdate && xDotC2 >= c2*float64(minDist) {
-		// The closest point on the great circle AB is too far away.
+	if !alwaysUpdate && xDotC2 > c2*float64(minDist) {
+		// The closest point on the great circle AB is too far away.  We need to
+		// test this using ">" rather than ">=" because the actual minimum bound
+		// on the distance is (xDotC2 / c2), which can be rounded differently
+		// than the (more efficient) multiplicative test above.
 		return minDist, false
 	}
 

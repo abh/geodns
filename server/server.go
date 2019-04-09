@@ -35,8 +35,8 @@ func NewServer(si *monitor.ServerInfo) *Server {
 	)
 	prometheus.MustRegister(queries)
 
-	buildInfo := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
+	buildInfo := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
 			Name: "geodns_build_info",
 			Help: "GeoDNS build information (in labels)",
 		},

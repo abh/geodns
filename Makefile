@@ -1,7 +1,7 @@
 
 # where to rsync builds
 DIST?=dist/publish
-DISTSUB=2018/07b
+DISTSUB=2019/04
 
 test: .PHONY
 	go test -v $(shell go list ./... | grep -v /vendor/)

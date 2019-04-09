@@ -59,7 +59,7 @@ func (i Interval) ContainsInterval(oi Interval) bool {
 	return i.Lo <= oi.Lo && oi.Hi <= i.Hi
 }
 
-// InteriorContains returns true iff the the interval strictly contains p.
+// InteriorContains returns true iff the interval strictly contains p.
 func (i Interval) InteriorContains(p float64) bool {
 	return i.Lo < p && p < i.Hi
 }
@@ -138,9 +138,14 @@ func (i Interval) Union(other Interval) Interval {
 
 func (i Interval) String() string { return fmt.Sprintf("[%.7f, %.7f]", i.Lo, i.Hi) }
 
-// epsilon is a small number that represents a reasonable level of noise between two
-// values that can be considered to be equal.
-const epsilon = 1e-14
+const (
+	// epsilon is a small number that represents a reasonable level of noise between two
+	// values that can be considered to be equal.
+	epsilon = 1e-15
+	// dblEpsilon is a smaller number for values that require more precision.
+	// This is the C++ DBL_EPSILON equivalent.
+	dblEpsilon = 2.220446049250313e-16
+)
 
 // ApproxEqual reports whether the interval can be transformed into the
 // given interval by moving each endpoint a small distance.

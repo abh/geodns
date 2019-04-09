@@ -62,8 +62,8 @@ func main() {
 	)
 	prometheus.MustRegister(queries)
 
-	buildInfo := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
+	buildInfo := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
 			Name: "geodns_logs_build_info",
 			Help: "GeoDNS logs build information (in labels)",
 		},

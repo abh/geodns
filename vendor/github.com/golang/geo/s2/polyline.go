@@ -164,11 +164,6 @@ func (p *Polyline) Edge(i int) Edge {
 	return Edge{(*p)[i], (*p)[i+1]}
 }
 
-// HasInterior returns false as Polylines are not closed.
-func (p *Polyline) HasInterior() bool {
-	return false
-}
-
 // ReferencePoint returns the default reference point with negative containment because Polylines are not closed.
 func (p *Polyline) ReferencePoint() ReferencePoint {
 	return OriginReferencePoint(false)
@@ -194,14 +189,16 @@ func (p *Polyline) ChainPosition(edgeID int) ChainPosition {
 	return ChainPosition{0, edgeID}
 }
 
-// dimension returns the dimension of the geometry represented by this Polyline.
-func (p *Polyline) dimension() dimension { return polylineGeometry }
+// Dimension returns the dimension of the geometry represented by this Polyline.
+func (p *Polyline) Dimension() int { return 1 }
 
 // IsEmpty reports whether this shape contains no points.
 func (p *Polyline) IsEmpty() bool { return defaultShapeIsEmpty(p) }
 
 // IsFull reports whether this shape contains all points on the sphere.
 func (p *Polyline) IsFull() bool { return defaultShapeIsFull(p) }
+
+func (p *Polyline) privateInterface() {}
 
 // findEndVertex reports the maximal end index such that the line segment between
 // the start index and this one such that the line segment between these two
@@ -384,13 +381,88 @@ func (p *Polyline) decode(d decoder) {
 	}
 }
 
+// Project returns a point on the polyline that is closest to the given point,
+// and the index of the next vertex after the projected point. The
+// value of that index is always in the range [1, len(polyline)].
+// The polyline must not be empty.
+func (p *Polyline) Project(point Point) (Point, int) {
+	if len(*p) == 1 {
+		// If there is only one vertex, it is always closest to any given point.
+		return (*p)[0], 1
+	}
+
+	// Initial value larger than any possible distance on the unit sphere.
+	minDist := 10 * s1.Radian
+	minIndex := -1
+
+	// Find the line segment in the polyline that is closest to the point given.
+	for i := 1; i < len(*p); i++ {
+		if dist := DistanceFromSegment(point, (*p)[i-1], (*p)[i]); dist < minDist {
+			minDist = dist
+			minIndex = i
+		}
+	}
+
+	// Compute the point on the segment found that is closest to the point given.
+	closest := Project(point, (*p)[minIndex-1], (*p)[minIndex])
+	if closest == (*p)[minIndex] {
+		minIndex++
+	}
+
+	return closest, minIndex
+}
+
+// IsOnRight reports whether the point given is on the right hand side of the
+// polyline, using a naive definition of "right-hand-sideness" where the point
+// is on the RHS of the polyline iff the point is on the RHS of the line segment
+// in the polyline which it is closest to.
+// The polyline must have at least 2 vertices.
+func (p *Polyline) IsOnRight(point Point) bool {
+	// If the closest point C is an interior vertex of the polyline, let B and D
+	// be the previous and next vertices. The given point P is on the right of
+	// the polyline (locally) if B, P, D are ordered CCW around vertex C.
+	closest, next := p.Project(point)
+	if closest == (*p)[next-1] && next > 1 && next < len(*p) {
+		if point == (*p)[next-1] {
+			// Polyline vertices are not on the RHS.
+			return false
+		}
+		return OrderedCCW((*p)[next-2], point, (*p)[next], (*p)[next-1])
+	}
+	// Otherwise, the closest point C is incident to exactly one polyline edge.
+	// We test the point P against that edge.
+	if next == len(*p) {
+		next--
+	}
+	return Sign(point, (*p)[next], (*p)[next-1])
+}
+
+// Validate checks whether this is a valid polyline or not.
+func (p *Polyline) Validate() error {
+	// All vertices must be unit length.
+	for i, pt := range *p {
+		if !pt.IsUnit() {
+			return fmt.Errorf("vertex %d is not unit length", i)
+		}
+	}
+
+	// Adjacent vertices must not be identical or antipodal.
+	for i := 1; i < len(*p); i++ {
+		prev, cur := (*p)[i-1], (*p)[i]
+		if prev == cur {
+			return fmt.Errorf("vertices %d and %d are identical", i-1, i)
+		}
+		if prev == (Point{cur.Mul(-1)}) {
+			return fmt.Errorf("vertices %d and %d are antipodal", i-1, i)
+		}
+	}
+
+	return nil
+}
+
 // TODO(roberts): Differences from C++.
-// IsValid
 // Suffix
 // Interpolate/UnInterpolate
-// Project
-// IsPointOnRight
 // Intersects(Polyline)
-// Reverse
 // ApproxEqual
 // NearlyCoversPolyline

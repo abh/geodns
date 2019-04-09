@@ -41,7 +41,7 @@ import (
 )
 
 // VERSION is the current version of GeoDNS
-var VERSION string = "3.0.1"
+var VERSION string = "3.0.2"
 var buildTime string
 var gitVersion string
 
