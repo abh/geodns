@@ -50,7 +50,7 @@ func TestTargetParse(t *testing.T) {
 }
 
 func TestGetTargets(t *testing.T) {
-	ip := net.ParseIP("207.171.1.1")
+	ip := net.ParseIP("93.184.216.34")
 
 	g, err := geoip2.New(geoip2.FindDB())
 	if err != nil {
@@ -79,12 +79,12 @@ func TestGetTargets(t *testing.T) {
 	tests := []test{
 		{
 			"@ continent country region ",
-			[]string{"us-ca", "us", "north-america", "@"},
+			[]string{"us-ma", "us", "north-america", "@"},
 			"",
 		},
 		{
 			"@ continent regiongroup country region ",
-			[]string{"us-ca", "us-west", "us", "north-america", "@"},
+			[]string{"us-ma", "us-east", "us", "north-america", "@"},
 			"",
 		},
 		{
@@ -92,14 +92,26 @@ func TestGetTargets(t *testing.T) {
 			[]string{"[2607:f238:2::ff:4]", "[2607:f238:2::]"},
 			"2607:f238:2:0::ff:4",
 		},
+		{
+			// GeoLite2 doesn't have cities/regions for IPv6 addresses?
+			"country",
+			[]string{"us"},
+			"2606:2800:220:1:248:1893:25c8:1946",
+		},
 	}
 
 	if ok, _ := g.HasASN(); ok {
 		tests = append(tests,
 			test{"@ continent regiongroup country region asn ip",
-				[]string{"[207.171.1.1]", "[207.171.1.0]", "as7012", "us-ca", "us-west", "us", "north-america", "@"},
-				"207.171.1.1",
-			})
+				[]string{"[98.248.0.1]", "[98.248.0.0]", "as7922", "us-ca", "us-west", "us", "north-america", "@"},
+				"98.248.0.1",
+			},
+			test{
+				"country asn",
+				[]string{"as8674", "se"},
+				"2a01:3f0:1:3::1",
+			},
+		)
 	}
 
 	for _, test := range tests {
@@ -109,6 +121,8 @@ func TestGetTargets(t *testing.T) {
 
 		tgt, _ = ParseTargets(test.Str)
 		targets, _, _ = tgt.GetTargets(ip, false)
+
+		t.Logf("testing %s, got %q", ip, targets)
 
 		if !reflect.DeepEqual(targets, test.Targets) {
 			t.Logf("For IP '%s' targets '%s' expected '%s', got '%s'", ip, test.Str, test.Targets, targets)

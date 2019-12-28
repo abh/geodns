@@ -7,6 +7,7 @@ import (
 	"github.com/golang/geo/s2"
 )
 
+// Provider is the interface for geoip providers
 type Provider interface {
 	HasCountry() (bool, error)
 	GetCountry(ip net.IP) (country, continent string, netmask int)
@@ -16,8 +17,12 @@ type Provider interface {
 	GetLocation(ip net.IP) (location *Location, err error)
 }
 
-const MAX_DISTANCE = 360
+// MaxDistance is the distance returned if Distance() is
+// called with a nil location
+const MaxDistance = 360
 
+// Location is the struct the GeoIP provider packages use to
+// return location details for an IP.
 type Location struct {
 	Country     string
 	Continent   string
@@ -28,13 +33,15 @@ type Location struct {
 	Netmask     int
 }
 
+// MaxDistance() returns the MaxDistance constant
 func (l *Location) MaxDistance() float64 {
-	return MAX_DISTANCE
+	return MaxDistance
 }
 
+// Distance returns the distance between the two locations
 func (l *Location) Distance(to *Location) float64 {
 	if to == nil {
-		return MAX_DISTANCE
+		return MaxDistance
 	}
 	ll1 := s2.LatLngFromDegrees(l.Latitude, l.Longitude)
 	ll2 := s2.LatLngFromDegrees(to.Latitude, to.Longitude)
