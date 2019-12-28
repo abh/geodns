@@ -4,9 +4,9 @@
 ; with your .json zone files.
 
 [geoip]
-;; Directory containing the GeoIP .dat database files; defaults
-;; to looking through a list of directories looking for one that
-;; exists.
+;; Directory containing the GeoIP2 .mmdb database files; defaults
+;; to looking through a list of common directories looking for one
+;; of those that exists.
 ;directory=/usr/local/share/GeoIP/
 
 [querylog]
