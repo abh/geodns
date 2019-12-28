@@ -17,7 +17,10 @@ go build -o dist/geodns-$OS-$ARCH \
   -ldflags "-X main.gitVersion=$REVISION -X main.buildTime=$BUILDTIME" \
   -v && \
   (cd geodns-logs && go build -v -o ../dist/geodns-logs-$OS-$ARCH && cd ..) && \
-cd dist && \
-tar -cvHf geodns-$OS-$ARCH.tar \
+  cd dist && \
+  rm -f service service-logs && \
+  ln -s ../service . && \
+  ln -s ../service-logs . && \
+  tar -cvhf geodns-$OS-$ARCH.tar \
  --exclude \*~ geodns-$OS-$ARCH \
  geodns-logs-$OS-$ARCH service service-logs
