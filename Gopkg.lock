@@ -64,21 +64,6 @@
   version = "v1.1.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:1ebcd0aef6d4512ef3e56932606daec583ea39f2b756111f64d50179ef032130"
-  name = "github.com/hpcloud/tail"
-  packages = [
-    ".",
-    "ratelimiter",
-    "util",
-    "watch",
-    "winfile",
-  ]
-  pruneopts = "NUT"
-  revision = "7d02b9cfe313d6d68d4a184d56d490b5a8ba4163"
-  source = "https://github.com/abh/tail.git"
-
-[[projects]]
   digest = "1:5985ef4caf91ece5d54817c11ea25f182697534f8ae6521eadcd628c142ac4b6"
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
@@ -93,6 +78,20 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "eda228adcff6f7a80ddaf1d265209a10a4f51ca9"
+
+[[projects]]
+  digest = "1:17995b544cdab2ad44419d8c9f551416c63c0fdee5a8b916373188623ed77ea5"
+  name = "github.com/nxadm/tail"
+  packages = [
+    ".",
+    "ratelimiter",
+    "util",
+    "watch",
+    "winfile",
+  ]
+  pruneopts = "NUT"
+  revision = "327c577245448d8192115e77a76ea3d6aee88202"
+  version = "v1.4.4"
 
 [[projects]]
   branch = "master"
@@ -269,8 +268,8 @@
     "github.com/abh/errorutil",
     "github.com/fsnotify/fsnotify",
     "github.com/golang/geo/s2",
-    "github.com/hpcloud/tail",
     "github.com/miekg/dns",
+    "github.com/nxadm/tail",
     "github.com/oschwald/geoip2-golang",
     "github.com/pborman/uuid",
     "github.com/prometheus/client_golang/prometheus",

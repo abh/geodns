@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hpcloud/tail"
+	"github.com/nxadm/tail"
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
