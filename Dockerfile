@@ -1,4 +1,4 @@
-FROM golang:1.10.1-alpine3.7 as compiler
+FROM golang:1.12.3-alpine3.9 as build
 
 RUN apk add --no-cache git
 WORKDIR /go/src/github.com/abh/geodns
@@ -12,5 +12,5 @@ RUN go build  -o /geodns
 
 
 FROM scratch
-COPY --from=compiler /geodns /geodns
+COPY --from=build /geodns /geodns
 ENTRYPOINT ["/geodns"]
