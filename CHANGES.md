@@ -1,9 +1,11 @@
 # GeoDNS Changelog
 
-## Master
+## 3.0.2 December 2019
 
 * Better test errors when geoip2 files aren't found
 * Require Go 1.13 or later (just for build script for now)
+* Add geodns-logs to Docker image
+* Fix targeting tests (GeoIP data changed)
 * Update dependencies
 
 ## 3.0.1 April 2019
