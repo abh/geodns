@@ -145,10 +145,10 @@ func (g *GeoIP2) HasASN() (bool, error) {
 	return false, err
 }
 
-// GetASN returns the ASN for the IP (as a "as123" string and
-// an integer)
+// GetASN returns the ASN for the IP (as a "as123" string) and the netmask
 func (g *GeoIP2) GetASN(ip net.IP) (string, int, error) {
 	r, err := g.get(asnDB, "")
+	log.Printf("GetASN for %s, got DB? %s", ip, err)
 	if err != nil {
 		return "", 0, err
 	}
@@ -158,7 +158,11 @@ func (g *GeoIP2) GetASN(ip net.IP) (string, int, error) {
 		return "", 0, fmt.Errorf("lookup ASN for '%s': %s", ip.String(), err)
 	}
 	asn := c.AutonomousSystemNumber
-	return fmt.Sprintf("as%d", asn), 0, nil
+	netmask := 24
+	if ip.To4() != nil {
+		netmask = 48
+	}
+	return fmt.Sprintf("as%d", asn), netmask, nil
 }
 
 // HasCountry checks if the GeoIP country database is available
