@@ -14,10 +14,11 @@ ARCH=${GOARCH:-`go env GOARCH`}
 set -ex
 
 go build -o dist/geodns-$OS-$ARCH \
+  -mod=vendor \
   -trimpath \
   -ldflags "-X main.gitVersion=$REVISION -X main.buildTime=$BUILDTIME" \
   -v && \
-  (cd geodns-logs && go build -v -o ../dist/geodns-logs-$OS-$ARCH && cd ..) && \
+  (cd geodns-logs && go build -trimpath -mod=vendor -v -o ../dist/geodns-logs-$OS-$ARCH && cd ..) && \
   cd dist && \
   rm -f service service-logs && \
   ln -s ../service . && \

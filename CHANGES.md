@@ -1,5 +1,11 @@
 # GeoDNS Changelog
 
+## 3.1.0 - in development
+
+* NSID support
+* Support for DNS Cookies
+* dnsflagday cleanups
+
 ## 3.0.2 December 2019
 
 * Better test errors when geoip2 files aren't found

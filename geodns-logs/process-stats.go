@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/nxadm/tail"
 	"github.com/miekg/dns"
+	"github.com/nxadm/tail"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -23,11 +23,11 @@ import (
 // Add vendor yes/no
 // add server region tag (identifier)?
 
-const UserAgent = "geodns-logs/2.0"
+const userAgent = "geodns-logs/2.0"
 
 func main() {
 
-	log.Printf("Starting %q", UserAgent)
+	log.Printf("Starting %q", userAgent)
 
 	identifierFlag := flag.String("identifier", "", "identifier (hostname, pop name or similar)")
 	// verboseFlag := flag.Bool("verbose", false, "verbose output")
@@ -70,7 +70,7 @@ func main() {
 		[]string{"Version"},
 	)
 	prometheus.MustRegister(buildInfo)
-	buildInfo.WithLabelValues(UserAgent).Set(1)
+	buildInfo.WithLabelValues(userAgent).Set(1)
 
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {

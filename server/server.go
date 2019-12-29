@@ -15,6 +15,7 @@ type serverMetrics struct {
 	Queries *prometheus.CounterVec
 }
 
+// Server ...
 type Server struct {
 	queryLogger        querylog.QueryLogger
 	mux                *dns.ServeMux
@@ -23,6 +24,7 @@ type Server struct {
 	metrics            *serverMetrics
 }
 
+// NewServer ...
 func NewServer(si *monitor.ServerInfo) *Server {
 	mux := dns.NewServeMux()
 
@@ -68,16 +70,18 @@ func NewServer(si *monitor.ServerInfo) *Server {
 	return &Server{mux: mux, info: si, metrics: metrics}
 }
 
-// Setup the QueryLogger. For now it only supports writing to a file (and all
-// zones get logged to the same file).
+// SetQueryLogger configures the query logger. For now it only supports writing to
+// a file (and all zones get logged to the same file).
 func (srv *Server) SetQueryLogger(logger querylog.QueryLogger) {
 	srv.queryLogger = logger
 }
 
+// Add adds the Zone to be handled under the specified name
 func (srv *Server) Add(name string, zone *zones.Zone) {
 	srv.mux.HandleFunc(name, srv.setupServerFunc(zone))
 }
 
+// Remove removes the zone name from being handled by the server
 func (srv *Server) Remove(name string) {
 	srv.mux.HandleRemove(name)
 }
@@ -88,10 +92,14 @@ func (srv *Server) setupServerFunc(zone *zones.Zone) func(dns.ResponseWriter, *d
 	}
 }
 
+// ServeDNS calls ServeDNS in the dns package
 func (srv *Server) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	srv.mux.ServeDNS(w, r)
 }
 
+// ListenAndServe starts the DNS server on the specified IP
+// (both tcp and udp) and returns. If something goes wrong
+// it will crash the process with an error message.
 func (srv *Server) ListenAndServe(ip string) {
 
 	prots := []string{"udp", "tcp"}
