@@ -20,7 +20,7 @@ github.com/golang/protobuf/proto
 github.com/google/uuid
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/miekg/dns v1.1.26
+# github.com/miekg/dns v1.1.26 => github.com/abh/dns v1.1.26-1
 github.com/miekg/dns
 # github.com/nxadm/tail v1.4.4
 github.com/nxadm/tail

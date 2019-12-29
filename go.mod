@@ -25,4 +25,4 @@ require (
 	gopkg.in/yaml.v2 v2.2.7 // indirect
 )
 
-// replace github.com/miekg/dns v1.1.26 => github.com/abh/dns v1.1.26-1
+replace github.com/miekg/dns v1.1.26 => github.com/abh/dns v1.1.26-1
