@@ -1,7 +1,7 @@
 
 # where to rsync builds
 DIST?=dist/publish
-DISTSUB=2020/01
+DISTSUB=2020/05
 
 test: .PHONY
 	go test -v $(shell go list ./... | grep -v /vendor/)
@@ -13,7 +13,7 @@ docker-test: .PHONY
 	# test that we don't have missing dependencies
 	docker run --rm -v `pwd`:/go/src/github.com/abh/geodns \
 		-v /opt/local/share/GeoIP:/opt/local/share/GeoIP \
-		golang:1.13.5-alpine3.10 \
+		golang:1.14-alpine3.11 -- \
 		go test ./...
 
 devel:

@@ -5,6 +5,7 @@
 * NSID support
 * Support for DNS Cookies
 * dnsflagday cleanups
+* Update dependencies
 
 ## 3.0.2 December 2019
 
