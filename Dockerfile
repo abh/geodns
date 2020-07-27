@@ -1,34 +1,25 @@
-FROM golang:1.14-alpine3.11 as build
+FROM golang as prepare
+COPY go.mod go.sum /goapp/
+WORKDIR /goapp/
+RUN go mod download
 
-RUN apk add --no-cache git tar
-
-WORKDIR /go/src/github.com/abh/geodns
-
+FROM golang as build
 ENV CGO_ENABLED=0
-
-ADD vendor/ vendor/
-ADD applog/ applog/
-ADD countries/ countries/
-ADD geodns-logs/ geodns-logs/
-ADD health/ health/
-ADD monitor/ monitor/
-ADD querylog/ querylog/
-ADD server/ server/
-ADD targeting/ targeting/
-ADD typeutil/ typeutil/
-ADD zones/ zones/
-ADD service/ service/
-ADD service-logs/ service-logs/
-ADD .git/ .git/
-ADD *.go build ./
-
-RUN ./build
-RUN ls -l
-RUN ls -l dist
-
-RUN ln dist/* /
+ARG REVISION=${REVISION:-""}
+ENV REVISION=${REVISION}
+COPY --from=prepare /go/pkg/mod /go/pkg/mod
+COPY . /goapp
+WORKDIR /goapp/
+RUN go mod vendor
+RUN go build -o dist/geodns \
+      -mod=vendor \
+      -trimpath \
+      -ldflags "-X main.gitVersion=$REVISION -X main.buildTime=`TZ=UTC date "+%Y-%m-%dT%H:%MZ"`" \
+      -v && \
+      (cd geodns-logs && go build -trimpath -mod=vendor -v -o ../dist/geodns-logs && cd ..)
 
 FROM scratch
-COPY --from=build /geodns-linux-amd64 /geodns
-COPY --from=build /geodns-logs-linux-amd64 /geodns-logs
+COPY --from=build /goapp/dist/geodns /geodns
+COPY --from=build /goapp/dist/geodns-logs /geodns-logs
+RUN mkdir ./dns/
 ENTRYPOINT ["/geodns"]
