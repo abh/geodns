@@ -1,0 +1,15 @@
+#!/bin/bash
+
+account=$1
+
+set -euo pipefail
+
+if [ -z "$account" ]; then
+  echo specify account as the first parameter
+  exit 2
+fi
+
+for f in dist/*.rpm dist/*.deb; do
+  echo Uploading $f
+  curl -sf -F package=@$f https://${FURY_TOKEN}@push.fury.io/${account}/
+done

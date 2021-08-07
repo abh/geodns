@@ -1,0 +1,9 @@
+beta4_key=
+beta6_key=
+beta4_url=https://www.beta.grundclock.com/monitor
+beta6_url=https://www.beta.grundclock.com/monitor
+
+prod4_key=
+prod6_key=
+prod4_url=https://api.ntppool.org/monitor
+prod6_url=https://api.ntppool.org/monitor

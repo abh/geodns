@@ -1,0 +1,84 @@
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+builds:
+  - id: geodns
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X main.VERSION={{.Version}}{{ if index .Env "DRONE_BUILD_NUMBER" }}-{{ .Env.DRONE_BUILD_NUMBER }}{{ end }}
+      - -X main.gitVersion={{.Commit}}
+      - -X main.buildTime={{.Date}}
+
+    goos:
+      - linux
+      - freebsd
+      - darwin
+    ignore:
+      - goos: darwin
+        goarch: 386
+      - goos: freebsd
+        goarch: 386
+      - goos: freebsd
+        goarch: arm64
+archives:
+  - replacements:
+      #darwin: Darwin
+      #linux: Linux
+      #windows: Windows
+      #386: i386
+      #amd64: x86_64
+checksum:
+  name_template: "checksums.txt"
+snapshot:
+  name_template: '{{ .Tag }}{{ if index .Env "DRONE_BUILD_NUMBER" }}-{{ .Env.DRONE_BUILD_NUMBER }}{{ end }}'
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+nfpms:
+  - id: geodns
+
+    # Name of the package.
+    # Defaults to `ProjectName`.
+    package_name: geodns
+
+    # release: {{ if index .Env "DRONE_BUILD_NUMBER" }}{{ .Env.DRONE_BUILD_NUMBER }}{{ else }}1{{ end }}
+
+    # You can change the file name of the package.
+    # Default: `{{ .PackageName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}`
+    file_name_template: '{{ .ProjectName }}_{{ .Version }}{{ if index .Env "DRONE_BUILD_NUMBER" }}-{{ .Env.DRONE_BUILD_NUMBER }}{{ end }}._{{ .Os }}_{{ .Arch }}'
+
+    vendor: NTP Pool Project
+    homepage: https://www.ntppool.org/
+    maintainer: Ask Bjørn Hansen <ask@develooper.com>
+    description: GeoDNS server
+    license: Apache 2.0
+    formats:
+      - deb
+      - rpm
+      - apk
+    replacements:
+      386: i686
+      amd64: x86_64
+    bindir: /usr/bin
+    contents:
+      - src: "scripts/geodns.service"
+        dst: "/etc/systemd/system/geodns.service"
+
+      - src: "scripts/defaults"
+        dst: "/etc/default/geodns.sample"
+        type: config
+
+    scripts:
+      postinstall: scripts/postinstall.sh
+
+    overrides:
+      rpm:
+        #file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Arch }}"
+        # {{ if index .Env "DRONE_BUILD_NUMBER" }}-{{ .Env.DRONE_BUILD_NUMBER }}{{ end }}

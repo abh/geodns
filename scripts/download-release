@@ -1,0 +1,23 @@
+#!/bin/bash
+
+BUILD=$1
+DIR=$2
+
+set -euo pipefail
+
+if [ -z "$DIR" ]; then
+  echo run with $0 BUILD_NUMBER DIR
+  exit 2
+fi
+
+mkdir -p $DIR
+
+BASE=https://geodns.bitnames.com/builds/$BUILD
+
+files=`curl -sf $BASE/checksums.txt | awk '{print $2}'`
+
+for f in $files; do
+  url=$BASE/$f
+  echo downloading $f
+  curl -fRo $DIR/$f $url
+done

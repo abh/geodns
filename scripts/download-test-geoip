@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -euo pipefail
+
+DIR=/usr/local/share/GeoIP
+
+mkdir -p $DIR
+
+for f in GeoLite2-ASN.mmdb GeoLite2-City.mmdb GeoLite2-Country.mmdb; do
+    Z=""
+    if [ -e $DIR/$f ]; then
+        Z="-z $DIR/$f"
+    fi
+    curl $Z -sfo $DIR/$f https://geodns.bitnames.com/geoip/$f
+done

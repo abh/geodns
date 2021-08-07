@@ -1,0 +1,13 @@
+[Unit]
+Description=GeoDNS server
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/geodns
+ExecStart=/usr/bin/geodns
+Restart=always
+TimeoutStartSec=10
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

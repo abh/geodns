@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -euo pipefail
+
+DRONE_TAG=${DRONE_TAG-""}
+
+is_snapshot=""
+
+if [ -z "$DRONE_TAG" ]; then
+  is_snapshot="--snapshot"
+fi
+
+curl -fsL https://git.io/goreleaser | bash -s -- release --snapshot
