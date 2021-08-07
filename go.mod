@@ -1,29 +1,27 @@
 module github.com/abh/geodns
 
-go 1.13
+go 1.16
 
 require (
-	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/abh/errorutil v0.0.0-20130729183701-f9bd360d00b9
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/golang/geo v0.0.0-20200319012246-673a6f80352d
-	github.com/golang/protobuf v1.4.2 // indirect
-	github.com/google/uuid v1.1.1 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
-	github.com/miekg/dns v1.1.29
-	github.com/nxadm/tail v1.4.4
-	github.com/oschwald/geoip2-golang v1.4.0
-	github.com/pborman/uuid v1.2.0
-	github.com/prometheus/client_golang v1.6.0
-	github.com/prometheus/common v0.10.0 // indirect
-	github.com/stretchr/testify v1.4.1-0.20191223143401-858f37ff9bc4
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
-	golang.org/x/net v0.0.0-20200513185701-a91f0712d120 // indirect
-	golang.org/x/sys v0.0.0-20200515095857-1151b9dac4a9 // indirect
-	golang.org/x/text v0.3.2 // indirect
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+	github.com/golang/geo v0.0.0-20210211234256-740aa86cb551
+	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/google/uuid v1.3.0 // indirect
+	github.com/miekg/dns v1.1.43
+	github.com/nxadm/tail v1.4.8
+	github.com/oschwald/geoip2-golang v1.5.0
+	github.com/pborman/uuid v1.2.1
+	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/common v0.30.0 // indirect
+	github.com/prometheus/procfs v0.7.2 // indirect
+	github.com/stretchr/testify v1.7.0
+	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
+	golang.org/x/sys v0.0.0-20210806184541-e5e7981a1069 // indirect
+	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/gcfg.v1 v1.2.3
-	gopkg.in/natefinch/lumberjack.v2 v2.0.1-0.20190411184413-94d9e492cc53
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v2 v2.2.7 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
