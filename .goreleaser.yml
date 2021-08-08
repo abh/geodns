@@ -52,7 +52,7 @@ nfpms:
 
     # You can change the file name of the package.
     # Default: `{{ .PackageName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}`
-    file_name_template: '{{ .ProjectName }}_{{ .Version }}{{ if index .Env "DRONE_BUILD_NUMBER" }}-{{ .Env.DRONE_BUILD_NUMBER }}{{ end }}._{{ .Os }}_{{ .Arch }}'
+    file_name_template: '{{ .ProjectName }}_{{ .Version }}{{ if index .Env "DRONE_BUILD_NUMBER" }}-{{ .Env.DRONE_BUILD_NUMBER }}{{ end }}_{{ .Os }}_{{ .Arch }}'
 
     vendor: NTP Pool Project
     homepage: https://www.ntppool.org/
