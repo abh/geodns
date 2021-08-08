@@ -9,7 +9,7 @@ builds:
     ldflags:
       - -s -w
       - -X main.VERSION={{.Version}}{{ if index .Env "DRONE_BUILD_NUMBER" }}-{{ .Env.DRONE_BUILD_NUMBER }}{{ end }}
-      - -X main.gitVersion={{.Commit}}
+      - -X main.gitVersion={{.ShortCommit}}
       - -X main.buildTime={{.Date}}
 
     goos:
