@@ -10,4 +10,4 @@ if [ -z "$DRONE_TAG" ]; then
   is_snapshot="--snapshot"
 fi
 
-curl -fsL https://git.io/goreleaser | bash -s -- release --snapshot
+curl -fsL https://git.io/goreleaser | bash -s -- release --snapshot -p 3

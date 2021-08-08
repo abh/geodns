@@ -5,6 +5,7 @@
 * NSID support
 * Support for DNS Cookies
 * dnsflagday cleanups
+* Add Russia's federal districts as country region codes
 * Update dependencies
 * Publish rpm and deb files
 
