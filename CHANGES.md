@@ -1,11 +1,12 @@
 # GeoDNS Changelog
 
-## 3.1.0 - in development
+## 3.1.0 August 2021
 
 * NSID support
 * Support for DNS Cookies
 * dnsflagday cleanups
 * Update dependencies
+* Publish rpm and deb files
 
 ## 3.0.2 December 2019
 
