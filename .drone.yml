@@ -8,6 +8,13 @@ steps:
     image: alpine/git
     commands:
       - git fetch --tags
+    resources:
+      requests:
+        cpu: 250
+        memory: 50MiB
+      limits:
+        cpu: 250
+        memory: 100MiB
 
   - name: test
     image: golang:1.16.7
@@ -19,6 +26,13 @@ steps:
       - go get
       - go test -v ./...
       - go build ./...
+    resources:
+      requests:
+        cpu: 1000
+        memory: 128MiB
+      limits:
+        cpu: 2000
+        memory: 512MiB
 
   - name: goreleaser
     image: golang:1.16.7
@@ -37,6 +51,13 @@ steps:
 
   - name: upload
     image: plugins/s3
+    resources:
+      requests:
+        cpu: 250
+        memory: 64MiB
+      limits:
+        cpu: 250
+        memory: 256MiB
     settings:
       access_key:
         from_secret: s3_access_key
@@ -52,6 +73,13 @@ steps:
 
   - name: fury-publish
     image: golang:1.16.7
+    resources:
+      requests:
+        cpu: 250
+        memory: 64MiB
+      limits:
+        cpu: 250
+        memory: 256MiB
     environment:
       FURY_TOKEN:
         from_secret: fury_test_token
@@ -84,9 +112,23 @@ steps:
     image: golang:1.16.7
     commands:
       - ./scripts/download-release ${DRONE_BUILD_PARENT} dist/
+    resources:
+      requests:
+        cpu: 250
+        memory: 64MiB
+      limits:
+        cpu: 250
+        memory: 256MiB
 
   - name: fury-publish
     image: golang:1.16.7
+    resources:
+      requests:
+        cpu: 250
+        memory: 64MiB
+      limits:
+        cpu: 250
+        memory: 256MiB
     environment:
       FURY_TOKEN:
         from_secret: fury_token
@@ -101,6 +143,6 @@ trigger:
     - publish
 ---
 kind: signature
-hmac: 687f4bc1dfa9b493fed2838a5033619ea1d5a8cc7b1133dc16db6489552ea896
+hmac: d6a923125d5b4d28469fb999962a7aecfeb71a1f59680e0b92bc5e864d0027ff
 
 ...
