@@ -19,5 +19,5 @@ files=`curl -sf $BASE/checksums.txt | awk '{print $2}'`
 for f in $files; do
   url=$BASE/$f
   echo downloading $f
-  curl -fRo $DIR/$f $url
+  curl -sfRo $DIR/$f $url
 done
