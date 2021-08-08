@@ -82,10 +82,12 @@ func (stats *Stats) Add(e *querylog.Entry) error {
 	if e.Origin == "pool.ntp.org" || strings.HasSuffix(e.Origin, "ntppool.org") {
 		vendor = vendorName(e.Name)
 
-		var ok bool
-		poolCC, ok = getPoolCC(e.LabelName)
-		if !ok {
-			log.Printf("Could not get valid poolCC label for %+v", e)
+		if len(vendor) == 0 && e.Name != e.Origin {
+			var ok bool
+			poolCC, ok = getPoolCC(e.LabelName)
+			if !ok {
+				log.Printf("Could not get valid poolCC label for %+v", e)
+			}
 		}
 	}
 
