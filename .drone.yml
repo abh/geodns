@@ -38,10 +38,10 @@ steps:
     image: golang:1.16.7
     resources:
       requests:
-        cpu: 3000
+        cpu: 4000
         memory: 512MiB
       limits:
-        cpu: 6000
+        cpu: 10000
         memory: 2048MiB
     volumes:
       - name: cache

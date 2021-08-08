@@ -23,11 +23,11 @@ import (
 // Add vendor yes/no
 // add server region tag (identifier)?
 
-const userAgent = "geodns-logs/2.0"
+var version string = "2.1"
 
 func main() {
 
-	log.Printf("Starting %q", userAgent)
+	log.Printf("Starting geodns-logs/%q", version)
 
 	identifierFlag := flag.String("identifier", "", "identifier (hostname, pop name or similar)")
 	// verboseFlag := flag.Bool("verbose", false, "verbose output")
@@ -39,9 +39,9 @@ func main() {
 	if len(*identifierFlag) > 0 {
 		ids := strings.Split(*identifierFlag, ",")
 		serverID = ids[0]
-		if len(ids) > 1 {
-			// serverGroups = ids[1:]
-		}
+		// if len(ids) > 1 {
+		// serverGroups = ids[1:]
+		// }
 	}
 
 	if len(serverID) == 0 {
@@ -70,7 +70,7 @@ func main() {
 		[]string{"Version"},
 	)
 	prometheus.MustRegister(buildInfo)
-	buildInfo.WithLabelValues(userAgent).Set(1)
+	buildInfo.WithLabelValues("geodns-logs/" + version).Set(1)
 
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {

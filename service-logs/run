@@ -1,0 +1,17 @@
+#!/bin/sh
+exec 2>&1
+sleep 1 # just in case we spin for some reason
+
+cd /opt/geodns
+
+ulimit -n 8192
+
+ID=""
+if [ -e env/ID ]; then
+  ID=`head -1 env/ID`
+  if [ ! -z "$ID" ]; then
+      ID="--identifier=$ID"
+  fi
+fi
+
+exec softlimit -d200000000 envdir ./env setuidgid nobody ./geodns-logs $ID /var/log/geodns/queries.log
