@@ -16,6 +16,9 @@ docker-test: .PHONY
 		golang:1.14-alpine3.11 -- \
 		go test ./...
 
+docker-build: .PHONY
+	docker build --build-arg REVISION=`git rev-parse --short=5  HEAD` -t geodns .
+
 devel:
 	go build -tags devel
 
