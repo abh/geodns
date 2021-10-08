@@ -2,12 +2,14 @@ package geoip2
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/abh/geodns/countries"
 	"github.com/abh/geodns/targeting/geo"
@@ -29,17 +31,25 @@ var dbFiles map[geoType][]string
 type GeoIP2 struct {
 	dir string
 
-	country *geoip2.Reader
-	city    *geoip2.Reader
-	asn     *geoip2.Reader
-	mu      sync.RWMutex
+	country geodb
+	city    geodb
+	asn     geodb
+
+	mu sync.RWMutex
+}
+
+type geodb struct {
+	db           *geoip2.Reader // Database reader
+	fp           string         // FilePath
+	lastModified int64          // Epoch time
+	// l            sync.Mutex     // Individual lock for separate DB access and reload -- Future?
 }
 
 func init() {
 	dbFiles = map[geoType][]string{
-		countryDB: []string{"GeoIP2-Country.mmdb", "GeoLite2-Country.mmdb"},
-		asnDB:     []string{"GeoIP2-ASN.mmdb", "GeoLite2-ASN.mmdb"},
-		cityDB:    []string{"GeoIP2-City.mmdb", "GeoLite2-City.mmdb"},
+		countryDB: {"GeoIP2-Country.mmdb", "GeoLite2-Country.mmdb"},
+		asnDB:     {"GeoIP2-ASN.mmdb", "GeoLite2-ASN.mmdb"},
+		cityDB:    {"GeoIP2-City.mmdb", "GeoLite2-City.mmdb"},
 	}
 }
 
@@ -64,14 +74,15 @@ func FindDB() string {
 }
 
 func (g *GeoIP2) open(t geoType, db string) (*geoip2.Reader, error) {
-
 	fileName := filepath.Join(g.dir, db)
+	var fi fs.FileInfo
 
 	if len(db) == 0 {
 		found := false
 		for _, f := range dbFiles[t] {
+			var err error
 			fileName = filepath.Join(g.dir, f)
-			if _, err := os.Stat(fileName); err == nil {
+			if fi, err = os.Stat(fileName); err == nil {
 				found = true
 				break
 			}
@@ -90,11 +101,17 @@ func (g *GeoIP2) open(t geoType, db string) (*geoip2.Reader, error) {
 
 	switch t {
 	case countryDB:
-		g.country = n
+		g.country.db = n
+		g.country.lastModified = fi.ModTime().UTC().Unix()
+		g.country.fp = fileName
 	case cityDB:
-		g.city = n
+		g.city.db = n
+		g.city.lastModified = fi.ModTime().UTC().Unix()
+		g.city.fp = fileName
 	case asnDB:
-		g.asn = n
+		g.asn.db = n
+		g.asn.lastModified = fi.ModTime().UTC().Unix()
+		g.asn.fp = fileName
 	}
 	return n, nil
 }
@@ -106,11 +123,11 @@ func (g *GeoIP2) get(t geoType, db string) (*geoip2.Reader, error) {
 
 	switch t {
 	case countryDB:
-		r = g.country
+		r = g.country.db
 	case cityDB:
-		r = g.city
+		r = g.city.db
 	case asnDB:
-		r = g.asn
+		r = g.asn.db
 	}
 
 	// unlock so the g.open() call below won't lock
@@ -123,6 +140,50 @@ func (g *GeoIP2) get(t geoType, db string) (*geoip2.Reader, error) {
 	return g.open(t, db)
 }
 
+func (g *GeoIP2) watchFiles() {
+	// Not worried about goroutines leaking because only one geoip2.New call is made in geodns.go (outside of testing)
+	ticker := time.NewTicker(1 * time.Minute)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				g.checkForUpdate()
+			default:
+				time.Sleep(12 * time.Second) // Sleep to avoid constant looping
+			}
+		}
+	}()
+}
+
+func (g *GeoIP2) checkForUpdate() {
+	// Iterate through each file, check modtime. If new, reload file
+	d := []*geodb{&g.country, &g.city, &g.asn} // Slice of pointers is kinda gross, but want to directly reference struct values (per const type)
+	for _, v := range d {
+		fi, err := os.Stat(v.fp)
+		if err != nil {
+			log.Printf("unable to stat DB file at %s :: %v", v.fp, err)
+			continue
+		}
+		if fi.ModTime().UTC().Unix() > v.lastModified {
+			g.mu.Lock()
+			e := v.db.Close()
+			if e != nil {
+				g.mu.Unlock()
+				log.Printf("unable to close DB file %s : %v", v.fp, e)
+				continue
+			}
+			n, e := geoip2.Open(v.fp)
+			if e != nil {
+				g.mu.Unlock()
+				log.Printf("unable to reopen DB file %s : %v", v.fp, e)
+				continue
+			}
+			v.db = n
+			g.mu.Unlock()
+		}
+	}
+}
+
 // New returns a new GeoIP2 provider
 func New(dir string) (*GeoIP2, error) {
 	g := &GeoIP2{
@@ -132,6 +193,8 @@ func New(dir string) (*GeoIP2, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	go g.watchFiles() // Launch goroutine to monitor
 
 	return g, nil
 }
@@ -205,7 +268,7 @@ func (g *GeoIP2) HasLocation() (bool, error) {
 
 // GetLocation returns a geo.Location object for the given IP
 func (g *GeoIP2) GetLocation(ip net.IP) (l *geo.Location, err error) {
-	c, err := g.city.City(ip)
+	c, err := g.city.db.City(ip)
 	if err != nil {
 		log.Printf("Could not lookup CountryRegion for '%s': %s", ip.String(), err)
 		return
@@ -229,5 +292,4 @@ func (g *GeoIP2) GetLocation(ip net.IP) (l *geo.Location, err error) {
 	}
 
 	return
-
 }

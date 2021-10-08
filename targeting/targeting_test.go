@@ -31,9 +31,9 @@ func TestTargetParse(t *testing.T) {
 	}
 
 	tests := [][]string{
-		[]string{"@ continent country asn", "@ continent country asn"},
-		[]string{"asn country", "country asn"},
-		[]string{"continent @ country", "@ continent country"},
+		{"@ continent country asn", "@ continent country asn"},
+		{"asn country", "country asn"},
+		{"continent @ country", "@ continent country"},
 	}
 
 	for _, strs := range tests {
@@ -102,7 +102,8 @@ func TestGetTargets(t *testing.T) {
 
 	if ok, _ := g.HasASN(); ok {
 		tests = append(tests,
-			test{"@ continent regiongroup country region asn ip",
+			test{
+				"@ continent regiongroup country region asn ip",
 				[]string{"[98.248.0.1]", "[98.248.0.0]", "as7922", "us-ca", "us-west", "us", "north-america", "@"},
 				"98.248.0.1",
 			},
