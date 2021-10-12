@@ -17,7 +17,7 @@ steps:
         memory: 100MiB
 
   - name: test
-    image: golang:1.16.7
+    image: golang:1.17.2
     volumes:
       - name: cache
         path: /go
@@ -35,7 +35,7 @@ steps:
         memory: 512MiB
 
   - name: goreleaser
-    image: golang:1.16.7
+    image: golang:1.17.2
     resources:
       requests:
         cpu: 4000
@@ -116,7 +116,7 @@ name: publish-production
 
 steps:
   - name: download
-    image: golang:1.16.7
+    image: golang:1.17.2
     commands:
       - ./scripts/download-release ${DRONE_BUILD_PARENT} dist/
     resources:
@@ -128,7 +128,7 @@ steps:
         memory: 256MiB
 
   - name: fury-publish
-    image: golang:1.16.7
+    image: golang:1.17.2
     resources:
       requests:
         cpu: 250
