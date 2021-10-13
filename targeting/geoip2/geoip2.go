@@ -268,6 +268,10 @@ func (g *GeoIP2) HasLocation() (bool, error) {
 
 // GetLocation returns a geo.Location object for the given IP
 func (g *GeoIP2) GetLocation(ip net.IP) (l *geo.Location, err error) {
+	// Need a read-lock because return value of City is a pointer, not copy of the struct/object
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
 	c, err := g.city.db.City(ip)
 	if err != nil {
 		log.Printf("Could not lookup CountryRegion for '%s': %s", ip.String(), err)
