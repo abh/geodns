@@ -14,6 +14,7 @@ import (
 	"github.com/abh/geodns/countries"
 	"github.com/abh/geodns/targeting/geo"
 	geoip2 "github.com/oschwald/geoip2-golang"
+	"github.com/pkg/errors"
 )
 
 type geoType uint8
@@ -140,48 +141,50 @@ func (g *GeoIP2) get(t geoType, db string) (*geoip2.Reader, error) {
 	return g.open(t, db)
 }
 
+// watchFiles spawns a goroutine to check for new files every minute, reloading if the modtime is newer than the original file's modtime
 func (g *GeoIP2) watchFiles() {
-	// Not worried about goroutines leaking because only one geoip2.New call is made in geodns.go (outside of testing)
+	// Not worried about goroutines leaking because only one geoip2.New call is made in main (outside of testing)
 	ticker := time.NewTicker(1 * time.Minute)
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				g.checkForUpdate()
-			default:
-				time.Sleep(12 * time.Second) // Sleep to avoid constant looping
+				// Iterate through each file, check modtime. If new, reload file
+				d := []*geodb{&g.country, &g.city, &g.asn} // Slice of pointers is kinda gross, but want to directly reference struct values (per const type)
+				for _, v := range d {
+					fi, err := os.Stat(v.fp) // Stat is a non-blocking call we can do for (nearly) free
+					if err != nil {
+						log.Printf("unable to stat DB file at %s :: %v", v.fp, err)
+						continue
+					}
+					if fi.ModTime().UTC().Unix() > v.lastModified {
+						e := g.reloadFile(v)
+						if e != nil {
+							log.Printf("failure to update DB: %v", e)
+						}
+					}
+				}
 			}
 		}
 	}()
 }
 
-func (g *GeoIP2) checkForUpdate() {
-	// Iterate through each file, check modtime. If new, reload file
-	d := []*geodb{&g.country, &g.city, &g.asn} // Slice of pointers is kinda gross, but want to directly reference struct values (per const type)
-	for _, v := range d {
-		fi, err := os.Stat(v.fp)
-		if err != nil {
-			log.Printf("unable to stat DB file at %s :: %v", v.fp, err)
-			continue
-		}
-		if fi.ModTime().UTC().Unix() > v.lastModified {
-			g.mu.Lock()
-			e := v.db.Close()
-			if e != nil {
-				g.mu.Unlock()
-				log.Printf("unable to close DB file %s : %v", v.fp, e)
-				continue
-			}
-			n, e := geoip2.Open(v.fp)
-			if e != nil {
-				g.mu.Unlock()
-				log.Printf("unable to reopen DB file %s : %v", v.fp, e)
-				continue
-			}
-			v.db = n
-			g.mu.Unlock()
-		}
+// reloadFile wraps the DB update operation with a pointer to the geodb struct
+func (g *GeoIP2) reloadFile(v *geodb) error {
+	// Wrap this sequence of operations
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	e := v.db.Close()
+	if e != nil {
+		return errors.Wrapf(e, "unable to close DB file %s", v.fp)
 	}
+	// Directly call geoip2.Open instead of the open() function because we cannot know the related enum value for the given file.
+	n, e := geoip2.Open(v.fp)
+	if e != nil {
+		return errors.Wrapf(e, "unable to reopen DB file %s", v.fp)
+	}
+	v.db = n
+	return nil
 }
 
 // New returns a new GeoIP2 provider
