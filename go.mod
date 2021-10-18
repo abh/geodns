@@ -13,7 +13,6 @@ require (
 	github.com/nxadm/tail v1.4.8
 	github.com/oschwald/geoip2-golang v1.5.0
 	github.com/pborman/uuid v1.2.1
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.30.0 // indirect
 	github.com/prometheus/procfs v0.7.2 // indirect
