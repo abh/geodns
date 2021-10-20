@@ -188,6 +188,10 @@ func (g *GeoIP2) GetCountry(ip net.IP) (country, continent string, netmask int) 
 	g.country.l.RLock()
 	defer g.country.l.RUnlock()
 
+	if !g.country.active {
+		return "", "", 0
+	}
+
 	c, err := g.country.db.Country(ip)
 	if err != nil {
 		log.Printf("Could not lookup country for '%s': %s", ip.String(), err)
@@ -214,6 +218,10 @@ func (g *GeoIP2) GetLocation(ip net.IP) (l *geo.Location, err error) {
 	// Need a read-lock because return value of City is a pointer, not copy of the struct/object
 	g.city.l.RLock()
 	defer g.city.l.RUnlock()
+
+	if !g.city.active {
+		return nil, fmt.Errorf("city db not active")
+	}
 
 	c, err := g.city.db.City(ip)
 	if err != nil {
