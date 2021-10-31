@@ -79,7 +79,7 @@ steps:
     depends_on: [goreleaser]
 
   - name: fury-publish
-    image: golang:1.16.7
+    image: golang:1.17.2
     resources:
       requests:
         cpu: 250

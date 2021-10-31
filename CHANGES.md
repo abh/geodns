@@ -1,5 +1,13 @@
 # GeoDNS Changelog
 
+## 3.2.0 October 2021
+
+* Reload GeoIP 2 databases when they change (Tyler Davis)
+* Updated build process, rpm and deb packages now available
+* Build with Go 1.17.2 (Tyler Davis)
+* Minor fix to geodns-logs tool
+* Updated code comments (Sven Nebel)
+
 ## 3.1.0 August 2021
 
 * NSID support
