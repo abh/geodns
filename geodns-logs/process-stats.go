@@ -168,8 +168,8 @@ func processChan(in chan string, wg *sync.WaitGroup) error {
 	for line := range in {
 		err := json.Unmarshal([]byte(line), &e)
 		if err != nil {
-			log.Printf("Can't unmarshal '%s': %s", line, err)
-			return err
+			log.Printf("unmarshal error '%s': %s", line, err)
+			continue
 		}
 		e.Name = strings.ToLower(e.Name)
 
@@ -177,7 +177,8 @@ func processChan(in chan string, wg *sync.WaitGroup) error {
 
 		err = stats.Add(&e)
 		if err != nil {
-			return err
+			log.Printf("stats error: %s", err)
+			continue
 		}
 	}
 
