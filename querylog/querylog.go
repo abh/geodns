@@ -13,6 +13,7 @@ type QueryLogger interface {
 // easyjson:json
 type Entry struct {
 	Time       int64
+	Hostname   string `json:"omitempty"` // not filled in by geodns
 	Origin     string
 	Name       string
 	Qtype      uint16
