@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine3.14 as build
+FROM golang:1.17-alpine3.15 as build
 
 RUN apk add --no-cache git tar
 

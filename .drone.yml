@@ -17,7 +17,7 @@ steps:
         memory: 100MiB
 
   - name: test
-    image: golang:1.17.5
+    image: golang:1.17.8
     volumes:
       - name: cache
         path: /go
@@ -32,10 +32,10 @@ steps:
         memory: 128MiB
       limits:
         cpu: 2000
-        memory: 512MiB
+        memory: 2GiB
 
   - name: goreleaser
-    image: golang:1.17.5
+    image: golang:1.17.8
     resources:
       requests:
         cpu: 4000
@@ -79,7 +79,7 @@ steps:
     depends_on: [goreleaser]
 
   - name: fury-publish
-    image: golang:1.17.5
+    image: golang:1.17.8
     resources:
       requests:
         cpu: 250
@@ -116,7 +116,7 @@ name: publish-production
 
 steps:
   - name: download
-    image: golang:1.17.2
+    image: golang:1.17.8
     commands:
       - ./scripts/download-release ${DRONE_BUILD_PARENT} dist/
     resources:
@@ -128,7 +128,7 @@ steps:
         memory: 256MiB
 
   - name: fury-publish
-    image: golang:1.17.5
+    image: golang:1.17.8
     resources:
       requests:
         cpu: 250
@@ -150,6 +150,6 @@ trigger:
     - publish
 ---
 kind: signature
-hmac: d6a923125d5b4d28469fb999962a7aecfeb71a1f59680e0b92bc5e864d0027ff
+hmac: 1e8cc0771e5995f2c3dda8356ecc73df0b1a50b1447722aeb58f05a9e294cb95
 
 ...
