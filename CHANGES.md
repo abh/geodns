@@ -1,5 +1,9 @@
 # GeoDNS Changelog
 
+## 3.2.1 November 2022
+* Go 1.19.3
+* Add new country codes
+
 ## 3.2.0 October 2021
 
 * Reload GeoIP 2 databases when they change (Tyler Davis)
