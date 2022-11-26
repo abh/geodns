@@ -24,6 +24,11 @@ type Entry struct {
 	RemoteAddr string
 	ClientAddr string
 	HasECS     bool
+
+        // todo:
+	// - GeoDNS version
+	// - TCP?
+	// - log the answer data
 }
 
 type FileLogger struct {
