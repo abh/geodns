@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine3.15 as build
+FROM golang:1.19.5-alpine as build
 
 RUN apk add --no-cache git tar
 
@@ -6,7 +6,6 @@ WORKDIR /go/src/github.com/abh/geodns
 
 ENV CGO_ENABLED=0
 
-ADD vendor/ vendor/
 ADD applog/ applog/
 ADD countries/ countries/
 ADD geodns-logs/ geodns-logs/
