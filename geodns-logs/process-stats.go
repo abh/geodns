@@ -27,7 +27,7 @@ var version string = "2.1"
 
 func main() {
 
-	log.Printf("Starting geodns-logs/%q", version)
+	log.Printf("Starting geodns-logs/%s", version)
 
 	identifierFlag := flag.String("identifier", "", "identifier (hostname, pop name or similar)")
 	// verboseFlag := flag.Bool("verbose", false, "verbose output")
