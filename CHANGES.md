@@ -1,5 +1,9 @@
 # GeoDNS Changelog
 
+## 3.2.2 May 2023
+* Go 1.20.4
+* Updated dependencies
+
 ## 3.2.1 November 2022
 * Go 1.19.3
 * Add new country codes

@@ -2,7 +2,9 @@
 
 This is the DNS server powering the [NTP Pool](http://www.pool.ntp.org/) system
 and other similar services.
-[![Build Status](https://travis-ci.org/abh/geodns.svg?branch=master)](https://travis-ci.org/abh/geodns)
+
+[![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/7022/badge)](https://bestpractices.coreinfrastructure.org/projects/7022)
+
 
 ## Questions or suggestions?
 
