@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/abh/geodns/monitor"
-	"github.com/abh/geodns/zones"
+	"github.com/abh/geodns/v3/monitor"
+	"github.com/abh/geodns/v3/zones"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 

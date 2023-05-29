@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/abh/geodns/health"
+	"github.com/abh/geodns/v3/health"
 	"github.com/miekg/dns"
 )
 

@@ -1,4 +1,4 @@
-module github.com/abh/geodns
+module github.com/abh/geodns/v3
 
 go 1.18
 

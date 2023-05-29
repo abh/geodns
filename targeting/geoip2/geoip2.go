@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abh/geodns/countries"
-	"github.com/abh/geodns/targeting/geo"
+	"github.com/abh/geodns/v3/countries"
+	"github.com/abh/geodns/v3/targeting/geo"
 	gdb "github.com/oschwald/geoip2-golang"
 )
 

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abh/geodns/targeting/geoip2"
+	"github.com/abh/geodns/v3/targeting/geoip2"
 
 	"github.com/fsnotify/fsnotify"
 	gcfg "gopkg.in/gcfg.v1"

@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/abh/geodns/targeting"
-	"github.com/abh/geodns/typeutil"
+	"github.com/abh/geodns/v3/targeting"
+	"github.com/abh/geodns/v3/typeutil"
 
 	"github.com/abh/errorutil"
 	"github.com/miekg/dns"

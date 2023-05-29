@@ -29,14 +29,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abh/geodns/applog"
-	"github.com/abh/geodns/health"
-	"github.com/abh/geodns/monitor"
-	"github.com/abh/geodns/querylog"
-	"github.com/abh/geodns/server"
-	"github.com/abh/geodns/targeting"
-	"github.com/abh/geodns/targeting/geoip2"
-	"github.com/abh/geodns/zones"
+	"github.com/abh/geodns/v3/applog"
+	"github.com/abh/geodns/v3/health"
+	"github.com/abh/geodns/v3/monitor"
+	"github.com/abh/geodns/v3/querylog"
+	"github.com/abh/geodns/v3/server"
+	"github.com/abh/geodns/v3/targeting"
+	"github.com/abh/geodns/v3/targeting/geoip2"
+	"github.com/abh/geodns/v3/zones"
 	"github.com/pborman/uuid"
 )
 

@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/abh/geodns/monitor"
-	"github.com/abh/geodns/zones"
+	"github.com/abh/geodns/v3/monitor"
+	"github.com/abh/geodns/v3/zones"
 	"github.com/miekg/dns"
 )
 

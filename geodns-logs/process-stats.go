@@ -15,8 +15,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/abh/geodns/countries"
-	"github.com/abh/geodns/querylog"
+	"github.com/abh/geodns/v3/countries"
+	"github.com/abh/geodns/v3/querylog"
 )
 
 // TODO:
@@ -111,11 +111,11 @@ func main() {
 }
 
 var extraValidLabels = map[string]struct{}{
-	"uk":       struct{}{},
-	"_status":  struct{}{},
-	"_country": struct{}{},
-	"www":      struct{}{},
-	"nag-test": struct{}{},
+	"uk":       {},
+	"_status":  {},
+	"_country": {},
+	"www":      {},
+	"nag-test": {},
 }
 
 func validCC(label string) bool {

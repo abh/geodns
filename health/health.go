@@ -3,7 +3,7 @@ package health
 import (
 	"fmt"
 
-	"github.com/abh/geodns/typeutil"
+	"github.com/abh/geodns/v3/typeutil"
 )
 
 type HealthTester interface {

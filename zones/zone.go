@@ -8,10 +8,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/abh/geodns/applog"
-	"github.com/abh/geodns/health"
-	"github.com/abh/geodns/targeting"
-	"github.com/abh/geodns/targeting/geo"
+	"github.com/abh/geodns/v3/applog"
+	"github.com/abh/geodns/v3/health"
+	"github.com/abh/geodns/v3/targeting"
+	"github.com/abh/geodns/v3/targeting/geo"
 
 	"github.com/miekg/dns"
 )

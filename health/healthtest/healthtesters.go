@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abh/geodns/applog"
-	"github.com/abh/geodns/typeutil"
+	"github.com/abh/geodns/v3/applog"
+	"github.com/abh/geodns/v3/typeutil"
 )
 
 /*

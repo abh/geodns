@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/abh/geodns/targeting/geo"
+	"github.com/abh/geodns/v3/targeting/geo"
 )
 
 type TargetOptions int

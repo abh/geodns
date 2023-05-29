@@ -9,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/abh/geodns/targeting"
-	"github.com/abh/geodns/targeting/geoip2"
-	"github.com/abh/geodns/zones"
+	"github.com/abh/geodns/v3/targeting"
+	"github.com/abh/geodns/v3/targeting/geoip2"
+	"github.com/abh/geodns/v3/zones"
 )
 
 func TestHTTP(t *testing.T) {

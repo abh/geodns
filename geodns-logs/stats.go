@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abh/geodns/querylog"
+	"github.com/abh/geodns/v3/querylog"
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 )
