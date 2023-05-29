@@ -13,7 +13,7 @@ type QueryLogger interface {
 // easyjson:json
 type Entry struct {
 	Time       int64
-	Hostname   string `json:"omitempty"` // not filled in by geodns
+	Hostname   string `json:",omitempty"` // not filled in by geodns
 	Origin     string
 	Name       string
 	Qtype      uint16
@@ -25,7 +25,7 @@ type Entry struct {
 	ClientAddr string
 	HasECS     bool
 
-        // todo:
+	// todo:
 	// - GeoDNS version
 	// - TCP?
 	// - log the answer data
