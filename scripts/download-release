@@ -15,9 +15,17 @@ mkdir -p $DIR
 BASE=https://geodns.bitnames.com/builds/$BUILD
 
 files=`curl -sf $BASE/checksums.txt | awk '{print $2}'`
+metafiles="checksums.txt metadata.json CHANGELOG.md artifacts.json"
+
+for f in $metafiles; do
+  url=$BASE/$f
+  echo downloading $url
+  curl --remove-on-error -sSfRo $DIR/$f $url || true
+done
+
 
 for f in $files; do
   url=$BASE/$f
-  echo downloading $f
-  curl -sfRo $DIR/$f $url
+  echo downloading $url
+  curl --remove-on-error -sSfRo $DIR/$f $url
 done

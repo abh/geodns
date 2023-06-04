@@ -71,7 +71,7 @@ steps:
       secret_key:
         from_secret: s3_secret_key
       bucket: geodns
-      target: /builds/${DRONE_BUILD_NUMBER}
+      target: /builds/test/${DRONE_BUILD_NUMBER}
       source: dist/*
       strip_prefix: dist/
       endpoint: https://minio-ewr1.develooper.com/
@@ -118,7 +118,7 @@ steps:
   - name: download
     image: golang:1.20.4
     commands:
-      - ./scripts/download-release ${DRONE_BUILD_PARENT} dist/
+      - ./scripts/download-release test/${DRONE_BUILD_PARENT} dist/
     resources:
       requests:
         cpu: 250
@@ -126,6 +126,28 @@ steps:
       limits:
         cpu: 250
         memory: 256MiB
+
+  - name: upload
+    image: plugins/s3
+    resources:
+      requests:
+        cpu: 250
+        memory: 64MiB
+      limits:
+        cpu: 250
+        memory: 256MiB
+    settings:
+      access_key:
+        from_secret: s3_access_key
+      secret_key:
+        from_secret: s3_secret_key
+      bucket: geodns
+      target: /builds/release/${DRONE_BUILD_NUMBER}
+      source: dist/*
+      strip_prefix: dist/
+      endpoint: https://minio-ewr1.develooper.com/
+      path_style: true
+    depends_on: ["download"]
 
   - name: fury-publish
     image: golang:1.20.4
@@ -150,6 +172,6 @@ trigger:
     - publish
 ---
 kind: signature
-hmac: c003da6f9e497570b6d0c9d7959e6022174ade8b43d68d902c9836e5cf897654
+hmac: 01e0f29bdac989bf32bbfc39c4105635843b8cd5a95c890020a8e9fdbc9964ee
 
 ...
