@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -33,11 +34,19 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 	var qle *querylog.Entry
 
 	if srv.queryLogger != nil {
+
+		var isTcp bool
+		if net := w.LocalAddr().Network(); net == "tcp" {
+			isTcp = true
+		}
+
 		qle = &querylog.Entry{
-			Time:   time.Now().UnixNano(),
-			Origin: z.Origin,
-			Name:   strings.ToLower(qnamefqdn),
-			Qtype:  qtype,
+			Time:    time.Now().UnixNano(),
+			Origin:  z.Origin,
+			Name:    strings.ToLower(qnamefqdn),
+			Qtype:   qtype,
+			Version: srv.info.Version,
+			IsTCP:   isTcp,
 		}
 		defer srv.queryLogger.Write(qle)
 	}
@@ -106,6 +115,29 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		defer func() {
 			qle.Rcode = m.Rcode
 			qle.Answers = len(m.Answer)
+
+			for _, rr := range m.Answer {
+				var s string
+				switch a := rr.(type) {
+				case *dns.A:
+					s = a.A.String()
+				case *dns.AAAA:
+					s = a.AAAA.String()
+				case *dns.CNAME:
+					s = a.Target
+				case *dns.MX:
+					s = a.Mx
+				case *dns.NS:
+					s = a.Ns
+				case *dns.SRV:
+					s = a.Target
+				case *dns.TXT:
+					s = strings.Join(a.Txt, " ")
+				}
+				if len(s) > 0 {
+					qle.AnswerData = append(qle.AnswerData, s)
+				}
+			}
 		}()
 	}
 
@@ -285,7 +317,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		applog.Printf("Error writing packet: %q, %s", err, m)
 		dns.HandleFailed(w, req)
 	}
-	return
+
 }
 
 func (srv *Server) statusRR(label string) []dns.RR {
@@ -302,6 +334,9 @@ func (srv *Server) statusRR(label string) []dns.RR {
 	status["up"] = strconv.Itoa(int(time.Since(srv.info.Started).Seconds()))
 
 	js, err := json.Marshal(status)
+	if err != nil {
+		log.Printf("error marshaling json status: %s", err)
+	}
 
 	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
 }
