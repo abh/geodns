@@ -3,6 +3,10 @@ kind: pipeline
 type: kubernetes
 name: default
 
+environment:
+  GOCACHE: /cache/pkg/cache
+  GOMODCACHE: /cache/pkg/mod
+
 steps:
   - name: fetch-tags
     image: alpine/git
@@ -19,8 +23,10 @@ steps:
   - name: test
     image: golang:1.20.5
     volumes:
-      - name: cache
+      - name: go
         path: /go
+      - name: gopkg
+        path: /cache
     commands:
       - ./scripts/download-test-geoip
       - go get
@@ -44,8 +50,10 @@ steps:
         cpu: 10000
         memory: 2048MiB
     volumes:
-      - name: cache
+      - name: go
         path: /go
+      - name: gopkg
+        path: /cache
     commands:
       - ./scripts/run-goreleaser
       - echo Done
@@ -100,8 +108,11 @@ steps:
     depends_on: [goreleaser]
 
 volumes:
-  - name: cache
+  - name: go
     temp: {}
+  - name: gopkg
+    claim:
+      name: go-pkg
 
 trigger:
   event:
@@ -172,6 +183,6 @@ trigger:
     - publish
 ---
 kind: signature
-hmac: 15fb83a349cd0141f9195dd089e87f44af8e9469945a31a720368ab5ef623f19
+hmac: 3be05c496c080db6c470712339a50a2bb4b3288992715b7f8f7033432eebdd45
 
 ...
