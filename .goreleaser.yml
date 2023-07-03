@@ -64,22 +64,16 @@ nfpms:
 
     # release: {{ if index .Env "DRONE_BUILD_NUMBER" }}{{ .Env.DRONE_BUILD_NUMBER }}{{ else }}1{{ end }}
 
-    # You can change the file name of the package.
-    # Default: `{{ .PackageName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}`
-    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-
     vendor: NTP Pool Project
     homepage: https://www.ntppool.org/
     maintainer: Ask Bjørn Hansen <ask@develooper.com>
     description: GeoDNS server
     license: Apache 2.0
+    file_name_template: "{{ .ConventionalFileName }}"
     formats:
       - deb
       - rpm
       - apk
-    replacements:
-      386: i686
-      amd64: x86_64
     bindir: /usr/bin
     contents:
       - src: "scripts/geodns.service"

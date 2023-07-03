@@ -25,7 +25,7 @@ Release builds are available in a yum repository at
 If you don't have Go installed the easiest way to build geodns from source is to
 download and install Go from `https://golang.org/dl/`.
 
-GeoDNS generally requires a recent version of Go (1.15+).
+GeoDNS generally requires a recent version of Go (one of the last few major versions)
 
 ```sh
 git clone https://github.com/abh/geodns.git

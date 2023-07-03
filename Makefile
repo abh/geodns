@@ -16,6 +16,9 @@ docker-test: .PHONY
 		golang:1.14-alpine3.11 -- \
 		go test ./...
 
+sign:
+	drone sign --save ntppool/geodns
+
 devel:
 	go build -tags devel
 

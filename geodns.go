@@ -40,8 +40,8 @@ import (
 	"github.com/pborman/uuid"
 )
 
-// VERSION is the current version of GeoDNS
-var VERSION string = "3.1.0-dev"
+// VERSION is the current version of GeoDNS, set by the build process
+var VERSION string = "devel"
 var buildTime string
 var gitVersion string
 
