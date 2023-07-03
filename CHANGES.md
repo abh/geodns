@@ -1,5 +1,11 @@
 # GeoDNS Changelog
 
+## 3.2.3 June 2023
+- querylog: Add software version, answer data and IsTCP fields
+- Make Go module paths semantic versions
+- Remove extra bogus json field from query log
+- Update dependencies (and Go 1.20.5)
+
 ## 3.2.2 May 2023
 * Go 1.20.4
 * Updated dependencies
