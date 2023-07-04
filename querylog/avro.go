@@ -139,6 +139,7 @@ func (l *AvroLogger) writer(ctx context.Context) {
 		}
 
 		if !af.open {
+			mu.Unlock()
 			log.Printf("called closeFile on file already being closed %s", af.fh.Name())
 			return nil
 		}
