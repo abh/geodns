@@ -32,6 +32,11 @@ type AppConfig struct {
 		MaxSize int
 		Keep    int
 	}
+	AvroLog struct {
+		Path    string
+		MaxSize int    // rotate files at this size
+		MaxTime string // rotate active files after this time, even if small
+	}
 	Health struct {
 		Directory string
 	}

@@ -217,7 +217,27 @@ func main() {
 
 	srv := server.NewServer(serverInfo)
 
-	if qlc := Config.QueryLog; len(qlc.Path) > 0 {
+	if qlc := Config.AvroLog; len(qlc.Path) > 0 {
+
+		maxsize := qlc.MaxSize
+		if maxsize < 50000 {
+			maxsize = 1000000
+		}
+		maxtime, err := time.ParseDuration(qlc.MaxTime)
+		if err != nil {
+			log.Printf("could not parse avrolog maxtime setting %q: %s", qlc.MaxTime, err)
+		}
+		if maxtime < 1*time.Second {
+			maxtime = 1 * time.Second
+		}
+
+		ql, err := querylog.NewAvroLogger(qlc.Path, maxsize, maxtime)
+		if err != nil {
+			log.Fatalf("Could not start avro query logger: %s", err)
+		}
+		srv.SetQueryLogger(ql)
+
+	} else if qlc := Config.QueryLog; len(qlc.Path) > 0 {
 		ql, err := querylog.NewFileLogger(qlc.Path, qlc.MaxSize, qlc.Keep)
 		if err != nil {
 			log.Fatalf("Could not start file query logger: %s", err)

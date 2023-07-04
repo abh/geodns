@@ -114,7 +114,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		qle.Targets = targets
 		defer func() {
 			qle.Rcode = m.Rcode
-			qle.Answers = len(m.Answer)
+			qle.AnswerCount = len(m.Answer)
 
 			for _, rr := range m.Answer {
 				var s string
@@ -285,7 +285,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 			if qle != nil {
 				qle.LabelName = label.Label
-				qle.Answers = len(m.Answer)
+				qle.AnswerCount = len(m.Answer)
 			}
 
 			break

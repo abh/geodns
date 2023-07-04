@@ -60,7 +60,7 @@ steps:
     when:
       ref:
         - refs/heads/main
-        - refs/heads/drone-test
+        - refs/heads/avro
         - refs/tags/**
     depends_on: [test]
 
@@ -183,6 +183,6 @@ trigger:
     - publish
 ---
 kind: signature
-hmac: 3be05c496c080db6c470712339a50a2bb4b3288992715b7f8f7033432eebdd45
+hmac: 3cefa2d3e35450fc898c0565bb977765f738ee4cf7a433cf7e5b2b6e3e7c31b1
 
 ...

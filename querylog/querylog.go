@@ -6,24 +6,19 @@ type QueryLogger interface {
 }
 
 type Entry struct {
-	Time       int64
-	Hostname   string `json:",omitempty"` // not filled in by geodns
-	Origin     string
-	Name       string
-	Qtype      uint16
-	Rcode      int
-	Answers    int
-	Targets    []string
-	AnswerData []string
-	LabelName  string
-	RemoteAddr string
-	ClientAddr string
-	HasECS     bool
-	IsTCP      bool
-	Version    string
-
-	// todo:
-	// - GeoDNS version
-	// - TCP?
-	// - log the answer data
+	Time        int64
+	Hostname    string `json:",omitempty"` // not filled in by geodns
+	Origin      string
+	Name        string
+	Qtype       uint16
+	Rcode       int
+	AnswerCount int `json:"Answers"`
+	Targets     []string
+	AnswerData  []string
+	LabelName   string
+	RemoteAddr  string
+	ClientAddr  string
+	HasECS      bool
+	IsTCP       bool
+	Version     string
 }

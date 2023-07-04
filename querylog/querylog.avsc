@@ -1,0 +1,33 @@
+{
+    "type": "record",
+    "name": "GeodnsQuery",
+    "namespace": "develooper",
+    "fields" : [
+        {"name": "Time", "type": "long", "logicalType": "timestamp-micros"},
+        {"name": "Hostname", "type": "string"},
+        {"name": "Origin", "type": "string"},
+        {"name": "Qtype", "type": "int"},
+        {"name": "Rcode", "type": "int"},
+        {"name": "AnswerCount", "type": "int"},
+        {"name": "Targets",
+         "type": {
+              "type": "array",
+              "items": "string",
+              "default": []
+            }
+        },
+        {"name": "AnswerData",
+         "type": {
+              "type": "array",
+              "items": "string",
+              "default": []
+            }
+        },
+        {"name": "LabelName", "type": "string"},
+        {"name": "RemoteAddr", "type": "string"},
+        {"name": "ClientAddr", "type": "string"},
+        {"name": "HasECS", "type": "boolean"},
+        {"name": "IsTCP", "type": "boolean"},
+        {"name": "Version", "type": "string"}
+    ]
+}

@@ -73,7 +73,7 @@ func (stats *Stats) Add(e *querylog.Entry) error {
 		// NXDOMAIN, count separately?
 		return nil
 	}
-	if e.Answers == 0 {
+	if e.AnswerCount == 0 {
 		// No answers, count separately?
 		return nil
 	}
