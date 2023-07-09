@@ -105,26 +105,19 @@ cluster the server is part of, etc. This is used in (future) reporting/statistic
 Enable to get lots of extra logging, only useful for testing and debugging. Absolutely not
 recommended in production unless you get very few queries (less than 1-200/second).
 
-* -cpus=1
+* -cpus=4
 
-Maximum number of CPUs to use. Set to 0 to match the number of CPUs available on the system.
-Only "1" (the default) has been extensively tested.
+Maximum number of CPUs to use. Set to 0 to match the number of CPUs
+available on the system (also the default).
 
-## WebSocket interface
+## Prometheus metrics
 
-geodns runs a WebSocket server on port 8053 that outputs various performance
-metrics. The WebSocket URL is `/monitor`. There's a "companion program" that can
-use this across a cluster to show aggregate statistics, email for more information.
+`/metrics` on the http port provides a number of metrics in Prometheus format.
 
-## Runtime status
+### Runtime status page, Websocket metrics & StatHat integration
 
-There's a page with various runtime information (queries per second, queries and
-most frequently requested labels per zone, etc) at `/status`.
-
-## StatHat integration
-
-GeoDNS can post runtime data to [StatHat](http://www.stathat.com/).
-([Documentation](https://github.com/abh/geodns/wiki/StatHat))
+The runtime status page, websocket feature and StatHat integration have
+been replaced with Prometheus metrics.
 
 ## Country and continent lookups
 

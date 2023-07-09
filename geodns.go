@@ -62,7 +62,7 @@ var (
 	flagport         = flag.String("port", "53", "default port number")
 	flaghttp         = flag.String("http", ":8053", "http listen address (:8053)")
 	flaglog          = flag.Bool("log", false, "be more verbose")
-	flagcpus         = flag.Int("cpus", 1, "Set the maximum number of CPUs to use")
+	flagcpus         = flag.Int("cpus", 0, "Set the maximum number of CPUs to use")
 	flagLogFile      = flag.String("logfile", "", "log to file")
 	flagPrivateDebug = flag.Bool("privatedebug", false, "Make debugging queries accepted only on loopback")
 
@@ -148,9 +148,7 @@ func main() {
 		return
 	}
 
-	if *flagcpus == 0 {
-		runtime.GOMAXPROCS(runtime.NumCPU())
-	} else {
+	if *flagcpus > 0 {
 		runtime.GOMAXPROCS(*flagcpus)
 	}
 

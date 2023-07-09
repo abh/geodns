@@ -1,5 +1,9 @@
 # GeoDNS Changelog
 
+## Next
+- Avro logging feature
+- Default to use all CPUs on the system.
+
 ## 3.2.3 June 2023
 - querylog: Add software version, answer data and IsTCP fields
 - Make Go module paths semantic versions
