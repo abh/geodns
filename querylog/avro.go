@@ -88,8 +88,6 @@ func (l *AvroLogger) writer(ctx context.Context) {
 
 	mu := sync.Mutex{}
 
-	log.Printf("opening")
-
 	timer := time.After(l.maxtime)
 
 	openFiles := []*avroFile{}
@@ -117,7 +115,7 @@ func (l *AvroLogger) writer(ctx context.Context) {
 		l.wg.Add(1)
 		a := &avroFile{fh: f, enc: enc, open: true}
 
-		log.Printf("opened %s", a.fh.Name())
+		// log.Printf("opened %s", a.fh.Name())
 
 		mu.Lock()
 		defer mu.Unlock()
@@ -127,8 +125,6 @@ func (l *AvroLogger) writer(ctx context.Context) {
 
 		return a, nil
 	}
-
-	log.Printf("setting up avro")
 
 	currentFile, err := openFile()
 	if err != nil {
@@ -156,7 +152,7 @@ func (l *AvroLogger) writer(ctx context.Context) {
 
 		defer l.wg.Done()
 
-		log.Printf("closing %s", af.fh.Name())
+		// log.Printf("closing %s", af.fh.Name())
 
 		if err := af.enc.Flush(); err != nil {
 			return err
@@ -174,7 +170,7 @@ func (l *AvroLogger) writer(ctx context.Context) {
 			return fmt.Errorf("unexpected tmp file name %s", tmpName)
 		}
 
-		log.Printf("renaming to %s", newName)
+		// log.Printf("renaming to %s", newName)
 		if err := os.Rename(tmpName, newName); err != nil {
 			return err
 		}
@@ -205,7 +201,7 @@ func (l *AvroLogger) writer(ctx context.Context) {
 			}
 
 		case <-ctx.Done():
-			log.Printf("context done, closing files")
+			log.Printf("closing avro files")
 
 			// drain the buffer within reason
 			count := 0
@@ -218,7 +214,7 @@ func (l *AvroLogger) writer(ctx context.Context) {
 					if err != nil {
 						log.Fatal(err)
 					}
-					if count > 10000 {
+					if count > 40000 {
 						break drain
 					}
 				default:
@@ -240,7 +236,7 @@ func (l *AvroLogger) writer(ctx context.Context) {
 				continue
 			}
 
-			log.Printf("rotating avro file for time")
+			// log.Printf("rotating avro file for time")
 
 			var err error
 			currentFile, err = openFile()
