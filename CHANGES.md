@@ -1,5 +1,11 @@
 # GeoDNS Changelog
 
+## 3.3.1 July 2023
+- Use server IP if ECS provided IP is unhelpful
+- Avro logging fixes
+- Remove deprecated geodns-logs tool
+- Lowercase 'version' in prometheus build_info
+
 ## 3.3.0 July 2023
 - Avro logging feature
 - Default to use all CPUs on the system.
