@@ -83,9 +83,9 @@ func testServing(t *testing.T) {
 
 	r = exchange(t, "bar.test.example.com.", dns.TypeA)
 	ip := r.Answer[0].(*dns.A).A
-
-	// c.Check(ip.String(), Equals, "192.168.1.2")
-	// c.Check(int(r.Answer[0].Header().Ttl), Equals, 601)
+	if ip.String() != "192.168.1.2" {
+		t.Logf("unexpected A record for bar.test.example.com: %s", ip.String())
+	}
 
 	r = exchange(t, "test.example.com.", dns.TypeSOA)
 	soa := r.Answer[0].(*dns.SOA)

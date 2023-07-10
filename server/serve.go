@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
@@ -87,7 +88,15 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 				applog.Println("Got edns-client-subnet", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
 				if e.Address != nil {
 					ecs = e
-					ip = e.Address
+
+					if ecsip, ok := netip.AddrFromSlice(e.Address); ok {
+						if ecsip.IsGlobalUnicast() &&
+							!(ecsip.IsPrivate() ||
+								ecsip.IsLinkLocalMulticast() ||
+								ecsip.IsInterfaceLocalMulticast()) {
+							ip = ecsip.AsSlice()
+						}
+					}
 
 					if qle != nil {
 						qle.HasECS = true
@@ -106,6 +115,11 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 	}
 
 	targets, netmask, location := z.Options.Targeting.GetTargets(ip, z.HasClosest)
+
+	// if the ECS IP didn't get targets, try the real IP instead
+	if l := len(targets); (l == 0 || l == 1 && targets[0] == "@") && !ip.Equal(realIP) {
+		targets, netmask, location = z.Options.Targeting.GetTargets(realIP, z.HasClosest)
+	}
 
 	m := &dns.Msg{}
 
