@@ -10,6 +10,7 @@ import (
 	"github.com/abh/geodns/v3/monitor"
 	"github.com/abh/geodns/v3/querylog"
 	"github.com/abh/geodns/v3/zones"
+	"go.ntppool.org/common/version"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/miekg/dns"
@@ -45,20 +46,21 @@ func NewServer(si *monitor.ServerInfo) *Server {
 	)
 	prometheus.MustRegister(queries)
 
-	buildInfo := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "geodns_build_info",
-			Help: "GeoDNS build information (in labels)",
-		},
-		[]string{"Version", "ID", "IP", "Group"},
-	)
-	prometheus.MustRegister(buildInfo)
+	version.RegisterMetric("geodns", prometheus.DefaultRegisterer)
 
+	instanceInfo := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "geodns_instance_info",
+			Help: "GeoDNS instance information",
+		},
+		[]string{"ID", "IP", "Group"},
+	)
+	prometheus.MustRegister(instanceInfo)
 	group := ""
 	if len(si.Groups) > 0 {
 		group = si.Groups[0]
 	}
-	buildInfo.WithLabelValues(si.Version, si.ID, si.IP, group).Set(1)
+	instanceInfo.WithLabelValues(si.ID, si.IP, group).Set(1)
 
 	startTime := prometheus.NewGauge(
 		prometheus.GaugeOpts{
