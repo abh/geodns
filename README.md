@@ -5,7 +5,6 @@ and other similar services.
 
 [![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/7022/badge)](https://bestpractices.coreinfrastructure.org/projects/7022)
 
-
 ## Questions or suggestions?
 
 For bug reports or feature requests, please create [an
@@ -33,6 +32,8 @@ cd geodns
 go build
 ./geodns -h
 ```
+
+You can also build with [goreleaser](https://github.com/goreleaser/goreleaser).
 
 ## Sample configuration
 
@@ -67,7 +68,9 @@ or more simply put
 
 The binary can be moved to /usr/local/bin, /opt/geodns/ or wherever you find appropriate.
 
-### Command options
+### Configuration
+
+See the [sample configuration file](https://github.com/abh/geodns/blob/main/dns/geodns.conf.sample).
 
 Notable command line parameters (and their defaults)
 
@@ -109,6 +112,11 @@ recommended in production unless you get very few queries (less than 1-200/secon
 
 Maximum number of CPUs to use. Set to 0 to match the number of CPUs
 available on the system (also the default).
+
+## Logging
+
+GeoDNS supports query logging to JSON or Avro files (see the sample configuration file
+for options).
 
 ## Prometheus metrics
 
@@ -201,8 +209,6 @@ Set the default TTL for the zone (default 120).
 
 * max_hosts
 
-
-
 * contact
 
 Set the soa 'contact' field (default is "hostmaster.$domain").
@@ -289,7 +295,6 @@ Or with weights
 ### SPF
 
 An SPF record is semantically identical to a TXT record with the exception that the label is set to 'spf'. An example of an spf record with weights:
-
 
     { "spf": "v=spf1 ~all]", "weight": 1 }
 

@@ -1,8 +1,9 @@
 # GeoDNS Changelog
 
-## Next
+## 3.3.0 July 2023
 - Avro logging feature
 - Default to use all CPUs on the system.
+- Graceful shutdown on term/quit/interrupt signals
 
 ## 3.2.3 June 2023
 - querylog: Add software version, answer data and IsTCP fields

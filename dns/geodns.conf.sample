@@ -17,6 +17,17 @@ path = log/queries.log
 ;; keep up to this many rotated log files (default 1)
 ; keep = 2
 
+
+;; avro logging will replace the json querylog if configured
+; [avrolog]
+;; The avro schema is specified in https://github.com/abh/geodns/blob/main/querylog/querylog.avsc
+;; files being written are suffixed .tmp; closed files are suffixed .avro
+; path = log/avro/
+;; rotate file after it reaches this size
+; maxsize = 5000000
+;; rotate the file after this many seconds
+; maxtime = 10s
+
 [http]
 ; require basic HTTP authentication; not encrypted or safe over the public internet
 ; user = stats
