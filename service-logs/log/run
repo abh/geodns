@@ -1,4 +1,0 @@
-#!/bin/sh
-mkdir -p /var/log/geodns-logs
-chown nobody /var/log/geodns-logs
-exec setuidgid nobody multilog s10000000 n3 /var/log/geodns-logs

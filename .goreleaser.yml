@@ -20,28 +20,13 @@ builds:
         goarch: 386
       - goos: freebsd
         goarch: arm64
-  - id: geodns-logs
-    main: ./geodns-logs/
-    binary: geodns-logs
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - freebsd
-      - darwin
-    ignore:
-      - goos: darwin
-        goarch: 386
-      - goos: freebsd
-        goarch: 386
-      - goos: freebsd
-        goarch: arm64
+
 archives:
   - files:
       - service/**
-      - service-logs/**
       - LICENSE
       - README.md
+
 checksum:
   name_template: "checksums.txt"
 snapshot:

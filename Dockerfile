@@ -8,7 +8,6 @@ ENV CGO_ENABLED=0
 
 ADD applog/ applog/
 ADD countries/ countries/
-ADD geodns-logs/ geodns-logs/
 ADD health/ health/
 ADD monitor/ monitor/
 ADD querylog/ querylog/
@@ -17,7 +16,6 @@ ADD targeting/ targeting/
 ADD typeutil/ typeutil/
 ADD zones/ zones/
 ADD service/ service/
-ADD service-logs/ service-logs/
 ADD .git/ .git/
 ADD *.go build ./
 
@@ -29,5 +27,4 @@ RUN ln dist/* /
 
 FROM scratch
 COPY --from=build /geodns-linux-amd64 /geodns
-COPY --from=build /geodns-logs-linux-amd64 /geodns-logs
 ENTRYPOINT ["/geodns"]
