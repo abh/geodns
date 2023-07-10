@@ -159,6 +159,11 @@ func main() {
 	g.Go(func() error {
 		<-ctx.Done()
 		log.Printf("server shutting down")
+		go func() {
+			time.Sleep(time.Second * 5)
+			log.Fatal("shutdown appears stalled; force exit")
+			os.Exit(99)
+		}()
 		return nil
 	})
 
