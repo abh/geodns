@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/abh/geodns/v3/monitor"
 	"github.com/abh/geodns/v3/zones"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/sync/errgroup"
 )
 
 type httpServer struct {
@@ -73,9 +77,36 @@ func (hs *httpServer) Mux() *http.ServeMux {
 	return hs.mux
 }
 
-func (hs *httpServer) Run(listen string) {
+func (hs *httpServer) Run(ctx context.Context, listen string) error {
 	log.Println("Starting HTTP interface on", listen)
-	log.Fatal(http.ListenAndServe(listen, &basicauth{h: hs.mux}))
+
+	srv := http.Server{
+		Addr:         listen,
+		Handler:      &basicauth{h: hs.mux},
+		ReadTimeout:  5 * time.Second,
+		IdleTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		err := srv.ListenAndServe()
+		if err != nil {
+			if !errors.Is(err, http.ErrServerClosed) {
+				return err
+			}
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		<-ctx.Done()
+		log.Printf("shutting down http server")
+		return srv.Shutdown(ctx)
+	})
+
+	return g.Wait()
 }
 
 func (hs *httpServer) mainServer(w http.ResponseWriter, req *http.Request) {
@@ -114,5 +145,4 @@ func (b *basicauth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm=%q`, "GeoDNS Status"))
 	http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-	return
 }

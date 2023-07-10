@@ -70,8 +70,9 @@ func TestExampleComZone(t *testing.T) {
 
 	// Test that we get the expected NS records (in any order because
 	// of the configuration format used for this zone)
+	re := regexp.MustCompile(`^ns[12]\.example\.net.$`)
 	for i := 0; i < 2; i++ {
-		if matched, err := regexp.MatchString("^ns[12]\\.example\\.net.$", Ns[i].RR.(*dns.NS).Ns); err != nil || !matched {
+		if matched := re.MatchString(Ns[i].RR.(*dns.NS).Ns); !matched {
 			if err != nil {
 				t.Fatal(err)
 			}

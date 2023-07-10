@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -36,7 +36,7 @@ func TestHTTP(t *testing.T) {
 
 	res, err := http.Get(baseurl + "/version")
 	require.Nil(t, err)
-	page, _ := ioutil.ReadAll(res.Body)
+	page, _ := io.ReadAll(res.Body)
 
 	if !bytes.HasPrefix(page, []byte("GeoDNS ")) {
 		t.Log("/version didn't start with 'GeoDNS '")

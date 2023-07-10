@@ -3,7 +3,6 @@ package zones
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -18,7 +17,7 @@ func loadZones(t *testing.T) *MuxManager {
 		t.Logf("Setting up geo provider")
 		dbDir := geoip2.FindDB()
 		if len(dbDir) == 0 {
-			t.Fatalf("Could not find geoip directory")
+			t.Skip("Could not find geoip directory")
 		}
 		geoprovider, err := geoip2.New(dbDir)
 		if err == nil {
@@ -95,7 +94,7 @@ func TestReadConfigs(t *testing.T) {
 }
 
 func TestRemoveConfig(t *testing.T) {
-	dir, err := ioutil.TempDir("", "geodns-test.")
+	dir, err := os.MkdirTemp("", "geodns-test.")
 	if err != nil {
 		t.Fail()
 	}
@@ -120,7 +119,7 @@ func TestRemoveConfig(t *testing.T) {
 		t.Fail()
 	}
 
-	err = ioutil.WriteFile(dir+"/invalid.example.org.json", []byte("not-json"), 0644)
+	err = os.WriteFile(dir+"/invalid.example.org.json", []byte("not-json"), 0644)
 	if err != nil {
 		t.Log(err)
 		t.Fail()

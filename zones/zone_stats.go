@@ -86,7 +86,7 @@ func (zs *zoneLabelStats) Counts() map[string]int {
 
 	counts := make(map[string]int)
 	for i, l := range zs.log {
-		if zs.rotated == false && i >= zs.pos {
+		if !zs.rotated && i >= zs.pos {
 			break
 		}
 		counts[l]++

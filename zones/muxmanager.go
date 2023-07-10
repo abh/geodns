@@ -1,11 +1,12 @@
 package zones
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -52,13 +53,17 @@ func NewMuxManager(path string, reg RegistrationAPI) (*MuxManager, error) {
 	return mm, err
 }
 
-func (mm *MuxManager) Run() {
+func (mm *MuxManager) Run(ctx context.Context) {
 	for {
 		err := mm.reload()
 		if err != nil {
 			log.Printf("error reading zones: %s", err)
 		}
-		time.Sleep(2 * time.Second)
+		select {
+		case <-time.After(2 * time.Second):
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
@@ -68,7 +73,7 @@ func (mm *MuxManager) Zones() ZoneList {
 }
 
 func (mm *MuxManager) reload() error {
-	dir, err := ioutil.ReadDir(mm.path)
+	dir, err := os.ReadDir(mm.path)
 	if err != nil {
 		return fmt.Errorf("could not read '%s': %s", mm.path, err)
 	}
@@ -85,12 +90,17 @@ func (mm *MuxManager) reload() error {
 			continue
 		}
 
+		fileInfo, err := file.Info()
+		if err != nil {
+			return err
+		}
+		modTime := fileInfo.ModTime()
+
 		zoneName := fileName[0:strings.LastIndex(fileName, ".")]
 
 		seenZones[zoneName] = true
 
-		if _, ok := mm.lastRead[zoneName]; !ok || file.ModTime().After(mm.lastRead[zoneName].time) {
-			modTime := file.ModTime()
+		if _, ok := mm.lastRead[zoneName]; !ok || modTime.After(mm.lastRead[zoneName].time) {
 			if ok {
 				log.Printf("Reloading %s\n", fileName)
 				mm.lastRead[zoneName].time = modTime
@@ -131,7 +141,7 @@ func (mm *MuxManager) reload() error {
 			zone := NewZone(zoneName)
 			err := zone.ReadZoneFile(filename)
 			if zone == nil || err != nil {
-				parseErr = fmt.Errorf("Error reading zone '%s': %s", zoneName, err)
+				parseErr = fmt.Errorf("error reading zone '%s': %s", zoneName, err)
 				log.Println(parseErr.Error())
 				continue
 			}
@@ -146,7 +156,7 @@ func (mm *MuxManager) reload() error {
 		if zoneName == "pgeodns" {
 			continue
 		}
-		if ok, _ := seenZones[zoneName]; ok {
+		if ok := seenZones[zoneName]; ok {
 			continue
 		}
 		log.Println("Removing zone", zone.Origin)
@@ -191,7 +201,7 @@ func (mm *MuxManager) setupRootZone() {
 }
 
 func sha256File(fn string) string {
-	data, err := ioutil.ReadFile(fn)
+	data, err := os.ReadFile(fn)
 	if err != nil {
 		return ""
 	}

@@ -1,11 +1,16 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"log"
+	"sync"
+	"time"
 
 	"github.com/abh/geodns/v3/monitor"
 	"github.com/abh/geodns/v3/querylog"
 	"github.com/abh/geodns/v3/zones"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,6 +27,9 @@ type Server struct {
 	PublicDebugQueries bool
 	info               *monitor.ServerInfo
 	metrics            *serverMetrics
+
+	lock       sync.Mutex
+	dnsServers []*dns.Server
 }
 
 // NewServer ...
@@ -97,26 +105,68 @@ func (srv *Server) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	srv.mux.ServeDNS(w, r)
 }
 
+func (srv *Server) addDNSServer(dnsServer *dns.Server) {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+	srv.dnsServers = append(srv.dnsServers, dnsServer)
+}
+
 // ListenAndServe starts the DNS server on the specified IP
-// (both tcp and udp) and returns. If something goes wrong
-// it will crash the process with an error message.
-func (srv *Server) ListenAndServe(ip string) {
+// (both tcp and udp). It returns an error if
+// something goes wrong.
+func (srv *Server) ListenAndServe(ctx context.Context, ip string) error {
 
 	prots := []string{"udp", "tcp"}
 
+	g, _ := errgroup.WithContext(ctx)
+
 	for _, prot := range prots {
-		go func(p string) {
+
+		p := prot
+
+		g.Go(func() error {
 			server := &dns.Server{
 				Addr:    ip,
 				Net:     p,
 				Handler: srv,
 			}
 
+			srv.addDNSServer(server)
+
 			log.Printf("Opening on %s %s", ip, p)
 			if err := server.ListenAndServe(); err != nil {
-				log.Fatalf("geodns: failed to setup %s %s: %s", ip, p, err)
+				log.Printf("geodns: failed to setup %s %s: %s", ip, p, err)
+				return err
 			}
-			log.Fatalf("geodns: ListenAndServe unexpectedly returned")
-		}(prot)
+			return nil
+		})
 	}
+
+	// the servers will be shutdown when Shutdown() is called
+	return g.Wait()
+}
+
+// Shutdown gracefully shuts down the server
+func (srv *Server) Shutdown() error {
+	var errs []error
+
+	for _, dnsServer := range srv.dnsServers {
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		err := dnsServer.ShutdownContext(timeoutCtx)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if srv.queryLogger != nil {
+		err := srv.queryLogger.Close()
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	err := errors.Join(errs...)
+
+	return err
 }

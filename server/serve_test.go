@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net"
 	"reflect"
 	"strings"
@@ -23,22 +24,28 @@ func TestServe(t *testing.T) {
 	serverInfo := &monitor.ServerInfo{}
 
 	srv := NewServer(serverInfo)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	mm, err := zones.NewMuxManager("../dns", srv)
 	if err != nil {
 		t.Fatalf("Loading test zones: %s", err)
 	}
-	go mm.Run()
+	go mm.Run(ctx)
 
-	// listenAndServe returns after listening on udp + tcp, so just
-	// wait for it before continuing
-	srv.ListenAndServe(PORT)
+	go func() {
+		srv.ListenAndServe(ctx, PORT)
+	}()
 
 	// ensure service has properly started before we query it
 	time.Sleep(500 * time.Millisecond)
 
 	t.Run("Serving", testServing)
 
+	// todo: run test queries?
+
+	cancel()
+
+	srv.Shutdown()
 }
 
 func testServing(t *testing.T) {

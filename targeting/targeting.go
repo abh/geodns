@@ -173,7 +173,7 @@ func ParseTargets(v string) (tgt TargetOptions, err error) {
 		case "ip":
 			x = TargetIP
 		default:
-			err = fmt.Errorf("Unknown targeting option '%s'", t)
+			err = fmt.Errorf("unknown targeting option '%s'", t)
 		}
 		tgt = tgt | x
 	}

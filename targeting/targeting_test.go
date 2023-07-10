@@ -25,7 +25,7 @@ func TestTargetParse(t *testing.T) {
 		t.Logf("Expected '@ country', got '%s'", str)
 		t.Fail()
 	}
-	if err.Error() != "Unknown targeting option 'foo'" {
+	if err.Error() != "unknown targeting option 'foo'" {
 		t.Log("Failed erroring on an unknown targeting option")
 		t.Fail()
 	}
@@ -54,7 +54,7 @@ func TestGetTargets(t *testing.T) {
 
 	g, err := geoip2.New(geoip2.FindDB())
 	if err != nil {
-		t.Fatalf("opening geoip2: %s", err)
+		t.Skipf("opening geoip2: %s", err)
 	}
 	Setup(g)
 

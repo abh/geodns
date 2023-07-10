@@ -3,6 +3,7 @@ package zones
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -48,7 +49,7 @@ func (zone *Zone) ReadZoneFile(fileName string) (zerr error) {
 	if err = decoder.Decode(&objmap); err != nil {
 		extra := ""
 		if serr, ok := err.(*json.SyntaxError); ok {
-			if _, serr := fh.Seek(0, os.SEEK_SET); serr != nil {
+			if _, serr := fh.Seek(0, io.SeekStart); serr != nil {
 				log.Fatalf("seek error: %v", serr)
 			}
 			line, col, highlight := errorutil.HighlightBytePosition(fh, serr.Offset)
@@ -204,11 +205,11 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 
 			records := make(map[string][]interface{})
 
-			switch rdata.(type) {
+			switch rd := rdata.(type) {
 			case map[string]interface{}:
 				// Handle NS map syntax, map[ns2.example.net:<nil> ns1.example.net:<nil>]
 				tmp := make([]interface{}, 0)
-				for rdataK, rdataV := range rdata.(map[string]interface{}) {
+				for rdataK, rdataV := range rd {
 					if rdataV == nil {
 						rdataV = ""
 					}
@@ -218,7 +219,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 			case string:
 				// CNAME and alias
 				tmp := make([]interface{}, 1)
-				tmp[0] = rdata.(string)
+				tmp[0] = rd
 				records[rType] = tmp
 			default:
 				records[rType] = rdata.([]interface{})
@@ -299,19 +300,18 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 					switch dnsType {
 					case dns.TypePTR:
 						record.RR = &dns.PTR{Hdr: h, Ptr: ip}
-						break
 					case dns.TypeA:
 						if x := net.ParseIP(ip); x != nil {
 							record.RR = &dns.A{Hdr: h, A: x}
-							break
+						} else {
+							panic(fmt.Errorf("bad A record %q for %q", ip, dk))
 						}
-						panic(fmt.Errorf("Bad A record %q for %q", ip, dk))
 					case dns.TypeAAAA:
 						if x := net.ParseIP(ip); x != nil {
 							record.RR = &dns.AAAA{Hdr: h, AAAA: x}
-							break
+						} else {
+							panic(fmt.Errorf("bad AAAA record %q for %q", ip, dk))
 						}
-						panic(fmt.Errorf("Bad AAAA record %q for %q", ip, dk))
 					}
 
 				case dns.TypeMX:

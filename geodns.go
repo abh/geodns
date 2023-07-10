@@ -17,6 +17,7 @@ package main
 */
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -38,16 +39,13 @@ import (
 	"github.com/abh/geodns/v3/targeting/geoip2"
 	"github.com/abh/geodns/v3/zones"
 	"github.com/pborman/uuid"
+	"golang.org/x/sync/errgroup"
 )
 
 // VERSION is the current version of GeoDNS, set by the build process
 var VERSION string = "devel"
 var buildTime string
 var gitVersion string
-
-// Set development with the 'devel' build flag to load
-// templates from disk instead of from the binary.
-var development bool
 
 var (
 	serverInfo *monitor.ServerInfo
@@ -154,6 +152,15 @@ func main() {
 
 	log.Printf("Starting geodns %s (%s)\n", VERSION, runtime.Version())
 
+	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		<-ctx.Done()
+		log.Printf("server shutting down")
+		return nil
+	})
+
 	if *cpuprofile != "" {
 		prof, err := os.Create(*cpuprofile)
 		if err != nil {
@@ -172,14 +179,25 @@ func main() {
 	}
 
 	// load geodns.conf config
-	configReader(configFileName)
+	err := configReader(configFileName)
+	if err != nil {
+		log.Printf("error reading config file %s: %s", configFileName, err)
+		os.Exit(2)
+	}
 
 	if len(Config.Health.Directory) > 0 {
 		go health.DirectoryReader(Config.Health.Directory)
 	}
 
 	// load (and re-load) zone data
-	go configWatcher(configFileName)
+	g.Go(func() error {
+		err := configWatcher(ctx, configFileName)
+		if err != nil {
+			log.Printf("config watcher error: %s", err)
+			return err
+		}
+		return nil
+	})
 
 	if *flaginter == "*" {
 		addrs, _ := net.InterfaceAddrs()
@@ -198,10 +216,6 @@ func main() {
 	}
 
 	inter := getInterfaces()
-
-	if Config.HasStatHat() {
-		log.Println("StatHat integration has been removed in favor of more generic metrics")
-	}
 
 	if len(Config.GeoIPDirectory()) > 0 {
 		geoProvider, err := geoip2.New(Config.GeoIPDirectory())
@@ -247,24 +261,41 @@ func main() {
 	if err != nil {
 		log.Printf("error loading zones: %s", err)
 	}
-	go muxm.Run()
+
+	g.Go(func() error {
+		muxm.Run(ctx)
+		return nil
+	})
 
 	for _, host := range inter {
-		go srv.ListenAndServe(host)
+		host := host
+		g.Go(func() error {
+			return srv.ListenAndServe(ctx, host)
+		})
 	}
+
+	g.Go(func() error {
+		<-ctx.Done()
+		log.Printf("shutting down DNS servers")
+		err = srv.Shutdown()
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 
 	if len(*flaghttp) > 0 {
-		go func() {
+		g.Go(func() error {
 			hs := NewHTTPServer(muxm, serverInfo)
-			hs.Run(*flaghttp)
-		}()
+			err := hs.Run(ctx, *flaghttp)
+			return err
+		})
 	}
 
-	terminate := make(chan os.Signal)
-	signal.Notify(terminate, os.Interrupt)
-
-	<-terminate
-	log.Printf("geodns: signal received, stopping")
+	err = g.Wait()
+	if err != nil {
+		log.Printf("server error: %s", err)
+	}
 
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)

@@ -263,10 +263,8 @@ func (l *AvroLogger) writer(ctx context.Context) {
 }
 
 func (l *AvroLogger) Close() error {
-	log.Printf("calling Close()")
 	l.cancel(fmt.Errorf("closing"))
 	<-l.ctx.Done()
 	l.wg.Wait() // wait for all files to be closed
-	log.Printf("Close() returning")
 	return nil
 }

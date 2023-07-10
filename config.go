@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"os"
 	"sync"
@@ -14,12 +14,6 @@ import (
 )
 
 type AppConfig struct {
-	StatHat struct {
-		ApiKey string
-	}
-	Flags struct {
-		HasStatHat bool
-	}
 	GeoIP struct {
 		Directory string
 	}
@@ -56,18 +50,6 @@ type AppConfig struct {
 var Config = new(AppConfig)
 var cfgMutex sync.RWMutex
 
-func (conf *AppConfig) HasStatHat() bool {
-	cfgMutex.RLock()
-	defer cfgMutex.RUnlock()
-	return conf.Flags.HasStatHat
-}
-
-func (conf *AppConfig) StatHatApiKey() string {
-	cfgMutex.RLock()
-	defer cfgMutex.RUnlock()
-	return conf.StatHat.ApiKey
-}
-
 func (conf *AppConfig) GeoIPDirectory() string {
 	cfgMutex.RLock()
 	defer cfgMutex.RUnlock()
@@ -77,38 +59,42 @@ func (conf *AppConfig) GeoIPDirectory() string {
 	return geoip2.FindDB()
 }
 
-func configWatcher(fileName string) {
+func configWatcher(ctx context.Context, fileName string) error {
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
 	if err := watcher.Add(*flagconfig); err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
 	for {
 		select {
+		case <-ctx.Done():
+			return nil
 		case ev := <-watcher.Events:
 			if ev.Name == fileName {
 				// Write = when the file is updated directly
 				// Rename = when it's updated atomicly
 				// Chmod = for `touch`
-				if ev.Op&fsnotify.Write == fsnotify.Write ||
-					ev.Op&fsnotify.Rename == fsnotify.Rename ||
-					ev.Op&fsnotify.Chmod == fsnotify.Chmod {
+				if ev.Has(fsnotify.Write) ||
+					ev.Has(fsnotify.Rename) ||
+					ev.Has(fsnotify.Chmod) {
 					time.Sleep(200 * time.Millisecond)
-					configReader(fileName)
+					err := configReader(fileName)
+					if err != nil {
+						// don't quit because we'll just keep the old config at this
+						// stage and try again next it changes
+						log.Printf("error reading config file: %s", err)
+					}
 				}
 			}
 		case err := <-watcher.Errors:
-			log.Println("fsnotify error:", err)
+			log.Printf("fsnotify error: %s", err)
 		}
 	}
-
 }
 
 var lastReadConfig time.Time
@@ -136,11 +122,6 @@ func configReader(fileName string) error {
 		log.Printf("Failed to parse config data: %s\n", err)
 		return err
 	}
-
-	cfg.Flags.HasStatHat = len(cfg.StatHat.ApiKey) > 0
-
-	// log.Println("STATHAT APIKEY:", cfg.StatHat.ApiKey)
-	// log.Println("STATHAT FLAG  :", cfg.Flags.HasStatHat)
 
 	cfgMutex.Lock()
 	*Config = *cfg // shallow copy to prevent race conditions in referring to Config.foo()
