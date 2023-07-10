@@ -28,6 +28,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/abh/geodns/v3/applog"
@@ -152,7 +153,7 @@ func main() {
 
 	log.Printf("Starting geodns %s (%s)\n", VERSION, runtime.Version())
 
-	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill, syscall.SIGTERM)
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
