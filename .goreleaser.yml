@@ -8,9 +8,7 @@ builds:
       - CGO_ENABLED=0
     ldflags:
       - -s -w
-      - -X main.VERSION={{.Version}}
-      - -X main.gitVersion={{.ShortCommit}}
-      - -X main.buildTime={{.Date}}
+      - -X go.ntppool.org/common/version.VERSION={{.Version}}
     goos:
       - linux
       - freebsd

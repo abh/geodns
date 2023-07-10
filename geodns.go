@@ -31,6 +31,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pborman/uuid"
+	"golang.org/x/sync/errgroup"
+
+	"go.ntppool.org/common/version"
+
 	"github.com/abh/geodns/v3/applog"
 	"github.com/abh/geodns/v3/health"
 	"github.com/abh/geodns/v3/monitor"
@@ -39,14 +44,7 @@ import (
 	"github.com/abh/geodns/v3/targeting"
 	"github.com/abh/geodns/v3/targeting/geoip2"
 	"github.com/abh/geodns/v3/zones"
-	"github.com/pborman/uuid"
-	"golang.org/x/sync/errgroup"
 )
-
-// VERSION is the current version of GeoDNS, set by the build process
-var VERSION string = "devel"
-var buildTime string
-var gitVersion string
 
 var (
 	serverInfo *monitor.ServerInfo
@@ -72,15 +70,12 @@ var (
 )
 
 func init() {
-	if len(gitVersion) > 0 {
-		VERSION = VERSION + "/" + gitVersion
-	}
 
 	log.SetPrefix("geodns ")
 	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
 
 	serverInfo = &monitor.ServerInfo{}
-	serverInfo.Version = VERSION
+	serverInfo.Version = version.Version()
 	serverInfo.UUID = uuid.New()
 	serverInfo.Started = time.Now()
 
@@ -94,12 +89,7 @@ func main() {
 	}
 
 	if *flagShowVersion {
-		extra := []string{}
-		if len(buildTime) > 0 {
-			extra = append(extra, buildTime)
-		}
-		extra = append(extra, runtime.Version())
-		fmt.Printf("geodns %s (%s)\n", VERSION, strings.Join(extra, ", "))
+		fmt.Printf("geodns %s\n", version.Version())
 		os.Exit(0)
 	}
 
@@ -151,7 +141,7 @@ func main() {
 		runtime.GOMAXPROCS(*flagcpus)
 	}
 
-	log.Printf("Starting geodns %s (%s)\n", VERSION, runtime.Version())
+	log.Printf("Starting geodns %s\n", version.Version())
 
 	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill, syscall.SIGTERM)
 	g, ctx := errgroup.WithContext(ctx)
