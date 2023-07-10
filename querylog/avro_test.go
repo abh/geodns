@@ -10,13 +10,18 @@ import (
 
 func TestAvro(t *testing.T) {
 
-	lg, err := NewAvroLogger("/tmp/avro", 5000000, 4*time.Second)
+	tmppath, err := os.MkdirTemp("", "geodns.avro")
+	if err != nil {
+		t.Fatalf("could not create temp dir: %s", err)
+	}
+
+	lg, err := NewAvroLogger(tmppath, 5000000, 4*time.Second)
 	if err != nil {
 		t.Log(err)
 		t.FailNow()
 	}
 
-	dataFh, err := os.Open("testdata/queries-2023-07-03T19-58-03.759.log")
+	dataFh, err := os.Open("testdata/queries.log")
 	if err != nil {
 		t.Log("no test data available")
 		t.SkipNow()

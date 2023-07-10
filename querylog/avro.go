@@ -192,7 +192,7 @@ func (l *AvroLogger) writer(ctx context.Context) {
 					continue
 				}
 				if size > int64(l.maxsize) {
-					log.Printf("rotating avro file for size")
+					// log.Printf("rotating avro file for size")
 					currentFile, err = openFile()
 					if err != nil {
 						log.Printf("could not open new avro file: %s", err)
