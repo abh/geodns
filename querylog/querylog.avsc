@@ -6,7 +6,7 @@
         {"name": "Time", "type": "long", "logicalType": "timestamp-micros"},
         {"name": "Hostname", "type": "string"},
         {"name": "Origin", "type": "string"},
-        {"name": "Name", "type": "string"},
+        {"name": "Name", "type": "string", "default": "" },
         {"name": "Qtype", "type": "int"},
         {"name": "Rcode", "type": "int"},
         {"name": "AnswerCount", "type": "int"},
