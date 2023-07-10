@@ -8,7 +8,6 @@ require (
 	github.com/golang/geo v0.0.0-20230421003525-6adc56603217
 	github.com/hamba/avro/v2 v2.12.0
 	github.com/miekg/dns v1.1.55
-	github.com/nxadm/tail v1.4.8
 	github.com/oschwald/geoip2-golang v1.9.0
 	github.com/pborman/uuid v1.2.1
 	github.com/prometheus/client_golang v1.16.0
@@ -46,7 +45,6 @@ require (
 	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/tools v0.11.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
-	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

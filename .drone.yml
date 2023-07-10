@@ -29,7 +29,6 @@ steps:
         path: /cache
     commands:
       - ./scripts/download-test-geoip
-      - go get
       - go test -v ./...
       - go build ./...
     resources:
@@ -56,6 +55,7 @@ steps:
         path: /cache
     commands:
       - go install github.com/goreleaser/goreleaser@v1.19.2
+      - git status
       - ./scripts/run-goreleaser
       - echo Done
     when:
@@ -184,6 +184,6 @@ trigger:
     - publish
 ---
 kind: signature
-hmac: ca3996a809efaa311bfdc783ed6453abdbd2bcd996947bf483ac0e9bbba512a1
+hmac: 1a3fdcfdfdeb9a198ceb9acea082922081ee1accf54ad174285c521d6d65baa8
 
 ...
