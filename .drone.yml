@@ -55,6 +55,7 @@ steps:
       - name: gopkg
         path: /cache
     commands:
+      - go install github.com/goreleaser/goreleaser@v1.19.2
       - ./scripts/run-goreleaser
       - echo Done
     when:
@@ -79,7 +80,7 @@ steps:
       secret_key:
         from_secret: s3_secret_key
       bucket: geodns
-      target: /builds/test/${DRONE_BUILD_NUMBER}
+      target: /geodns/builds/test/${DRONE_BUILD_NUMBER}
       source: dist/*
       strip_prefix: dist/
       endpoint: https://minio-ewr1.develooper.com/
@@ -129,7 +130,7 @@ steps:
   - name: download
     image: golang:1.20.5
     commands:
-      - ./scripts/download-release test/${DRONE_BUILD_PARENT} dist/
+      - ./scripts/download-release geodns test/${DRONE_BUILD_PARENT} dist/
     resources:
       requests:
         cpu: 250
@@ -153,7 +154,7 @@ steps:
       secret_key:
         from_secret: s3_secret_key
       bucket: geodns
-      target: /builds/release/${DRONE_BUILD_NUMBER}
+      target: /geodns/builds/release/${DRONE_BUILD_NUMBER}
       source: dist/*
       strip_prefix: dist/
       endpoint: https://minio-ewr1.develooper.com/
@@ -183,6 +184,6 @@ trigger:
     - publish
 ---
 kind: signature
-hmac: 3cefa2d3e35450fc898c0565bb977765f738ee4cf7a433cf7e5b2b6e3e7c31b1
+hmac: ca3996a809efaa311bfdc783ed6453abdbd2bcd996947bf483ac0e9bbba512a1
 
 ...

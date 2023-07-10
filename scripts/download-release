@@ -1,20 +1,21 @@
 #!/bin/bash
 
-BUILD=$1
-DIR=$2
+BASE=$1
+BUILD=$2
+DIR=$3
 
 set -euo pipefail
 
 if [ -z "$DIR" ]; then
-  echo run with $0 BUILD_NUMBER DIR
+  echo run with $0 NAME BUILD_NUMBER DIR
   exit 2
 fi
 
 mkdir -p $DIR
 
-BASE=https://geodns.bitnames.com/builds/$BUILD
+BASE=https://geodns.bitnames.com/${BASE}/builds/${BUILD}
 
-files=`curl -sf $BASE/checksums.txt | awk '{print $2}'`
+files=`curl -sSf ${BASE}/checksums.txt | awk '{print $2}'`
 metafiles="checksums.txt metadata.json CHANGELOG.md artifacts.json"
 
 for f in $metafiles; do
