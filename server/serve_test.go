@@ -41,6 +41,8 @@ func TestServe(t *testing.T) {
 
 	t.Run("Serving", testServing)
 
+	t.Run("QueryLog", testQueryLog(srv))
+
 	// todo: run test queries?
 
 	cancel()
