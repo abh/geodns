@@ -6,7 +6,7 @@ require (
 	github.com/abh/errorutil v1.0.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/golang/geo v0.0.0-20230421003525-6adc56603217
-	github.com/hamba/avro/v2 v2.12.0
+	github.com/hamba/avro/v2 v2.13.0
 	github.com/miekg/dns v1.1.55
 	github.com/oschwald/geoip2-golang v1.9.0
 	github.com/pborman/uuid v1.2.1
