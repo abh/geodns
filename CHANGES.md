@@ -1,5 +1,9 @@
 # GeoDNS Changelog
 
+## 3.3.1 August 2023
+- Update Go to 1.20.7 and package dependencies
+- Minor Avro logging improvements
+
 ## 3.3.1 July 2023
 - Use server IP if ECS provided IP is unhelpful
 - Avro logging fixes

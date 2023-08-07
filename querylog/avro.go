@@ -134,7 +134,7 @@ func (l *AvroLogger) writer(ctx context.Context) {
 	closeFile := func(af *avroFile) error {
 
 		mu.Lock()
-		idx := slices.Index[*avroFile](openFiles, af)
+		idx := slices.Index(openFiles, af)
 		if idx >= 0 {
 			openFiles = slices.Delete(openFiles, idx, idx+1)
 		} else {
