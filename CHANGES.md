@@ -1,6 +1,6 @@
 # GeoDNS Changelog
 
-## 3.3.1 August 2023
+## 3.3.2 August 2023
 - Update Go to 1.20.7 and package dependencies
 - Minor Avro logging improvements
 
