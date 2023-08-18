@@ -21,7 +21,7 @@ steps:
         memory: 100MiB
 
   - name: test
-    image: golang:1.20.5
+    image: golang:1.21.0
     volumes:
       - name: go
         path: /go
@@ -40,7 +40,7 @@ steps:
         memory: 2GiB
 
   - name: goreleaser
-    image: golang:1.20.7
+    image: golang:1.21.0
     resources:
       requests:
         cpu: 4000
@@ -54,7 +54,6 @@ steps:
       - name: gopkg
         path: /cache
     commands:
-      - go install github.com/goreleaser/goreleaser@v1.19.2
       - git status
       - ./scripts/run-goreleaser
       - echo Done
@@ -88,7 +87,7 @@ steps:
     depends_on: [goreleaser]
 
   - name: fury-publish
-    image: golang:1.20.7
+    image: golang:1.21.0
     resources:
       requests:
         cpu: 250
@@ -128,7 +127,7 @@ name: publish-production
 
 steps:
   - name: download
-    image: golang:1.20.7
+    image: golang:1.21.0
     commands:
       - ./scripts/download-release geodns test/${DRONE_BUILD_PARENT} dist/
     resources:
@@ -162,7 +161,7 @@ steps:
     depends_on: ["download"]
 
   - name: fury-publish
-    image: golang:1.20.7
+    image: golang:1.21.0
     resources:
       requests:
         cpu: 250
@@ -184,6 +183,6 @@ trigger:
     - publish
 ---
 kind: signature
-hmac: 17247755dd9aa6253a6160a6e93bc8e373687987fa8d258671cd5cf9db7773a3
+hmac: a0553710aad7699bef0aacf5539674f86b7ae27cdf70a758028348115b9e07ba
 
 ...

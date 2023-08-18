@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+go install github.com/goreleaser/goreleaser@v1.20.0
+
 DRONE_TAG=${DRONE_TAG-""}
 
 is_snapshot=""
