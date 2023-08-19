@@ -168,6 +168,9 @@
     "bar-alias": {
       "alias": "bar"
     },
+    "root-alias": {
+      "alias": ""
+    },
     "www-alias": {
       "alias": "www"
     },

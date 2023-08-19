@@ -81,10 +81,33 @@ func testServing(t *testing.T) {
 	// NOERROR for A request
 	checkRcode(t, r.Rcode, dns.RcodeSuccess, "_status.pgeodns")
 
+	// bar is an alias
 	r = exchange(t, "bar.test.example.com.", dns.TypeA)
 	ip := r.Answer[0].(*dns.A).A
 	if ip.String() != "192.168.1.2" {
 		t.Logf("unexpected A record for bar.test.example.com: %s", ip.String())
+		t.Fail()
+	}
+
+	// bar is an alias to test, the SOA record should be for test
+	r = exchange(t, "_.root-alias.test.example.com.", dns.TypeA)
+	if len(r.Answer) > 0 {
+		t.Errorf("got answers for _.root-alias.test.example.com")
+	}
+	if len(r.Ns) == 0 {
+		t.Fatalf("_.root-alias.test didn't return auth section")
+	}
+	if n := r.Ns[0].(*dns.SOA).Header().Name; n != "test.example.com." {
+		t.Fatalf("_.root-alias.test didn't have test.example.com soa: %s", n)
+	}
+
+	// root-alias is an alias to test (apex), but the NS records shouldn't be on root-alias
+	r = exchange(t, "root-alias.test.example.com.", dns.TypeNS)
+	if len(r.Answer) > 0 {
+		t.Errorf("got unexpected answers for root-alias.test.example.com NS")
+	}
+	if len(r.Ns) == 0 {
+		t.Fatalf("root-alias.test NS didn't return auth section")
 	}
 
 	r = exchange(t, "test.example.com.", dns.TypeSOA)
@@ -93,11 +116,10 @@ func testServing(t *testing.T) {
 	assert.Equal(t, 3, int(serial))
 
 	// no AAAA records for 'bar', so check we get a soa record back
-	r = exchange(t, "test.example.com.", dns.TypeAAAA)
+	r = exchange(t, "bar.test.example.com.", dns.TypeAAAA)
 	soa2 := r.Ns[0].(*dns.SOA)
 	if !reflect.DeepEqual(soa, soa2) {
-		t.Logf("AAAA empty NOERROR soa record different from SOA request")
-		t.Fail()
+		t.Errorf("AAAA empty NOERROR soa record different from SOA request")
 	}
 
 	// CNAMEs

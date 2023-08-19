@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -246,9 +247,20 @@ func (z *Zone) FindLabels(s string, targets []string, qts []uint16) []LabelMatch
 					continue
 				case dns.TypeMF:
 					if label.Records[dns.TypeMF] != nil {
+
+						// don't follow NS and SOA records for aliases
+						aliasQts := slices.DeleteFunc(qts, func(q uint16) bool {
+							if slices.Contains(
+								[]uint16{dns.TypeNS, dns.TypeSOA},
+								q) {
+								return true
+							}
+							return false
+						})
+
 						name = label.FirstRR(dns.TypeMF).(*dns.MF).Mf
 						// TODO: need to avoid loops here somehow
-						aliases := z.FindLabels(name, targets, qts)
+						aliases := z.FindLabels(name, targets, aliasQts)
 						matches = append(matches, aliases...)
 						continue
 					}
