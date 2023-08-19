@@ -40,6 +40,7 @@ func FindDB() string {
 		"/usr/share/local/GeoIP/", // source install?
 		"/usr/local/share/GeoIP/", // FreeBSD
 		"/opt/local/share/GeoIP/", // MacPorts
+		"/opt/homebrew/var/GeoIP", // Homebrew
 	}
 	for _, dir := range dirs {
 		if _, err := os.Stat(dir); err != nil {

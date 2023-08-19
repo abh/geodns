@@ -8,3 +8,4 @@ dist/
 /dns/geodns.conf
 geodns-*-*
 geodns-*-*.tar
+/devel/
