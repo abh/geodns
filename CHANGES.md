@@ -1,5 +1,10 @@
 # GeoDNS Changelog
 
+## 3.3.3 August 2023
+- Fix how NS / SOA queries are treated for alias records pointing
+  to the zone apex
+- Update Go to 1.21.0 and package dependencies
+
 ## 3.3.2 August 2023
 - Update Go to 1.20.7 and package dependencies
 - Minor Avro logging improvements
