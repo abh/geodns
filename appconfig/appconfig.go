@@ -1,4 +1,4 @@
-package main
+package appconfig
 
 import (
 	"context"
@@ -7,13 +7,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abh/geodns/v3/targeting/geoip2"
-
 	"github.com/fsnotify/fsnotify"
-	gcfg "gopkg.in/gcfg.v1"
+	"gopkg.in/gcfg.v1"
+
+	"github.com/abh/geodns/v3/targeting/geoip2"
 )
 
 type AppConfig struct {
+	DNS struct {
+		PublicDebugQueries bool
+		DetailedMetrics    bool
+	}
 	GeoIP struct {
 		Directory string
 	}
@@ -47,7 +51,9 @@ type AppConfig struct {
 	}
 }
 
+// Singleton to keep the latest read config
 var Config = new(AppConfig)
+
 var cfgMutex sync.RWMutex
 
 func (conf *AppConfig) GeoIPDirectory() string {
@@ -59,14 +65,14 @@ func (conf *AppConfig) GeoIPDirectory() string {
 	return geoip2.FindDB()
 }
 
-func configWatcher(ctx context.Context, fileName string) error {
+func ConfigWatcher(ctx context.Context, fileName string) error {
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
 	}
 
-	if err := watcher.Add(*flagconfig); err != nil {
+	if err := watcher.Add(fileName); err != nil {
 		return err
 	}
 
@@ -83,7 +89,7 @@ func configWatcher(ctx context.Context, fileName string) error {
 					ev.Has(fsnotify.Rename) ||
 					ev.Has(fsnotify.Chmod) {
 					time.Sleep(200 * time.Millisecond)
-					err := configReader(fileName)
+					err := ConfigReader(fileName)
 					if err != nil {
 						// don't quit because we'll just keep the old config at this
 						// stage and try again next it changes
@@ -99,7 +105,7 @@ func configWatcher(ctx context.Context, fileName string) error {
 
 var lastReadConfig time.Time
 
-func configReader(fileName string) error {
+func ConfigReader(fileName string) error {
 
 	stat, err := os.Stat(fileName)
 	if err != nil {

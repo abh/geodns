@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/abh/geodns/v3/appconfig"
 	"github.com/abh/geodns/v3/monitor"
 	"github.com/abh/geodns/v3/zones"
 	"github.com/miekg/dns"
@@ -23,7 +24,7 @@ const (
 func TestServe(t *testing.T) {
 	serverInfo := &monitor.ServerInfo{}
 
-	srv := NewServer(serverInfo)
+	srv := NewServer(appconfig.Config, serverInfo)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mm, err := zones.NewMuxManager("../dns", srv)

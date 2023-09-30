@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/abh/geodns/v3/appconfig"
 	"github.com/abh/geodns/v3/monitor"
 	"github.com/abh/geodns/v3/zones"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -125,10 +126,10 @@ type basicauth struct {
 
 func (b *basicauth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	cfgMutex.RLock()
-	user := Config.HTTP.User
-	password := Config.HTTP.Password
-	cfgMutex.RUnlock()
+	// cfgMutex.RLock()
+	user := appconfig.Config.HTTP.User
+	password := appconfig.Config.HTTP.Password
+	// cfgMutex.RUnlock()
 
 	if len(user) == 0 {
 		b.h.ServeHTTP(w, r)

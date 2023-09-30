@@ -36,6 +36,7 @@ import (
 
 	"go.ntppool.org/common/version"
 
+	"github.com/abh/geodns/v3/appconfig"
 	"github.com/abh/geodns/v3/applog"
 	"github.com/abh/geodns/v3/health"
 	"github.com/abh/geodns/v3/monitor"
@@ -51,17 +52,16 @@ var (
 )
 
 var (
-	flagconfig       = flag.String("config", "./dns/", "directory of zone files")
-	flagconfigfile   = flag.String("configfile", "geodns.conf", "filename of config file (in 'config' directory)")
-	flagcheckconfig  = flag.Bool("checkconfig", false, "check configuration and exit")
-	flagidentifier   = flag.String("identifier", "", "identifier (hostname, pop name or similar)")
-	flaginter        = flag.String("interface", "*", "set the listener address")
-	flagport         = flag.String("port", "53", "default port number")
-	flaghttp         = flag.String("http", ":8053", "http listen address (:8053)")
-	flaglog          = flag.Bool("log", false, "be more verbose")
-	flagcpus         = flag.Int("cpus", 0, "Set the maximum number of CPUs to use")
-	flagLogFile      = flag.String("logfile", "", "log to file")
-	flagPrivateDebug = flag.Bool("privatedebug", false, "Make debugging queries accepted only on loopback")
+	flagconfig      = flag.String("config", "./dns/", "directory of zone files")
+	flagconfigfile  = flag.String("configfile", "geodns.conf", "filename of config file (in 'config' directory)")
+	flagcheckconfig = flag.Bool("checkconfig", false, "check configuration and exit")
+	flagidentifier  = flag.String("identifier", "", "identifier (hostname, pop name or similar)")
+	flaginter       = flag.String("interface", "*", "set the listener address")
+	flagport        = flag.String("port", "53", "default port number")
+	flaghttp        = flag.String("http", ":8053", "http listen address (:8053)")
+	flaglog         = flag.Bool("log", false, "be more verbose")
+	flagcpus        = flag.Int("cpus", 0, "Set the maximum number of CPUs to use")
+	flagLogFile     = flag.String("logfile", "", "log to file")
 
 	flagShowVersion = flag.Bool("version", false, "Show GeoDNS version")
 
@@ -118,7 +118,7 @@ func main() {
 	}
 
 	if *flagcheckconfig {
-		err := configReader(configFileName)
+		err := appconfig.ConfigReader(configFileName)
 		if err != nil {
 			log.Println("Errors reading config", err)
 			os.Exit(2)
@@ -175,19 +175,19 @@ func main() {
 	}
 
 	// load geodns.conf config
-	err := configReader(configFileName)
+	err := appconfig.ConfigReader(configFileName)
 	if err != nil {
 		log.Printf("error reading config file %s: %s", configFileName, err)
 		os.Exit(2)
 	}
 
-	if len(Config.Health.Directory) > 0 {
-		go health.DirectoryReader(Config.Health.Directory)
+	if len(appconfig.Config.Health.Directory) > 0 {
+		go health.DirectoryReader(appconfig.Config.Health.Directory)
 	}
 
 	// load (and re-load) zone data
 	g.Go(func() error {
-		err := configWatcher(ctx, configFileName)
+		err := appconfig.ConfigWatcher(ctx, configFileName)
 		if err != nil {
 			log.Printf("config watcher error: %s", err)
 			return err
@@ -213,8 +213,8 @@ func main() {
 
 	inter := getInterfaces()
 
-	if len(Config.GeoIPDirectory()) > 0 {
-		geoProvider, err := geoip2.New(Config.GeoIPDirectory())
+	if len(appconfig.Config.GeoIPDirectory()) > 0 {
+		geoProvider, err := geoip2.New(appconfig.Config.GeoIPDirectory())
 		if err != nil {
 			log.Printf("Configuring geo provider: %s", err)
 		}
@@ -223,9 +223,9 @@ func main() {
 		}
 	}
 
-	srv := server.NewServer(serverInfo)
+	srv := server.NewServer(appconfig.Config, serverInfo)
 
-	if qlc := Config.AvroLog; len(qlc.Path) > 0 {
+	if qlc := appconfig.Config.AvroLog; len(qlc.Path) > 0 {
 
 		maxsize := qlc.MaxSize
 		if maxsize < 50000 {
@@ -245,7 +245,7 @@ func main() {
 		}
 		srv.SetQueryLogger(ql)
 
-	} else if qlc := Config.QueryLog; len(qlc.Path) > 0 {
+	} else if qlc := appconfig.Config.QueryLog; len(qlc.Path) > 0 {
 		ql, err := querylog.NewFileLogger(qlc.Path, qlc.MaxSize, qlc.Keep)
 		if err != nil {
 			log.Fatalf("Could not start file query logger: %s", err)

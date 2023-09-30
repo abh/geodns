@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/abh/geodns/v3/appconfig"
 	"github.com/abh/geodns/v3/monitor"
 	"github.com/abh/geodns/v3/querylog"
 	"github.com/abh/geodns/v3/zones"
@@ -23,18 +24,20 @@ type serverMetrics struct {
 
 // Server ...
 type Server struct {
-	queryLogger        querylog.QueryLogger
-	mux                *dns.ServeMux
 	PublicDebugQueries bool
-	info               *monitor.ServerInfo
-	metrics            *serverMetrics
+	DetailedMetrics    bool
+
+	queryLogger querylog.QueryLogger
+	mux         *dns.ServeMux
+	info        *monitor.ServerInfo
+	metrics     *serverMetrics
 
 	lock       sync.Mutex
 	dnsServers []*dns.Server
 }
 
 // NewServer ...
-func NewServer(si *monitor.ServerInfo) *Server {
+func NewServer(config *appconfig.AppConfig, si *monitor.ServerInfo) *Server {
 	mux := dns.NewServeMux()
 
 	queries := prometheus.NewCounterVec(
