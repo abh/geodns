@@ -311,11 +311,16 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		m.Ns = append(m.Ns, z.SoaRR())
 	}
 
+	qlabelMetric := "_"
+	if srv.DetailedMetrics {
+		qlabelMetric = qlabel
+	}
+
 	srv.metrics.Queries.With(
 		prometheus.Labels{
 			"zone":  z.Origin,
 			"qtype": dns.TypeToString[qtype],
-			"qname": qlabel,
+			"qname": qlabelMetric,
 			"rcode": dns.RcodeToString[m.Rcode],
 		}).Inc()
 

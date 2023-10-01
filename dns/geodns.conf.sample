@@ -3,6 +3,12 @@
 ; It is recommended to distribute the configuration file globally
 ; with your .json zone files.
 
+[dns]
+# allow _status queries from anywhere (versus only localhost)
+publicdebugqueries = false
+# include query label in prometheus metrics
+detailedmetrics    = true
+
 [geoip]
 ;; Directory containing the GeoIP2 .mmdb database files; defaults
 ;; to looking through a list of common directories looking for one

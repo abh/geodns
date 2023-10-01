@@ -80,7 +80,14 @@ func NewServer(config *appconfig.AppConfig, si *monitor.ServerInfo) *Server {
 		Queries: queries,
 	}
 
-	return &Server{mux: mux, info: si, metrics: metrics}
+	return &Server{
+		PublicDebugQueries: appconfig.Config.DNS.PublicDebugQueries,
+		DetailedMetrics:    appconfig.Config.DNS.DetailedMetrics,
+
+		mux:     mux,
+		info:    si,
+		metrics: metrics,
+	}
 }
 
 // SetQueryLogger configures the query logger. For now it only supports writing to

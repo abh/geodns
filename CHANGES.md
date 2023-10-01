@@ -1,5 +1,10 @@
 # GeoDNS Changelog
 
+## Next
+- DNS configuration options (see dns/geodns.conf.sample) for
+  disabling qnames being in the prometheus labels and enabling
+  public debug queries.
+
 ## 3.3.3 August 2023
 - Fix how NS / SOA queries are treated for alias records pointing
   to the zone apex
