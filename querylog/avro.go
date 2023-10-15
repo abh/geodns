@@ -106,7 +106,10 @@ func (l *AvroLogger) writer(ctx context.Context) {
 			return nil, err
 		}
 
-		enc, err := ocf.NewEncoder(schemaJson, f, ocf.WithCodec(ocf.Snappy))
+		enc, err := ocf.NewEncoder(schemaJson, f,
+			ocf.WithCodec(ocf.Snappy),
+			ocf.WithBlockLength(10_000), // count, not bytes
+		)
 
 		if err != nil {
 			return nil, err
