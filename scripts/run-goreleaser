@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-go install github.com/goreleaser/goreleaser@v1.20.0
+go install github.com/goreleaser/goreleaser@v1.22.1
 
 DRONE_TAG=${DRONE_TAG-""}
 
@@ -12,4 +12,4 @@ if [ -z "$DRONE_TAG" ]; then
   is_snapshot="--snapshot"
 fi
 
-goreleaser release $is_snapshot -p 6 --skip-publish
+goreleaser release $is_snapshot -p 6 --skip=publish
