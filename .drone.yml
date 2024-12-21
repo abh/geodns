@@ -21,7 +21,7 @@ steps:
         memory: 100MiB
 
   - name: test
-    image: golang:1.21.4
+    image: golang:1.23.4
     volumes:
       - name: go
         path: /go
@@ -40,14 +40,14 @@ steps:
         memory: 2GiB
 
   - name: goreleaser
-    image: golang:1.21.4
+    image: golang:1.23.4
     resources:
       requests:
         cpu: 4000
         memory: 512MiB
       limits:
         cpu: 10000
-        memory: 2048MiB
+        memory: 4096MiB
     volumes:
       - name: go
         path: /go
@@ -87,7 +87,7 @@ steps:
     depends_on: [goreleaser]
 
   - name: fury-publish
-    image: golang:1.21.4
+    image: golang:1.23.4
     resources:
       requests:
         cpu: 250
@@ -127,7 +127,7 @@ name: publish-production
 
 steps:
   - name: download
-    image: golang:1.21.4
+    image: golang:1.23.4
     commands:
       - ./scripts/download-release geodns test/${DRONE_BUILD_PARENT} dist/
     resources:
@@ -161,7 +161,7 @@ steps:
     depends_on: ["download"]
 
   - name: fury-publish
-    image: golang:1.21.4
+    image: golang:1.23.4
     resources:
       requests:
         cpu: 250
@@ -183,6 +183,6 @@ trigger:
     - publish
 ---
 kind: signature
-hmac: 0e6d31ce009c1d91ea28cc3de8d9a38bfe736038cb11ed8a664d26310f32b466
+hmac: e533474e76990523f4fedb7bd4339ede3b71040680103c055621ad881ee39bfc
 
 ...

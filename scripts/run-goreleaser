@@ -2,7 +2,16 @@
 
 set -euo pipefail
 
-go install github.com/goreleaser/goreleaser@v1.22.1
+go install github.com/goreleaser/goreleaser/v2@v2.5.0
+
+if [ ! -z "${harbor_username:-}" ]; then
+  DOCKER_FILE=~/.docker/config.json
+  if [ ! -e $DOCKER_FILE ]; then
+    mkdir -p ~/.docker/
+    export harbor_auth=`cat /dev/null | jq -s -r '[ env.harbor_username, env.harbor_password ] | join(":") | @base64'`
+    echo '{"auths":{"harbor.ntppool.org":{"auth":""}}}' | jq '.auths["harbor.ntppool.org"].auth=env.harbor_auth' > $DOCKER_FILE
+  fi
+fi
 
 DRONE_TAG=${DRONE_TAG-""}
 

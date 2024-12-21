@@ -1,3 +1,4 @@
+version: 2
 before:
   hooks:
     - go mod tidy
@@ -30,7 +31,7 @@ archives:
 checksum:
   name_template: "checksums.txt"
 snapshot:
-  name_template: '{{ .Tag }}{{ if index .Env "DRONE_BUILD_NUMBER" }}-{{ .Env.DRONE_BUILD_NUMBER }}{{ end }}'
+  version_template: '{{ .Tag }}{{ if index .Env "DRONE_BUILD_NUMBER" }}-{{ .Env.DRONE_BUILD_NUMBER }}{{ end }}'
 changelog:
   sort: asc
   filters:
