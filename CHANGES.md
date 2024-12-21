@@ -1,5 +1,8 @@
 # GeoDNS Changelog
 
+## 3.4.1 December 2024
+- Update Go to 1.23.4 and package dependencies
+
 ## 3.4.0 November 2023
 - DNS configuration options (see dns/geodns.conf.sample) for
   disabling qnames being in the prometheus labels and enabling
