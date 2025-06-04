@@ -155,6 +155,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 		"a":     dns.TypeA,
 		"aaaa":  dns.TypeAAAA,
 		"alias": dns.TypeMF,
+		"caa":   dns.TypeCAA,
 		"cname": dns.TypeCNAME,
 		"mx":    dns.TypeMX,
 		"ns":    dns.TypeNS,
@@ -470,6 +471,41 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 					} else {
 						log.Printf("Zero length SPF record for '%s' in '%s'\n", label.Label, zone.Origin)
 						continue
+					}
+
+				case dns.TypeCAA:
+					rec := records[rType][i].(map[string]interface{})
+					
+					var flag uint8 = 0
+					var tag, value string
+					
+					if rec["flag"] != nil {
+						flag = uint8(typeutil.ToInt(rec["flag"]))
+					}
+					
+					if rec["tag"] != nil {
+						tag = rec["tag"].(string)
+					} else {
+						log.Printf("CAA record missing required 'tag' field for '%s' in '%s'\n", label.Label, zone.Origin)
+						continue
+					}
+					
+					if rec["value"] != nil {
+						value = rec["value"].(string)
+					} else {
+						log.Printf("CAA record missing required 'value' field for '%s' in '%s'\n", label.Label, zone.Origin)
+						continue
+					}
+					
+					if rec["weight"] != nil {
+						record.Weight = typeutil.ToInt(rec["weight"])
+					}
+					
+					record.RR = &dns.CAA{
+						Hdr:   h,
+						Flag:  flag,
+						Tag:   tag,
+						Value: value,
 					}
 
 				default:
