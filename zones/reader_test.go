@@ -8,6 +8,7 @@ import (
 
 	"github.com/abh/geodns/v3/targeting"
 	"github.com/abh/geodns/v3/targeting/geoip2"
+	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -160,4 +161,228 @@ func CopyFile(src, dst string) (int64, error) {
 	}
 	defer df.Close()
 	return io.Copy(df, sf)
+}
+
+func TestCAARecords(t *testing.T) {
+	// Create test data inline
+	jsonData := map[string]interface{}{
+		"": map[string]interface{}{
+			"ns": map[string]interface{}{
+				"ns1.example.com.": nil,
+				"ns2.example.com.": nil,
+			},
+			"caa": []interface{}{
+				map[string]interface{}{
+					"flag":  float64(0),
+					"tag":   "issue",
+					"value": "ca.example.net",
+				},
+				map[string]interface{}{
+					"tag":   "issuewild",
+					"value": "ca.example.net",
+				},
+				map[string]interface{}{
+					"flag":   float64(128),
+					"tag":    "iodef",
+					"value":  "mailto:security@example.com",
+					"weight": float64(100),
+				},
+			},
+		},
+	}
+
+	// Create a test zone
+	zone := &Zone{
+		Origin:  "test.com",
+		Labels:  make(map[string]*Label),
+		Options: ZoneOptions{Ttl: 600},
+	}
+
+	// Set up zone data
+	setupZoneData(jsonData, zone)
+
+	// Verify the apex label was created
+	apexLabel, exists := zone.Labels[""]
+	if !exists {
+		t.Fatal("Apex label not found")
+	}
+
+	// Verify CAA records exist
+	caaRecords, exists := apexLabel.Records[dns.TypeCAA]
+	if !exists {
+		t.Fatal("CAA records not found")
+	}
+
+	// Should have 3 CAA records
+	assert.Equal(t, 3, len(caaRecords), "Expected 3 CAA records")
+
+	// Debug: print the actual records
+	for i, record := range caaRecords {
+		caa := record.RR.(*dns.CAA)
+		t.Logf("CAA record %d: flag=%d, tag=%s, value=%s, weight=%d", i, caa.Flag, caa.Tag, caa.Value, record.Weight)
+	}
+
+	// Test records - order may vary based on JSON parsing
+	var issue, issuewild, iodef *dns.CAA
+	var iodefWeight int
+	
+	for _, record := range caaRecords {
+		caa := record.RR.(*dns.CAA)
+		switch caa.Tag {
+		case "issue":
+			issue = caa
+		case "issuewild":
+			issuewild = caa
+		case "iodef":
+			iodef = caa
+			iodefWeight = record.Weight
+		}
+	}
+
+	// Test issue CAA record
+	assert.NotNil(t, issue, "Issue CAA record should exist")
+	assert.Equal(t, uint8(0), issue.Flag, "Issue CAA record flag should be 0")
+	assert.Equal(t, "issue", issue.Tag, "Issue CAA record tag should be 'issue'")
+	assert.Equal(t, "ca.example.net", issue.Value, "Issue CAA record value should be 'ca.example.net'")
+
+	// Test issuewild CAA record
+	assert.NotNil(t, issuewild, "Issuewild CAA record should exist")
+	assert.Equal(t, uint8(0), issuewild.Flag, "Issuewild CAA record flag should default to 0")
+	assert.Equal(t, "issuewild", issuewild.Tag, "Issuewild CAA record tag should be 'issuewild'")
+	assert.Equal(t, "ca.example.net", issuewild.Value, "Issuewild CAA record value should be 'ca.example.net'")
+
+	// Test iodef CAA record
+	assert.NotNil(t, iodef, "Iodef CAA record should exist")
+	assert.Equal(t, uint8(128), iodef.Flag, "Iodef CAA record flag should be 128")
+	assert.Equal(t, "iodef", iodef.Tag, "Iodef CAA record tag should be 'iodef'")
+	assert.Equal(t, "mailto:security@example.com", iodef.Value, "Iodef CAA record value should be 'mailto:security@example.com'")
+	assert.Equal(t, 100, iodefWeight, "Iodef CAA record weight should be 100")
+}
+
+func TestCAARecordsTextFormat(t *testing.T) {
+	// Test CAA records using text format (bind-style)
+	jsonData := map[string]interface{}{
+		"": map[string]interface{}{
+			"ns": map[string]interface{}{
+				"ns1.example.com.": nil,
+				"ns2.example.com.": nil,
+			},
+			"caa": []interface{}{
+				"0 issue ca.example.net",
+				"0 issuewild \"ca.example.net\"",
+				[]interface{}{"128 iodef \"mailto:security@example.com\"", 100},
+				"255 issue letsencrypt.org",
+			},
+		},
+	}
+
+	// Create a test zone
+	zone := &Zone{
+		Origin:  "texttest.com",
+		Labels:  make(map[string]*Label),
+		Options: ZoneOptions{Ttl: 600},
+	}
+
+	// Set up zone data
+	setupZoneData(jsonData, zone)
+
+	// Verify the apex label was created
+	apexLabel, exists := zone.Labels[""]
+	if !exists {
+		t.Fatal("Apex label not found")
+	}
+
+	// Verify CAA records exist
+	caaRecords, exists := apexLabel.Records[dns.TypeCAA]
+	if !exists {
+		t.Fatal("CAA records not found")
+	}
+
+	// Should have 4 CAA records
+	assert.Equal(t, 4, len(caaRecords), "Expected 4 CAA records")
+
+	// Debug: print the actual records
+	for i, record := range caaRecords {
+		caa := record.RR.(*dns.CAA)
+		t.Logf("CAA text record %d: flag=%d, tag=%s, value=%s, weight=%d", i, caa.Flag, caa.Tag, caa.Value, record.Weight)
+	}
+
+	// Find specific records by content
+	var issue1, issue2, issuewild, iodef *dns.CAA
+	var iodefWeight int
+	
+	for _, record := range caaRecords {
+		caa := record.RR.(*dns.CAA)
+		switch {
+		case caa.Tag == "issue" && caa.Value == "ca.example.net":
+			issue1 = caa
+		case caa.Tag == "issue" && caa.Value == "letsencrypt.org":
+			issue2 = caa
+		case caa.Tag == "issuewild":
+			issuewild = caa
+		case caa.Tag == "iodef":
+			iodef = caa
+			iodefWeight = record.Weight
+		}
+	}
+
+	// Test first issue CAA record
+	assert.NotNil(t, issue1, "First issue CAA record should exist")
+	assert.Equal(t, uint8(0), issue1.Flag, "First issue CAA record flag should be 0")
+	assert.Equal(t, "issue", issue1.Tag, "First issue CAA record tag should be 'issue'")
+	assert.Equal(t, "ca.example.net", issue1.Value, "First issue CAA record value should be 'ca.example.net'")
+
+	// Test second issue CAA record
+	assert.NotNil(t, issue2, "Second issue CAA record should exist")
+	assert.Equal(t, uint8(255), issue2.Flag, "Second issue CAA record flag should be 255")
+	assert.Equal(t, "issue", issue2.Tag, "Second issue CAA record tag should be 'issue'")
+	assert.Equal(t, "letsencrypt.org", issue2.Value, "Second issue CAA record value should be 'letsencrypt.org'")
+
+	// Test issuewild CAA record (with quotes stripped)
+	assert.NotNil(t, issuewild, "Issuewild CAA record should exist")
+	assert.Equal(t, uint8(0), issuewild.Flag, "Issuewild CAA record flag should be 0")
+	assert.Equal(t, "issuewild", issuewild.Tag, "Issuewild CAA record tag should be 'issuewild'")
+	assert.Equal(t, "ca.example.net", issuewild.Value, "Issuewild CAA record value should be 'ca.example.net' (quotes stripped)")
+
+	// Test iodef CAA record with weight
+	assert.NotNil(t, iodef, "Iodef CAA record should exist")
+	assert.Equal(t, uint8(128), iodef.Flag, "Iodef CAA record flag should be 128")
+	assert.Equal(t, "iodef", iodef.Tag, "Iodef CAA record tag should be 'iodef'")
+	assert.Equal(t, "mailto:security@example.com", iodef.Value, "Iodef CAA record value should be 'mailto:security@example.com'")
+	assert.Equal(t, 100, iodefWeight, "Iodef CAA record weight should be 100")
+}
+
+func TestCAARecordsTextFormatErrors(t *testing.T) {
+	// Test error handling for malformed CAA text records
+	jsonData := map[string]interface{}{
+		"test": map[string]interface{}{
+			"caa": []interface{}{
+				"invalid",                  // Too few parts
+				"notanumber issue ca.net", // Invalid flag
+				"256 issue ca.net",        // Flag out of range
+			},
+		},
+	}
+
+	// Create a test zone
+	zone := &Zone{
+		Origin:  "errortest.com",
+		Labels:  make(map[string]*Label),
+		Options: ZoneOptions{Ttl: 600},
+	}
+
+	// This should not panic but should log errors and skip malformed records
+	setupZoneData(jsonData, zone)
+
+	// Verify the label was created
+	testLabel, exists := zone.Labels["test"]
+	if !exists {
+		t.Fatal("Test label not found")
+	}
+
+	// Should have no CAA records due to all being malformed
+	caaRecords, exists := testLabel.Records[dns.TypeCAA]
+	if exists && len(caaRecords) > 0 {
+		t.Errorf("Expected no CAA records due to malformed input, but got %d", len(caaRecords))
+	}
 }

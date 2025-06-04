@@ -155,6 +155,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 		"a":     dns.TypeA,
 		"aaaa":  dns.TypeAAAA,
 		"alias": dns.TypeMF,
+		"caa":   dns.TypeCAA,
 		"cname": dns.TypeCNAME,
 		"mx":    dns.TypeMX,
 		"ns":    dns.TypeNS,
@@ -227,7 +228,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 
 			//log.Printf("RECORDS %s TYPE-REC %T\n", Records, Records)
 
-			label.Records[dnsType] = make(Records, len(records[rType]))
+			validRecords := make([]*Record, 0, len(records[rType]))
 
 			for i := 0; i < len(records[rType]); i++ {
 				//log.Printf("RT %T %#v\n", records[rType][i], records[rType][i])
@@ -472,6 +473,95 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 						continue
 					}
 
+				case dns.TypeCAA:
+					rec := records[rType][i]
+					
+					var flag uint8 = 0
+					var tag, value string
+					
+					switch rec.(type) {
+					case string:
+						// Text format: "flag tag value" 
+						var err error
+						flag, tag, value, err = parseCAAText(rec.(string))
+						if err != nil {
+							log.Printf("Error parsing CAA record '%s' for '%s' in '%s': %v\n", rec.(string), label.Label, zone.Origin, err)
+							continue
+						}
+					case []interface{}:
+						// Array format: ["flag tag value", weight]
+						arr := rec.([]interface{})
+						if len(arr) == 0 {
+							log.Printf("Empty CAA record array for '%s' in '%s'\n", label.Label, zone.Origin)
+							continue
+						}
+						
+						caaText, ok := arr[0].(string)
+						if !ok {
+							log.Printf("First element of CAA record array must be string for '%s' in '%s'\n", label.Label, zone.Origin)
+							continue
+						}
+						
+						var err error
+						flag, tag, value, err = parseCAAText(caaText)
+						if err != nil {
+							log.Printf("Error parsing CAA record '%s' for '%s' in '%s': %v\n", caaText, label.Label, zone.Origin, err)
+							continue
+						}
+						
+						if len(arr) > 1 {
+							switch weight := arr[1].(type) {
+							case int:
+								record.Weight = weight
+							case float64:
+								record.Weight = int(weight)
+							case string:
+								var err error
+								record.Weight, err = strconv.Atoi(weight)
+								if err != nil {
+									log.Printf("Error converting CAA weight '%s' to integer for '%s' in '%s': %v\n", weight, label.Label, zone.Origin, err)
+								}
+							default:
+								record.Weight = typeutil.ToInt(arr[1])
+							}
+						}
+					case map[string]interface{}:
+						// JSON format for backward compatibility
+						recmap := rec.(map[string]interface{})
+						
+						if recmap["flag"] != nil {
+							flag = uint8(typeutil.ToInt(recmap["flag"]))
+						}
+						
+						if recmap["tag"] != nil {
+							tag = recmap["tag"].(string)
+						} else {
+							log.Printf("CAA record missing required 'tag' field for '%s' in '%s'\n", label.Label, zone.Origin)
+							continue
+						}
+						
+						if recmap["value"] != nil {
+							value = recmap["value"].(string)
+						} else {
+							log.Printf("CAA record missing required 'value' field for '%s' in '%s'\n", label.Label, zone.Origin)
+							continue
+						}
+						
+						if recmap["weight"] != nil {
+							record.Weight = typeutil.ToInt(recmap["weight"])
+						}
+					default:
+						log.Printf("CAA record must be string, array, or map format for '%s' in '%s'\n", label.Label, zone.Origin)
+						continue
+					}
+					
+					record.RR = &dns.CAA{
+						Hdr:   h,
+						Flag:  flag,
+						Tag:   tag,
+						Value: value,
+					}
+
 				default:
 					log.Println("type:", rType)
 					panic("Don't know how to handle this type")
@@ -482,10 +572,17 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 				}
 
 				label.Weight[dnsType] += record.Weight
-				label.Records[dnsType][i] = record
+				validRecords = append(validRecords, record)
 			}
-			if label.Weight[dnsType] > 0 {
-				sort.Sort(RecordsByWeight{label.Records[dnsType]})
+			
+			// Only create the Records array if we have valid records
+			if len(validRecords) > 0 {
+				label.Records[dnsType] = make(Records, len(validRecords))
+				copy(label.Records[dnsType], validRecords)
+				
+				if label.Weight[dnsType] > 0 {
+					sort.Sort(RecordsByWeight{label.Records[dnsType]})
+				}
 			}
 		}
 	}
@@ -558,4 +655,37 @@ func getStringWeight(rec []interface{}) (string, int) {
 	}
 
 	return str, weight
+}
+
+// parseCAAText parses CAA record text format: "flag tag value"
+// Example: "0 issue ca.example.net" or "128 iodef mailto:security@example.com"
+func parseCAAText(text string) (flag uint8, tag, value string, err error) {
+	parts := strings.Fields(text)
+	if len(parts) < 3 {
+		return 0, "", "", fmt.Errorf("CAA record must have at least 3 parts: flag tag value")
+	}
+
+	// Parse flag
+	flagInt, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, "", "", fmt.Errorf("invalid CAA flag '%s': %v", parts[0], err)
+	}
+	if flagInt < 0 || flagInt > 255 {
+		return 0, "", "", fmt.Errorf("CAA flag must be between 0 and 255, got %d", flagInt)
+	}
+	flag = uint8(flagInt)
+
+	// Tag is the second part
+	tag = parts[1]
+
+	// Value is everything from the third part onwards, joined with spaces
+	// This handles values that contain spaces (like quoted strings)
+	value = strings.Join(parts[2:], " ")
+
+	// Remove quotes if present (common in bind format)
+	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
+		value = value[1 : len(value)-1]
+	}
+
+	return flag, tag, value, nil
 }

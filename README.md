@@ -256,6 +256,37 @@ Internally resolved cname, of sorts. Only works internally in a zone.
 
 The target will have the current zone name appended if it's not a FQDN (since v2.2.0).
 
+### CAA
+
+CAA (Certificate Authority Authorization) records allow domain owners to specify which Certificate Authorities are authorized to issue certificates for their domain.
+
+CAA records support the standard DNS text format (similar to bind zone files):
+
+    "0 issue ca.example.net"
+    "0 issuewild ca.example.net"
+    "128 iodef mailto:security@example.com"
+
+The format is `"flag tag value"` where:
+- `flag`: A number (0-255) for processing flags 
+- `tag`: The property type (issue, issuewild, iodef, etc.)
+- `value`: The property value (CA domain, email, URL, etc.)
+
+For weight-based load balancing, use array format:
+
+    ["0 issue ca.example.net", 10]
+    ["128 iodef mailto:security@example.com", 100]
+
+The older JSON object format is still supported for backward compatibility:
+
+    { "tag": "issue", "value": "ca.example.net" }
+    { "flag": 0, "tag": "issuewild", "value": "ca.example.net" }
+    { "flag": 128, "tag": "iodef", "value": "mailto:security@example.com", "weight": 100 }
+
+Common tags include:
+- `issue`: Authorizes the specified CA to issue certificates for this domain
+- `issuewild`: Authorizes the specified CA to issue wildcard certificates for this domain  
+- `iodef`: Specifies a URL or email address for reporting certificate issue violations
+
 ### MX
 
 MX records support a `weight` similar to A records to indicate how often the particular
