@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/netip"
 	"os"
 	"runtime/debug"
 	"sort"
@@ -15,8 +16,10 @@ import (
 	"github.com/abh/geodns/v3/targeting"
 	"github.com/abh/geodns/v3/typeutil"
 
+	dns "codeberg.org/miekg/dns"
+	"codeberg.org/miekg/dns/dnsutil"
+	"codeberg.org/miekg/dns/rdata"
 	"github.com/abh/errorutil"
-	dnsv1 "github.com/miekg/dns"
 )
 
 // ZoneList maps domain names to zone data
@@ -152,16 +155,16 @@ func (zone *Zone) ReadZoneFile(fileName string) (zerr error) {
 
 func setupZoneData(data map[string]interface{}, zone *Zone) {
 	recordTypes := map[string]uint16{
-		"a":     dnsv1.TypeA,
-		"aaaa":  dnsv1.TypeAAAA,
-		"alias": dnsv1.TypeMF,
-		"cname": dnsv1.TypeCNAME,
-		"mx":    dnsv1.TypeMX,
-		"ns":    dnsv1.TypeNS,
-		"txt":   dnsv1.TypeTXT,
-		"spf":   dnsv1.TypeSPF,
-		"srv":   dnsv1.TypeSRV,
-		"ptr":   dnsv1.TypePTR,
+		"a":     dns.TypeA,
+		"aaaa":  dns.TypeAAAA,
+		"alias": dns.TypeMF,
+		"cname": dns.TypeCNAME,
+		"mx":    dns.TypeMX,
+		"ns":    dns.TypeNS,
+		"txt":   dns.TypeTXT,
+		"spf":   dns.TypeSPF,
+		"srv":   dns.TypeSRV,
+		"ptr":   dns.TypePTR,
 	}
 
 	for dk, dv_inter := range data {
@@ -171,22 +174,22 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 
 		label := zone.AddLabel(dk)
 
-		for rType, rdata := range dv {
+		for rType, rdata_ := range dv {
 			switch rType {
 			case "max_hosts":
-				label.MaxHosts = typeutil.ToInt(rdata)
+				label.MaxHosts = typeutil.ToInt(rdata_)
 				continue
 			case "closest":
-				label.Closest = rdata.(bool)
+				label.Closest = rdata_.(bool)
 				if label.Closest {
 					zone.HasClosest = true
 				}
 				continue
 			case "ttl":
-				label.Ttl = typeutil.ToInt(rdata)
+				label.Ttl = typeutil.ToInt(rdata_)
 				continue
 			case "health":
-				zone.addHealthReference(label, rdata)
+				zone.addHealthReference(label, rdata_)
 				continue
 			}
 
@@ -196,16 +199,16 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 				continue
 			}
 
-			if rdata == nil {
+			if rdata_ == nil {
 				// log.Printf("No %s records for label %s\n", rType, dk)
 				continue
 			}
 
-			// log.Printf("rdata %s TYPE-R %T\n", rdata, rdata)
+			// log.Printf("rdata %s TYPE-R %T\n", rdata_, rdata_)
 
 			records := make(map[string][]interface{})
 
-			switch rd := rdata.(type) {
+			switch rd := rdata_.(type) {
 			case map[string]interface{}:
 				// Handle NS map syntax, map[ns2.example.net:<nil> ns1.example.net:<nil>]
 				tmp := make([]interface{}, 0)
@@ -222,7 +225,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 				tmp[0] = rd
 				records[rType] = tmp
 			default:
-				records[rType] = rdata.([]interface{})
+				records[rType] = rdata_.([]interface{})
 			}
 
 			// log.Printf("RECORDS %s TYPE-REC %T\n", Records, Records)
@@ -234,9 +237,8 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 
 				record := new(Record)
 
-				var h dnsv1.RR_Header
-				h.Class = dnsv1.ClassINET
-				h.Rrtype = dnsType
+				var h dns.Header
+				h.Class = dns.ClassINET
 
 				{
 					// allow for individual health test name overrides
@@ -255,7 +257,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 				}
 
 				switch dnsType {
-				case dnsv1.TypeA, dnsv1.TypeAAAA, dnsv1.TypePTR:
+				case dns.TypeA, dns.TypeAAAA, dns.TypePTR:
 
 					rec := records[rType][i]
 
@@ -275,13 +277,13 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 							ip = r["ip"].(string)
 						}
 
-						if len(ip) == 0 || dnsType == dnsv1.TypePTR {
+						if len(ip) == 0 || dnsType == dns.TypePTR {
 							switch dnsType {
-							case dnsv1.TypeA:
+							case dns.TypeA:
 								ip = r["a"].(string)
-							case dnsv1.TypeAAAA:
+							case dns.TypeAAAA:
 								ip = r["aaaa"].(string)
-							case dnsv1.TypePTR:
+							case dns.TypePTR:
 								ip = r["ptr"].(string)
 							}
 						}
@@ -297,23 +299,25 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 					}
 
 					switch dnsType {
-					case dnsv1.TypePTR:
-						record.RR = &dnsv1.PTR{Hdr: h, Ptr: ip}
-					case dnsv1.TypeA:
+					case dns.TypePTR:
+						record.RR = &dns.PTR{Hdr: h, PTR: rdata.PTR{Ptr: ip}}
+					case dns.TypeA:
 						if x := net.ParseIP(ip); x != nil {
-							record.RR = &dnsv1.A{Hdr: h, A: x}
+							addr := netip.AddrFrom4([4]byte(x.To4()))
+							record.RR = &dns.A{Hdr: h, A: rdata.A{Addr: addr}}
 						} else {
 							panic(fmt.Errorf("bad A record %q for %q", ip, dk))
 						}
-					case dnsv1.TypeAAAA:
+					case dns.TypeAAAA:
 						if x := net.ParseIP(ip); x != nil {
-							record.RR = &dnsv1.AAAA{Hdr: h, AAAA: x}
+							addr := netip.AddrFrom16([16]byte(x.To16()))
+							record.RR = &dns.AAAA{Hdr: h, AAAA: rdata.AAAA{Addr: addr}}
 						} else {
 							panic(fmt.Errorf("bad AAAA record %q for %q", ip, dk))
 						}
 					}
 
-				case dnsv1.TypeMX:
+				case dns.TypeMX:
 					rec := records[rType][i].(map[string]interface{})
 					pref := uint16(0)
 					mx := rec["mx"].(string)
@@ -326,20 +330,22 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 					if rec["preference"] != nil {
 						pref = uint16(typeutil.ToInt(rec["preference"]))
 					}
-					record.RR = &dnsv1.MX{
-						Hdr:        h,
-						Mx:         mx,
-						Preference: pref,
+					record.RR = &dns.MX{
+						Hdr: h,
+						MX: rdata.MX{
+							Mx:         mx,
+							Preference: pref,
+						},
 					}
 
-				case dnsv1.TypeSRV:
+				case dns.TypeSRV:
 					rec := records[rType][i].(map[string]interface{})
 					priority := uint16(0)
 					srv_weight := uint16(0)
 					port := uint16(0)
 					target := rec["target"].(string)
 
-					if !dnsv1.IsFqdn(target) {
+					if !dnsutil.IsFqdn(target) {
 						target = target + "." + zone.Origin
 					}
 
@@ -352,15 +358,17 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 					if rec["priority"] != nil {
 						priority = uint16(typeutil.ToInt(rec["priority"]))
 					}
-					record.RR = &dnsv1.SRV{
-						Hdr:      h,
-						Priority: priority,
-						Weight:   srv_weight,
-						Port:     port,
-						Target:   target,
+					record.RR = &dns.SRV{
+						Hdr: h,
+						SRV: rdata.SRV{
+							Priority: priority,
+							Weight:   srv_weight,
+							Port:     port,
+							Target:   target,
+						},
 					}
 
-				case dnsv1.TypeCNAME:
+				case dns.TypeCNAME:
 					rec := records[rType][i]
 					var target string
 					var weight int
@@ -384,18 +392,18 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 							record.Test = typeutil.ToString(h)
 						}
 					}
-					if !dnsv1.IsFqdn(target) {
+					if !dnsutil.IsFqdn(target) {
 						target = target + "." + zone.Origin
 					}
 					record.Weight = weight
-					record.RR = &dnsv1.CNAME{Hdr: h, Target: dnsv1.Fqdn(target)}
+					record.RR = &dns.CNAME{Hdr: h, CNAME: rdata.CNAME{Target: dnsutil.Fqdn(target)}}
 
-				case dnsv1.TypeMF:
+				case dns.TypeMF:
 					rec := records[rType][i]
 					// MF records (how we store aliases) are not FQDNs
-					record.RR = &dnsv1.MF{Hdr: h, Mf: rec.(string)}
+					record.RR = &dns.MF{Hdr: h, MF: rdata.MF{Mf: rec.(string)}}
 
-				case dnsv1.TypeNS:
+				case dns.TypeNS:
 					rec := records[rType][i]
 
 					var ns string
@@ -414,11 +422,11 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 						panic("Unrecognized NS format/syntax")
 					}
 
-					rr := &dnsv1.NS{Hdr: h, Ns: dnsv1.Fqdn(ns)}
+					rr := &dns.NS{Hdr: h, NS: rdata.NS{Ns: dnsutil.Fqdn(ns)}}
 
 					record.RR = rr
 
-				case dnsv1.TypeTXT:
+				case dns.TypeTXT:
 					rec := records[rType][i]
 
 					var txt string
@@ -438,7 +446,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 						}
 					}
 					if len(txt) > 0 {
-						rr := &dnsv1.TXT{Hdr: h, Txt: []string{txt}}
+						rr := &dns.TXT{Hdr: h, TXT: rdata.TXT{Txt: []string{txt}}}
 						record.RR = rr
 					} else {
 						log.Printf("Zero length txt record for '%s' in '%s'\n", label.Label, zone.Origin)
@@ -446,7 +454,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 					}
 					// Initial SPF support added here, cribbed from the TypeTXT case definition - SPF records should be handled identically
 
-				case dnsv1.TypeSPF:
+				case dns.TypeSPF:
 					rec := records[rType][i]
 
 					var spf string
@@ -466,7 +474,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 						}
 					}
 					if len(spf) > 0 {
-						rr := &dnsv1.SPF{Hdr: h, Txt: []string{spf}}
+						rr := &dns.SPF{TXT: dns.TXT{Hdr: h, TXT: rdata.TXT{Txt: []string{spf}}}}
 						record.RR = rr
 					} else {
 						log.Printf("Zero length SPF record for '%s' in '%s'\n", label.Label, zone.Origin)
@@ -522,7 +530,7 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 				}
 
 				var defaultTtl uint32 = 86400
-				if r.RR.Header().Rrtype != dnsv1.TypeNS {
+				if dns.RRToType(r.RR) != dns.TypeNS {
 					// NS records have special treatment. If they are not specified, they default to 86400 rather than
 					// defaulting to the zone ttl option. The label TTL option always works though
 					defaultTtl = uint32(zone.Options.Ttl)
@@ -530,8 +538,8 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 				if zone.Labels[k].Ttl > 0 {
 					defaultTtl = uint32(zone.Labels[k].Ttl)
 				}
-				if r.RR.Header().Ttl == 0 {
-					r.RR.Header().Ttl = defaultTtl
+				if r.RR.Header().TTL == 0 {
+					r.RR.Header().TTL = defaultTtl
 				}
 			}
 		}

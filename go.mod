@@ -3,6 +3,7 @@ module github.com/abh/geodns/v3
 go 1.25.0
 
 require (
+	codeberg.org/miekg/dns v0.6.40
 	github.com/abh/errorutil v1.0.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/golang/geo v0.0.0-20230421003525-6adc56603217
