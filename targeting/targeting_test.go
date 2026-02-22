@@ -1,7 +1,7 @@
 package targeting
 
 import (
-	"net"
+	"net/netip"
 	"reflect"
 	"testing"
 
@@ -50,7 +50,7 @@ func TestTargetParse(t *testing.T) {
 }
 
 func TestGetTargets(t *testing.T) {
-	ip := net.ParseIP("93.184.216.34")
+	ip := netip.MustParseAddr("93.184.216.34")
 
 	g, err := geoip2.New(geoip2.FindDB())
 	if err != nil {
@@ -117,7 +117,7 @@ func TestGetTargets(t *testing.T) {
 
 	for _, test := range tests {
 		if len(test.IP) > 0 {
-			ip = net.ParseIP(test.IP)
+			ip = netip.MustParseAddr(test.IP)
 		}
 
 		tgt, _ = ParseTargets(test.Str)

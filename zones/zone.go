@@ -3,7 +3,7 @@ package zones
 import (
 	"encoding/json"
 	"log"
-	"net"
+	"net/netip"
 	"slices"
 	"strings"
 	"sync"
@@ -300,16 +300,16 @@ func (z *Zone) SetLocations() {
 					for i := range label.Records[qtype] {
 						label.Records[qtype][i].Loc = nil
 						rr := label.Records[qtype][i].RR
-						var ip net.IP
+						var ip netip.Addr
 						switch r := rr.(type) {
 						case *dns.A:
-							ip = r.Addr.AsSlice()
+							ip = r.Addr
 						case *dns.AAAA:
-							ip = r.Addr.AsSlice()
+							ip = r.Addr
 						default:
 							log.Printf("Can't lookup location of type %T", rr)
 						}
-						if ip != nil {
+						if ip.IsValid() {
 							location, err := geo.GetLocation(ip)
 							if err != nil {
 								// log.Printf("Could not get location for '%s': %s", ip.String(), err)

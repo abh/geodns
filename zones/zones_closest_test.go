@@ -1,7 +1,7 @@
 package zones
 
 import (
-	"net"
+	"net/netip"
 	"reflect"
 	"sort"
 	"testing"
@@ -28,10 +28,7 @@ func TestClosest(t *testing.T) {
 
 	for _, x := range tests {
 
-		ip := net.ParseIP(x.ClientIP)
-		if ip == nil {
-			t.Fatalf("Invalid ClientIP: %s", x.ClientIP)
-		}
+		ip := netip.MustParseAddr(x.ClientIP)
 
 		tz := muxm.zonelist["test.example.com"]
 		targets, netmask, location := tz.Options.Targeting.GetTargets(ip, true)

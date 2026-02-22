@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"log"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -158,7 +159,7 @@ func (g *GeoIP2) HasASN() (bool, error) {
 }
 
 // GetASN returns the ASN for the IP (as a "as123" string) and the netmask
-func (g *GeoIP2) GetASN(ip net.IP) (string, int, error) {
+func (g *GeoIP2) GetASN(ip netip.Addr) (string, int, error) {
 	g.asn.l.RLock()
 	defer g.asn.l.RUnlock()
 
@@ -166,14 +167,14 @@ func (g *GeoIP2) GetASN(ip net.IP) (string, int, error) {
 		return "", 0, fmt.Errorf("ASN db not active")
 	}
 
-	c, err := g.asn.db.ASN(ip)
+	c, err := g.asn.db.ASN(net.IP(ip.AsSlice()))
 	if err != nil {
 		return "", 0, fmt.Errorf("lookup ASN for '%s': %s", ip.String(), err)
 	}
 	asn := c.AutonomousSystemNumber
-	netmask := 24
-	if ip.To4() != nil {
-		netmask = 48
+	netmask := 48
+	if ip.Unmap().Is4() {
+		netmask = 24
 	}
 	return fmt.Sprintf("as%d", asn), netmask, nil
 }
@@ -184,7 +185,7 @@ func (g *GeoIP2) HasCountry() (bool, error) {
 }
 
 // GetCountry returns the country, continent and netmask for the given IP
-func (g *GeoIP2) GetCountry(ip net.IP) (country, continent string, netmask int) {
+func (g *GeoIP2) GetCountry(ip netip.Addr) (country, continent string, netmask int) {
 	// Need a read-lock because return value of Country is a pointer, not copy of the struct/object
 	g.country.l.RLock()
 	defer g.country.l.RUnlock()
@@ -193,7 +194,7 @@ func (g *GeoIP2) GetCountry(ip net.IP) (country, continent string, netmask int) 
 		return "", "", 0
 	}
 
-	c, err := g.country.db.Country(ip)
+	c, err := g.country.db.Country(net.IP(ip.AsSlice()))
 	if err != nil {
 		log.Printf("Could not lookup country for '%s': %s", ip.String(), err)
 		return "", "", 0
@@ -215,7 +216,7 @@ func (g *GeoIP2) HasLocation() (bool, error) {
 }
 
 // GetLocation returns a geo.Location object for the given IP
-func (g *GeoIP2) GetLocation(ip net.IP) (l *geo.Location, err error) {
+func (g *GeoIP2) GetLocation(ip netip.Addr) (l *geo.Location, err error) {
 	// Need a read-lock because return value of City is a pointer, not copy of the struct/object
 	g.city.l.RLock()
 	defer g.city.l.RUnlock()
@@ -224,7 +225,7 @@ func (g *GeoIP2) GetLocation(ip net.IP) (l *geo.Location, err error) {
 		return nil, fmt.Errorf("city db not active")
 	}
 
-	c, err := g.city.db.City(ip)
+	c, err := g.city.db.City(net.IP(ip.AsSlice()))
 	if err != nil {
 		log.Printf("Could not lookup CountryRegion for '%s': %s", ip.String(), err)
 		return

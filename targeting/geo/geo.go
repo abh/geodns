@@ -2,7 +2,7 @@ package geo
 
 import (
 	"math"
-	"net"
+	"net/netip"
 
 	"github.com/golang/geo/s2"
 )
@@ -10,11 +10,11 @@ import (
 // Provider is the interface for geoip providers
 type Provider interface {
 	HasCountry() (bool, error)
-	GetCountry(ip net.IP) (country, continent string, netmask int)
+	GetCountry(ip netip.Addr) (country, continent string, netmask int)
 	HasASN() (bool, error)
-	GetASN(net.IP) (asn string, netmask int, err error)
+	GetASN(netip.Addr) (asn string, netmask int, err error)
 	HasLocation() (bool, error)
-	GetLocation(ip net.IP) (location *Location, err error)
+	GetLocation(ip netip.Addr) (location *Location, err error)
 }
 
 // MaxDistance is the distance returned if Distance() is

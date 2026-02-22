@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
@@ -69,14 +70,12 @@ func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg
 	z.Metrics.LabelStats.Add(qlabel)
 
 	// IP that's talking to us (not EDNS CLIENT SUBNET)
-	var realIP net.IP
+	var realIP netip.Addr
 
 	if addr, ok := w.RemoteAddr().(*net.UDPAddr); ok {
-		realIP = make(net.IP, len(addr.IP))
-		copy(realIP, addr.IP)
+		realIP = addr.AddrPort().Addr()
 	} else if addr, ok := w.RemoteAddr().(*net.TCPAddr); ok {
-		realIP = make(net.IP, len(addr.IP))
-		copy(realIP, addr.IP)
+		realIP = addr.AddrPort().Addr()
 	}
 	if qle != nil {
 		qle.RemoteAddr = realIP.String()
@@ -84,7 +83,7 @@ func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg
 
 	z.Metrics.ClientStats.Add(realIP.String())
 
-	var ip net.IP // EDNS CLIENT SUBNET or real IP
+	var ip netip.Addr // EDNS CLIENT SUBNET or real IP
 	var ecs *dns.SUBNET
 
 	if option := edns.FindOPT(req); option != nil {
@@ -100,7 +99,7 @@ func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg
 						!(ecsip.IsPrivate() ||
 							ecsip.IsLinkLocalMulticast() ||
 							ecsip.IsInterfaceLocalMulticast()) {
-						ip = ecsip.AsSlice()
+						ip = ecsip
 					}
 
 					if qle != nil {
@@ -112,17 +111,17 @@ func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg
 		}
 	}
 
-	if len(ip) == 0 { // no edns client subnet
+	if !ip.IsValid() { // no edns client subnet
 		ip = realIP
 		if qle != nil {
-			qle.ClientAddr = fmt.Sprintf("%s/%d", ip, len(ip)*8)
+			qle.ClientAddr = fmt.Sprintf("%s/%d", ip, len(ip.AsSlice())*8)
 		}
 	}
 
 	targets, netmask, location := z.Options.Targeting.GetTargets(ip, z.HasClosest)
 
 	// if the ECS IP didn't get targets, try the real IP instead
-	if l := len(targets); (l == 0 || l == 1 && targets[0] == "@") && !ip.Equal(realIP) {
+	if l := len(targets); (l == 0 || l == 1 && targets[0] == "@") && ip != realIP {
 		targets, netmask, location = z.Options.Targeting.GetTargets(realIP, z.HasClosest)
 	}
 
@@ -195,7 +194,7 @@ func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg
 
 	if len(labelMatches) == 0 {
 
-		permitDebug := srv.PublicDebugQueries || (realIP != nil && realIP.IsLoopback())
+		permitDebug := srv.PublicDebugQueries || (realIP.IsValid() && realIP.IsLoopback())
 
 		firstLabel := (strings.Split(qlabel, "."))[0]
 

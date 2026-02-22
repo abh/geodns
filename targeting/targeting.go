@@ -3,7 +3,7 @@ package targeting
 import (
 	"fmt"
 	"log"
-	"net"
+	"net/netip"
 	"strings"
 
 	"github.com/abh/geodns/v3/targeting/geo"
@@ -21,12 +21,6 @@ const (
 	TargetIP
 )
 
-var cidr48Mask net.IPMask
-
-func init() {
-	cidr48Mask = net.CIDRMask(48, 128)
-}
-
 var g geo.Provider
 
 // Setup sets the global geo provider
@@ -40,8 +34,7 @@ func Geo() geo.Provider {
 	return g
 }
 
-func (t TargetOptions) getGeoTargets(ip net.IP, hasClosest bool) ([]string, int, *geo.Location) {
-
+func (t TargetOptions) getGeoTargets(ip netip.Addr, hasClosest bool) ([]string, int, *geo.Location) {
 	targets := make([]string, 0)
 
 	if t&TargetASN > 0 {
@@ -93,8 +86,7 @@ func (t TargetOptions) getGeoTargets(ip net.IP, hasClosest bool) ([]string, int,
 	return targets, netmask, location
 }
 
-func (t TargetOptions) GetTargets(ip net.IP, hasClosest bool) ([]string, int, *geo.Location) {
-
+func (t TargetOptions) GetTargets(ip netip.Addr, hasClosest bool) ([]string, int, *geo.Location) {
 	targets := make([]string, 0)
 	var location *geo.Location
 	var netmask int
@@ -102,15 +94,14 @@ func (t TargetOptions) GetTargets(ip net.IP, hasClosest bool) ([]string, int, *g
 	if t&TargetIP > 0 {
 		ipStr := ip.String()
 		targets = append(targets, "["+ipStr+"]")
-		ip4 := ip.To4()
-		if ip4 != nil {
-			if ip4[3] != 0 {
-				ip4[3] = 0
-				targets = append(targets, "["+ip4.String()+"]")
+		if ip.Unmap().Is4() {
+			masked := netip.PrefixFrom(ip, 24).Masked().Addr()
+			if masked != ip {
+				targets = append(targets, "["+masked.String()+"]")
 			}
 		} else {
 			// v6 address, also target the /48 address
-			ip48 := ip.Mask(cidr48Mask)
+			ip48 := netip.PrefixFrom(ip, 48).Masked().Addr()
 			targets = append(targets, "["+ip48.String()+"]")
 		}
 	}
