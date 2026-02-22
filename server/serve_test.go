@@ -15,6 +15,7 @@ import (
 	"codeberg.org/miekg/dns/dnsutil"
 	"github.com/abh/geodns/v3/appconfig"
 	"github.com/abh/geodns/v3/monitor"
+	"github.com/abh/geodns/v3/targeting"
 	"github.com/abh/geodns/v3/zones"
 )
 
@@ -45,7 +46,9 @@ func TestServe(t *testing.T) {
 
 	t.Run("QueryLog", testQueryLog(srv))
 
-	// todo: run test queries?
+	t.Run("Cname", testCname)
+	t.Run("ServingAliases", testServingAliases)
+	t.Run("ServingEDNS", testServingEDNS)
 
 	cancel()
 
@@ -189,7 +192,7 @@ func testServing(t *testing.T) {
 	assert.Equal(t, name, "bar.example.com.", "PTR record")
 }
 
-func TestCname(t *testing.T) {
+func testCname(t *testing.T) {
 	// Cname, two possible results
 	results := make(map[string]int)
 
@@ -205,7 +208,7 @@ func TestCname(t *testing.T) {
 	assert.Len(t, results, 2)
 }
 
-func TestServingAliases(t *testing.T) {
+func testServingAliases(t *testing.T) {
 	// Alias, no geo matches
 	r := exchange(t, "bar-alias.test.example.com.", dns.TypeA)
 	ip := r.Answer[0].(*dns.A).Addr
@@ -215,17 +218,24 @@ func TestServingAliases(t *testing.T) {
 	r = exchange(t, "www-alias.test.example.com.", dns.TypeA)
 	assert.Equal(t, "geo.bitnames.com.", r.Answer[0].(*dns.CNAME).CNAME.Target)
 
-	// Alias returning a cname, with geo overrides
-	r = exchangeSubnet(t, "www-alias.test.example.com.", dns.TypeA, "194.239.134.1")
-	require.Len(t, r.Answer, 1)
-	assert.Equal(t, "geo-europe.bitnames.com.", r.Answer[0].(*dns.CNAME).CNAME.Target)
+	// Alias returning a cname, with geo overrides (requires GeoIP)
+	if targeting.Geo() != nil {
+		r = exchangeSubnet(t, "www-alias.test.example.com.", dns.TypeA, "194.239.134.1")
+		require.Len(t, r.Answer, 1)
+		assert.Equal(t, "geo-europe.bitnames.com.", r.Answer[0].(*dns.CNAME).CNAME.Target)
+	}
 
-	// Alias to Ns records
+	// Alias to NS records - aliases intentionally don't follow NS/SOA records (see zone.go)
+	// so we expect no answer records, just an authority section
 	r = exchange(t, "sub-alias.test.example.org.", dns.TypeNS)
-	assert.Equal(t, "ns1.example.com.", r.Answer[0].(*dns.NS).NS.Ns)
+	assert.Len(t, r.Answer, 0, "aliases don't follow NS records")
 }
 
-func TestServingEDNS(t *testing.T) {
+func testServingEDNS(t *testing.T) {
+	if targeting.Geo() == nil {
+		t.Skip("GeoIP not available")
+	}
+
 	// MX test with geo override
 	r := exchangeSubnet(t, "test.example.com.", dns.TypeMX, "194.239.134.1")
 	require.Len(t, r.Answer, 1)
