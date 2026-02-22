@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -47,9 +48,7 @@ import (
 	"github.com/abh/geodns/v3/zones"
 )
 
-var (
-	serverInfo *monitor.ServerInfo
-)
+var serverInfo *monitor.ServerInfo
 
 var (
 	flagconfig      = flag.String("config", "./dns/", "directory of zone files")
@@ -70,7 +69,6 @@ var (
 )
 
 func init() {
-
 	log.SetPrefix("geodns ")
 	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
 
@@ -78,7 +76,6 @@ func init() {
 	serverInfo.Version = version.Version()
 	serverInfo.UUID = uuid.New()
 	serverInfo.Started = time.Now()
-
 }
 
 func main() {
@@ -199,10 +196,11 @@ func main() {
 		addrs, _ := net.InterfaceAddrs()
 		ips := make([]string, 0)
 		for _, addr := range addrs {
-			ip, _, err := net.ParseCIDR(addr.String())
+			prefix, err := netip.ParsePrefix(addr.String())
 			if err != nil {
 				continue
 			}
+			ip := prefix.Addr()
 			if !(ip.IsLoopback() || ip.IsGlobalUnicast()) {
 				continue
 			}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"net/netip"
 	"os"
 	"runtime/debug"
@@ -302,23 +301,23 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 					case dns.TypePTR:
 						record.RR = &dns.PTR{Hdr: h, PTR: rdata.PTR{Ptr: ip}}
 					case dns.TypeA:
-						if x := net.ParseIP(ip); x != nil {
-							x4 := x.To4()
-							if x4 == nil {
-								panic(fmt.Errorf("bad A record %q (not IPv4) for %q", ip, dk))
-							}
-							addr := netip.AddrFrom4([4]byte(x4))
-							record.RR = &dns.A{Hdr: h, A: rdata.A{Addr: addr}}
-						} else {
-							panic(fmt.Errorf("bad A record %q for %q", ip, dk))
+						addr, err := netip.ParseAddr(ip)
+						if err != nil {
+							panic(fmt.Errorf("bad A record %q for %q: %v", ip, dk, err))
 						}
+						if !addr.Is4() {
+							panic(fmt.Errorf("bad A record %q for %q (not IPv4)", ip, dk))
+						}
+						record.RR = &dns.A{Hdr: h, A: rdata.A{Addr: addr}}
 					case dns.TypeAAAA:
-						if x := net.ParseIP(ip); x != nil {
-							addr := netip.AddrFrom16([16]byte(x.To16()))
-							record.RR = &dns.AAAA{Hdr: h, AAAA: rdata.AAAA{Addr: addr}}
-						} else {
-							panic(fmt.Errorf("bad AAAA record %q for %q", ip, dk))
+						addr, err := netip.ParseAddr(ip)
+						if err != nil {
+							panic(fmt.Errorf("bad AAAA record %q for %q: %v", ip, dk, err))
 						}
+						if !addr.Is6() {
+							panic(fmt.Errorf("bad AAAA record %q for %q (not IPv6)", ip, dk))
+						}
+						record.RR = &dns.AAAA{Hdr: h, AAAA: rdata.AAAA{Addr: addr}}
 					}
 
 				case dns.TypeMX:

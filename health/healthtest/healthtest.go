@@ -3,7 +3,7 @@ package healthtest
 import (
 	"fmt"
 	"math/rand"
-	"net"
+	"net/netip"
 	"sync"
 	"time"
 
@@ -32,7 +32,7 @@ type HealthTestParameters struct {
 
 type HealthTest struct {
 	HealthTestParameters
-	ipAddress    net.IP
+	ipAddress    netip.Addr
 	healthy      bool
 	healthyMutex sync.RWMutex
 	closing      chan chan error
@@ -65,7 +65,7 @@ func defaultHealthTestParameters() HealthTestParameters {
 	}
 }
 
-func NewTest(ipAddress net.IP, htp HealthTestParameters, tester *HealthTester) *HealthTest {
+func NewTest(ipAddress netip.Addr, htp HealthTestParameters, tester *HealthTester) *HealthTest {
 	ht := HealthTest{
 		ipAddress:            ipAddress,
 		HealthTestParameters: htp,
@@ -97,7 +97,7 @@ func (ht *HealthTest) String() string {
 
 // safe copy function that copies the parameters but not (e.g.) the
 // mutex
-func (ht *HealthTest) copy(ipAddress net.IP) *HealthTest {
+func (ht *HealthTest) copy(ipAddress netip.Addr) *HealthTest {
 	return NewTest(ipAddress, ht.HealthTestParameters, ht.tester)
 }
 
@@ -192,7 +192,7 @@ func (ht *HealthTest) Stop() (err error) {
 	return err
 }
 
-func (ht *HealthTest) IP() net.IP {
+func (ht *HealthTest) IP() netip.Addr {
 	return ht.ipAddress
 }
 
@@ -231,7 +231,7 @@ func (htr *HealthTestRunner) addTest(ht *HealthTest, ref string) {
 			references: make(map[string]bool),
 		}
 		if t.global {
-			t.ipAddress = nil
+			t.ipAddress = netip.Addr{}
 		}
 		// we know it is not started, so no need for the mutex
 		t.healthy = ht.healthy
@@ -331,6 +331,6 @@ func NewFromMap(i map[string]interface{}) (*HealthTest, error) {
 		}
 	}
 
-	tester := NewTest(nil, htp, &h)
+	tester := NewTest(netip.Addr{}, htp, &h)
 	return tester, nil
 }

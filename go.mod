@@ -1,6 +1,6 @@
 module github.com/abh/geodns/v3
 
-go 1.25.0
+go 1.26.0
 
 require (
 	codeberg.org/miekg/dns v0.6.61
@@ -13,7 +13,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/stretchr/testify v1.11.1
 	go.ntppool.org/common v0.7.1
-	golang.org/x/exp v0.0.0-20260209203927-2842357ff358
+	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa
 	golang.org/x/sync v0.19.0
 	gopkg.in/gcfg.v1 v1.2.3
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
