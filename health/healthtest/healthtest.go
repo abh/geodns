@@ -10,10 +10,10 @@ import (
 	"github.com/abh/geodns/v3/applog"
 	"github.com/abh/geodns/v3/typeutil"
 
-	dnsv1 "github.com/miekg/dns"
+	dns "codeberg.org/miekg/dns"
 )
 
-var Qtypes = []uint16{dnsv1.TypeA, dnsv1.TypeAAAA}
+var Qtypes = []uint16{dns.TypeA, dns.TypeAAAA}
 
 type HealthTester interface {
 	String() string

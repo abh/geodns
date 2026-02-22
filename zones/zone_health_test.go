@@ -4,8 +4,8 @@ import (
 	"math/rand"
 	"testing"
 
+	dns "codeberg.org/miekg/dns"
 	"github.com/abh/geodns/v3/health"
-	dnsv1 "github.com/miekg/dns"
 )
 
 type HealthStatus struct {
@@ -49,7 +49,7 @@ func TestHealth(t *testing.T) {
 	// t.Logf("hs: '%+v'", tz.HealthStatus)
 	// t.Logf("hc zone: '%+v'", tz)
 
-	matches := tz.FindLabels("tucs", []string{"@"}, []uint16{dnsv1.TypeA})
+	matches := tz.FindLabels("tucs", []string{"@"}, []uint16{dns.TypeA})
 	// t.Logf("qt: %d, label: '%+v'", qt, label)
 	records := tz.Picker(matches[0].Label, matches[0].Type, 2, nil)
 	if len(records) > 0 {

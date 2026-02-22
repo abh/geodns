@@ -3,8 +3,8 @@ package server
 import (
 	"testing"
 
+	dns "codeberg.org/miekg/dns"
 	"github.com/abh/geodns/v3/querylog"
-	dnsv1 "github.com/miekg/dns"
 )
 
 type testLogger struct {
@@ -31,9 +31,9 @@ func testQueryLog(srv *Server) func(*testing.T) {
 	srv.SetQueryLogger(tlog)
 
 	return func(t *testing.T) {
-		r := exchange(t, "www-alias.example.com.", dnsv1.TypeA)
+		r := exchange(t, "www-alias.example.com.", dns.TypeA)
 		expected := "geo.bitnames.com."
-		answer := r.Answer[0].(*dnsv1.CNAME).Target
+		answer := r.Answer[0].(*dns.CNAME).CNAME.Target
 		if answer != expected {
 			t.Logf("expected CNAME %s, got %s", expected, answer)
 			t.Fail()
