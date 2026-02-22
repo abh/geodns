@@ -11,7 +11,8 @@ import (
 	"strings"
 	"time"
 
-	dnsv1 "github.com/miekg/dns"
+	dns "codeberg.org/miekg/dns"
+	"codeberg.org/miekg/dns/dnsutil"
 )
 
 type RegistrationAPI interface {
@@ -193,10 +194,11 @@ func (mm *MuxManager) setupPgeodnsZone() {
 }
 
 func (mm *MuxManager) setupRootZone() {
-	dnsv1.HandleFunc(".", func(w dnsv1.ResponseWriter, r *dnsv1.Msg) {
-		m := new(dnsv1.Msg)
-		m.SetRcode(r, dnsv1.RcodeRefused)
-		w.WriteMsg(m)
+	dns.HandleFunc(".", func(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) {
+		m := new(dns.Msg)
+		dnsutil.SetReply(m, r)
+		m.Rcode = dns.RcodeRefused
+		m.WriteTo(w)
 	})
 }
 
