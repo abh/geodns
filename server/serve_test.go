@@ -53,7 +53,8 @@ func TestServe(t *testing.T) {
 }
 
 func testServing(t *testing.T) {
-	r := exchange(t, "_status.pgeodnsv1.", dns.TypeTXT)
+	// Query _status on the pgeodns zone
+	r := exchange(t, "_status.pgeodns.", dns.TypeTXT)
 	require.Len(t, r.Answer, 1, "1 txt record for _status.pgeodns")
 	txt := r.Answer[0].(*dns.TXT).TXT.Txt[0]
 	if !strings.HasPrefix(txt, "{") {
@@ -62,7 +63,7 @@ func testServing(t *testing.T) {
 	}
 
 	// Allow _country and _status queries as long as the first label is that
-	r = exchange(t, "_country.foo.pgeodnsv1.", dns.TypeTXT)
+	r = exchange(t, "_country.foo.pgeodns.", dns.TypeTXT)
 	txt = r.Answer[0].(*dns.TXT).TXT.Txt[0]
 	// Got appropriate response for _country txt query
 	if !strings.HasPrefix(txt, "127.0.0.1:") {
@@ -71,7 +72,7 @@ func testServing(t *testing.T) {
 	}
 
 	// Make sure A requests for _status doesn't NXDOMAIN
-	r = exchange(t, "_status.pgeodnsv1.", dns.TypeA)
+	r = exchange(t, "_status.pgeodns.", dns.TypeA)
 	if len(r.Answer) != 0 {
 		t.Log("got A record for _status.pgeodns")
 		t.Fail()
@@ -342,12 +343,12 @@ func exchange(t *testing.T, name string, dnstype uint16) *dns.Msg {
 }
 
 func dorequest(t *testing.T, msg *dns.Msg) *dns.Msg {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	r, err := dns.Exchange(ctx, msg, "udp", "127.0.0.1"+PORT)
 	if err != nil {
-		t.Logf("request err '%s': %s", msg.String(), err)
-		t.Fail()
+		t.Fatalf("request err '%s': %s", msg.String(), err)
 	}
 	return r
 }
