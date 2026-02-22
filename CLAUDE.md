@@ -92,7 +92,7 @@ Label naming: `label.target` (e.g., `www.us` for US-specific, `www.eu` for Europ
 
 ## Key Dependencies
 
-- `github.com/miekg/dns` - DNS protocol implementation
+- `codeberg.org/miekg/dns` - DNS protocol implementation (v2)
 - `github.com/oschwald/geoip2-golang` - MaxMind GeoIP2 reader
 - `github.com/prometheus/client_golang` - Prometheus metrics
 - `github.com/hamba/avro/v2` - Avro query logging

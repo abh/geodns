@@ -159,7 +159,7 @@ func (zone *Zone) AddSOA() {
 func (zone *Zone) addSOA() {
 	label := zone.Labels[""]
 
-	primaryNs := "ns."
+	primaryNs := "ns." + zone.Origin + "."
 
 	// log.Println("LABEL", label)
 
@@ -367,7 +367,7 @@ func (z *Zone) setupHealthTests() {
 				case *dns.AAAA:
 					t = rrt.Addr.String()
 				case *dns.MX:
-					t = rrt.Mx
+					t = rrt.MX.Mx
 				default:
 					continue
 				}

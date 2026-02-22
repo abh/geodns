@@ -23,18 +23,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// findOPT returns the OPT record from the Pseudo section of the message, or nil if not found.
-func findOPT(m *dns.Msg) *dns.OPT {
-	for _, rr := range m.Pseudo {
-		if opt, ok := rr.(*dns.OPT); ok {
-			return opt
-		}
-	}
-	return nil
-}
-
 func getQuestionName(z *zones.Zone, fqdn string) string {
-	lx := strings.Split(strings.TrimSuffix(fqdn, "."), ".")
+	trimmed := strings.TrimSuffix(fqdn, ".")
+	if trimmed == "" {
+		return ""
+	}
+	lx := strings.Split(trimmed, ".")
 	ql := lx[0 : len(lx)-z.LabelCount]
 	return strings.ToLower(strings.Join(ql, "."))
 }
@@ -93,7 +87,7 @@ func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg
 	var ip net.IP // EDNS CLIENT SUBNET or real IP
 	var ecs *dns.SUBNET
 
-	if option := findOPT(req); option != nil {
+	if option := edns.FindOPT(req); option != nil {
 		for _, s := range option.Options {
 			switch e := s.(type) {
 			case *dns.SUBNET:
@@ -216,7 +210,9 @@ func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg
 				m.Ns = append(m.Ns, z.SoaRR())
 			}
 			m.Authoritative = true
-			m.WriteTo(w)
+			if _, err := m.WriteTo(w); err != nil {
+				applog.Printf("error writing response: %s", err)
+			}
 			return
 		}
 
@@ -225,12 +221,16 @@ func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg
 				baseLabel := strings.Join((strings.Split(qlabel, "."))[1:], ".")
 				m.Answer = z.HealthRR(qlabel+"."+z.Origin+".", baseLabel)
 				m.Authoritative = true
-				m.WriteTo(w)
+				if _, err := m.WriteTo(w); err != nil {
+					applog.Printf("error writing response: %s", err)
+				}
 				return
 			}
 			m.Ns = append(m.Ns, z.SoaRR())
 			m.Authoritative = true
-			m.WriteTo(w)
+			if _, err := m.WriteTo(w); err != nil {
+				applog.Printf("error writing response: %s", err)
+			}
 			return
 		}
 
@@ -263,7 +263,9 @@ func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg
 
 			m.Authoritative = true
 
-			m.WriteTo(w)
+			if _, err := m.WriteTo(w); err != nil {
+				applog.Printf("error writing response: %s", err)
+			}
 			return
 		}
 
@@ -280,7 +282,9 @@ func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg
 
 		m.Ns = []dns.RR{z.SoaRR()}
 
-		m.WriteTo(w)
+		if _, err := m.WriteTo(w); err != nil {
+			applog.Printf("error writing response: %s", err)
+		}
 		return
 	}
 
@@ -346,7 +350,9 @@ func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg
 		sf := new(dns.Msg)
 		dnsutil.SetReply(sf, req)
 		sf.Rcode = dns.RcodeServerFailure
-		sf.WriteTo(w)
+		if _, err := sf.WriteTo(w); err != nil {
+			applog.Printf("error writing SERVFAIL response: %s", err)
+		}
 	}
 }
 

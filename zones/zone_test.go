@@ -43,8 +43,8 @@ func TestExampleComZone(t *testing.T) {
 	if len(Mx) != 2 {
 		t.Errorf("Expected 2 MX records but got %d", len(Mx))
 	}
-	if Mx[0].RR.(*dns.MX).Mx != "mx.example.net." {
-		t.Errorf("First MX should have been mx.example.net, but was %s", Mx[0].RR.(*dns.MX).Mx)
+	if Mx[0].RR.(*dns.MX).MX.Mx != "mx.example.net." {
+		t.Errorf("First MX should have been mx.example.net, but was %s", Mx[0].RR.(*dns.MX).MX.Mx)
 	}
 
 	m = ex.findFirstLabel("", []string{"dk", "europe", "@"}, []uint16{dns.TypeMX})
@@ -52,8 +52,8 @@ func TestExampleComZone(t *testing.T) {
 	if len(Mx) != 1 {
 		t.Errorf("Got %d MX record for dk,europe,@ - expected %d", len(Mx), 1)
 	}
-	if Mx[0].RR.(*dns.MX).Mx != "mx-eu.example.net." {
-		t.Errorf("First MX should have been mx-eu.example.net, but was %s", Mx[0].RR.(*dns.MX).Mx)
+	if Mx[0].RR.(*dns.MX).MX.Mx != "mx-eu.example.net." {
+		t.Errorf("First MX should have been mx-eu.example.net, but was %s", Mx[0].RR.(*dns.MX).MX.Mx)
 	}
 
 	// // look for multiple record types

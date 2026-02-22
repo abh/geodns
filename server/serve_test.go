@@ -189,123 +189,55 @@ func testServing(t *testing.T) {
 	assert.Equal(t, name, "bar.example.com.", "PTR record")
 }
 
-// func TestServingMixedCase(t *testing.T) {
+func TestCname(t *testing.T) {
+	// Cname, two possible results
+	results := make(map[string]int)
 
-// 	r := exchange(c, "_sTaTUs.pGEOdnsv1.", dnsv1.TypeTXT)
-// 	checkRcode(t, r.Rcode, dnsv1.RcodeSuccess, "_sTaTUs.pGEOdnsv1.")
+	for range 10 {
+		r := exchange(t, "www.se.test.example.com.", dns.TypeA)
+		// only return one CNAME even if there are multiple options
+		require.Len(t, r.Answer, 1)
+		target := r.Answer[0].(*dns.CNAME).CNAME.Target
+		results[target]++
+	}
 
-// 	txt := r.Answer[0].(*dnsv1.TXT).Txt[0]
-// 	if !strings.HasPrefix(txt, "{") {
-// 		t.Log("Unexpected result for _status.pgeodns", txt)
-// 		t.Fail()
-// 	}
+	// Two possible results from this cname
+	assert.Len(t, results, 2)
+}
 
-// 	n := "baR.test.eXAmPLe.cOM."
-// 	r = exchange(c, n, dnsv1.TypeA)
-// 	ip := r.Answer[0].(*dnsv1.A).A
-// 	c.Check(ip.String(), Equals, "192.168.1.2")
-// 	c.Check(r.Answer[0].Header().Name, Equals, n)
+func TestServingAliases(t *testing.T) {
+	// Alias, no geo matches
+	r := exchange(t, "bar-alias.test.example.com.", dns.TypeA)
+	ip := r.Answer[0].(*dns.A).Addr
+	assert.Equal(t, "192.168.1.2", ip.String())
 
-// }
+	// Alias to a cname record
+	r = exchange(t, "www-alias.test.example.com.", dns.TypeA)
+	assert.Equal(t, "geo.bitnames.com.", r.Answer[0].(*dns.CNAME).CNAME.Target)
 
-// func TestCname(t *testing.T) {
-// 	// Cname, two possible results
+	// Alias returning a cname, with geo overrides
+	r = exchangeSubnet(t, "www-alias.test.example.com.", dns.TypeA, "194.239.134.1")
+	require.Len(t, r.Answer, 1)
+	assert.Equal(t, "geo-europe.bitnames.com.", r.Answer[0].(*dns.CNAME).CNAME.Target)
 
-// 	results := make(map[string]int)
+	// Alias to Ns records
+	r = exchange(t, "sub-alias.test.example.org.", dns.TypeNS)
+	assert.Equal(t, "ns1.example.com.", r.Answer[0].(*dns.NS).NS.Ns)
+}
 
-// 	for i := 0; i < 10; i++ {
-// 		r := exchange(c, "www.se.test.example.com.", dnsv1.TypeA)
-// 		// only return one CNAME even if there are multiple options
-// 		c.Check(r.Answer, HasLen, 1)
-// 		target := r.Answer[0].(*dnsv1.CNAME).Target
-// 		results[target]++
-// 	}
+func TestServingEDNS(t *testing.T) {
+	// MX test with geo override
+	r := exchangeSubnet(t, "test.example.com.", dns.TypeMX, "194.239.134.1")
+	require.Len(t, r.Answer, 1)
+	assert.Equal(t, "mx-eu.example.net.", r.Answer[0].(*dns.MX).MX.Mx)
 
-// 	// Two possible results from this cname
-// 	c.Check(results, HasLen, 2)
-// }
-
-// func testUnknownDomain(t *testing.T) {
-// 	r := exchange(t, "no.such.domain.", dnsv1.TypeAAAA)
-// 	c.Assert(r.Rcode, Equals, dnsv1.RcodeRefused)
-// }
-
-// func testServingAliases(t *testing.T) {
-// 	// Alias, no geo matches
-// 	r := exchange(c, "bar-alias.test.example.com.", dnsv1.TypeA)
-// 	ip := r.Answer[0].(*dnsv1.A).A
-// 	c.Check(ip.String(), Equals, "192.168.1.2")
-
-// 	// Alias to a cname record
-// 	r = exchange(c, "www-alias.test.example.com.", dnsv1.TypeA)
-// 	c.Check(r.Answer[0].(*dnsv1.CNAME).Target, Equals, "geo.bitnames.com.")
-
-// 	// Alias returning a cname, with geo overrides
-// 	r = exchangeSubnet(c, "www-alias.test.example.com.", dnsv1.TypeA, "194.239.134.1")
-// 	c.Check(r.Answer, HasLen, 1)
-// 	if len(r.Answer) > 0 {
-// 		c.Check(r.Answer[0].(*dnsv1.CNAME).Target, Equals, "geo-europe.bitnames.com.")
-// 	}
-
-// 	// Alias to Ns records
-// 	r = exchange(c, "sub-alias.test.example.org.", dnsv1.TypeNS)
-// 	c.Check(r.Answer[0].(*dnsv1.NS).Ns, Equals, "ns1.example.com.")
-
-// }
-
-// func testServingEDNS(t *testing.T) {
-// 	// MX test
-// 	r := exchangeSubnet(t, "test.example.com.", dnsv1.TypeMX, "194.239.134.1")
-// 	c.Check(r.Answer, HasLen, 1)
-// 	if len(r.Answer) > 0 {
-// 		c.Check(r.Answer[0].(*dnsv1.MX).Mx, Equals, "mx-eu.example.net.")
-// 	}
-
-// 	c.Log("Testing www.test.example.com from .dk, should match www.europe (a cname)")
-
-// 	r = exchangeSubnet(c, "www.test.example.com.", dnsv1.TypeA, "194.239.134.0")
-// 	// www.test from .dk IP address gets at least one answer
-// 	c.Check(r.Answer, HasLen, 1)
-// 	if len(r.Answer) > 0 {
-// 		// EDNS-SUBNET test (request A, respond CNAME)
-// 		c.Check(r.Answer[0].(*dnsv1.CNAME).Target, Equals, "geo-europe.bitnames.com.")
-// 	}
-
-// }
-
-// func TestServeRace(t *testing.T) {
-// 	wg := sync.WaitGroup{}
-// 	for i := 0; i < 5; i++ {
-// 		wg.Add(1)
-// 		go func() {
-// 			s.TestServing(t)
-// 			wg.Done()
-// 		}()
-// 	}
-// 	wg.Wait()
-// }
-
-// func BenchmarkServingCountryDebug(b *testing.B) {
-// 	for i := 0; i < b.N; i++ {
-// 		exchange(b, "_country.foo.pgeodnsv1.", dnsv1.TypeTXT)
-// 	}
-// }
-
-// func BenchmarkServing(b *testing.B) {
-
-// 	// a deterministic seed is the default anyway, but let's be explicit we want it here.
-// 	rnd := rand.NewSource(1)
-
-// 	testNames := []string{"foo.test.example.com.", "one.test.example.com.",
-// 		"weight.test.example.com.", "three.two.one.test.example.com.",
-// 		"bar.test.example.com.", "0-alias.test.example.com.",
-// 	}
-
-// 	for i := 0; i < c.N; i++ {
-// 		name := testNames[rnd.Int63()%int64(len(testNames))]
-// 		exchange(t, name, dnsv1.TypeA)
-// 	}
-// }
+	// www.test from .dk IP address gets at least one answer
+	t.Log("Testing www.test.example.com from .dk, should match www.europe (a cname)")
+	r = exchangeSubnet(t, "www.test.example.com.", dns.TypeA, "194.239.134.0")
+	require.Len(t, r.Answer, 1)
+	// EDNS-SUBNET test (request A, respond CNAME)
+	assert.Equal(t, "geo-europe.bitnames.com.", r.Answer[0].(*dns.CNAME).CNAME.Target)
+}
 
 func checkRcode(t *testing.T, rcode uint16, expected uint16, name string) {
 	if rcode != expected {

@@ -9,9 +9,9 @@ import (
 	"codeberg.org/miekg/dns/dnsutil"
 )
 
-// findOPT returns the OPT record from the Pseudo section of the message, or nil if not found.
+// FindOPT returns the OPT record from the Pseudo section of the message, or nil if not found.
 // This replaces the v1 IsEdns0() method.
-func findOPT(m *dns.Msg) *dns.OPT {
+func FindOPT(m *dns.Msg) *dns.OPT {
 	for _, rr := range m.Pseudo {
 		if opt, ok := rr.(*dns.OPT); ok {
 			return opt
@@ -51,7 +51,7 @@ func SupportedOption(option uint16) bool {
 // returned Msg is valid to be returned to the client (and should). For some
 // reason this response should not contain a question RR in the question section.
 func Version(req *dns.Msg) (*dns.Msg, error) {
-	opt := findOPT(req)
+	opt := FindOPT(req)
 	if opt == nil {
 		return nil, nil
 	}
@@ -92,15 +92,16 @@ The below wasn't from the edns package
 
 // SetSizeAndDo adds an OPT record that the reflects the intent from request.
 func SetSizeAndDo(req, m *dns.Msg) *dns.OPT {
-	o := findOPT(req)
+	o := FindOPT(req)
 	if o == nil {
 		return nil
 	}
 
-	if mo := findOPT(m); mo != nil {
+	if mo := FindOPT(m); mo != nil {
 		mo.Hdr.Name = "."
 		mo.SetVersion(0)
 		mo.SetUDPSize(o.UDPSize())
+		mo.SetRcode(0)        // clear extended RCODE
 		mo.SetZ(0)            // clear Z flags
 		mo.SetSecurity(false) // clear DO bit
 
@@ -115,6 +116,7 @@ func SetSizeAndDo(req, m *dns.Msg) *dns.OPT {
 	// Reuse the request's OPT record and tack it to m.
 	o.Hdr.Name = "."
 	o.SetVersion(0)
+	o.SetRcode(0)        // clear extended RCODE
 	o.SetZ(0)            // clear Z flags
 	o.SetSecurity(false) // clear DO bit
 

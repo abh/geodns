@@ -303,7 +303,11 @@ func setupZoneData(data map[string]interface{}, zone *Zone) {
 						record.RR = &dns.PTR{Hdr: h, PTR: rdata.PTR{Ptr: ip}}
 					case dns.TypeA:
 						if x := net.ParseIP(ip); x != nil {
-							addr := netip.AddrFrom4([4]byte(x.To4()))
+							x4 := x.To4()
+							if x4 == nil {
+								panic(fmt.Errorf("bad A record %q (not IPv4) for %q", ip, dk))
+							}
+							addr := netip.AddrFrom4([4]byte(x4))
 							record.RR = &dns.A{Hdr: h, A: rdata.A{Addr: addr}}
 						} else {
 							panic(fmt.Errorf("bad A record %q for %q", ip, dk))

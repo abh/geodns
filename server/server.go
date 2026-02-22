@@ -172,8 +172,8 @@ func (srv *Server) Shutdown() error {
 
 	for _, dnsServer := range srv.dnsServers {
 		timeoutCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
 		dnsServer.Shutdown(timeoutCtx)
+		cancel()
 	}
 
 	if srv.queryLogger != nil {
