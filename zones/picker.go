@@ -3,16 +3,15 @@ package zones
 import (
 	"math/rand"
 
+	dns "codeberg.org/miekg/dns"
 	"github.com/abh/geodns/v3/health"
 	"github.com/abh/geodns/v3/targeting/geo"
-
-	dnsv1 "github.com/miekg/dns"
 )
 
 // AlwaysWeighted types always honors 'MaxHosts', even
 // without an explicit weight set. (This list is slightly arbitrary).
 var AlwaysWeighted = []uint16{
-	dnsv1.TypeA, dnsv1.TypeAAAA, dnsv1.TypeCNAME,
+	dns.TypeA, dns.TypeAAAA, dns.TypeCNAME,
 }
 
 var alwaysWeighted map[uint16]struct{}
@@ -43,7 +42,7 @@ func (zone *Zone) filterHealth(servers Records) (Records, int) {
 // return the "closests" results, otherwise they are returned weighted
 // randomized.
 func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *geo.Location) Records {
-	if qtype == dnsv1.TypeANY {
+	if qtype == dns.TypeANY {
 		var result Records
 		for rtype := range label.Records {
 
@@ -90,7 +89,7 @@ func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *geo.Loca
 		return servers
 	}
 
-	if qtype == dnsv1.TypeCNAME || qtype == dnsv1.TypeMF {
+	if qtype == dns.TypeCNAME || qtype == dns.TypeMF {
 		max = 1
 	}
 
@@ -105,7 +104,7 @@ func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *geo.Loca
 	// 5% thereof. What this means in practice is that if we have a nearby
 	// cluster of servers that are close, they all get included, so load
 	// balancing works
-	if location != nil && (qtype == dnsv1.TypeA || qtype == dnsv1.TypeAAAA) && max < rrCount {
+	if location != nil && (qtype == dns.TypeA || qtype == dns.TypeAAAA) && max < rrCount {
 		// First we record the distance to each server
 		distances := make([]float64, rrCount)
 		for i, s := range servers {

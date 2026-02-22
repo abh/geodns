@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -98,11 +99,19 @@ func (srv *Server) SetQueryLogger(logger querylog.QueryLogger) {
 
 // Add adds the Zone to be handled under the specified name
 func (srv *Server) Add(name string, zone *zones.Zone) {
+	// v2 ServeMux requires patterns to be in canonical form (FQDN with trailing dot)
+	if !strings.HasSuffix(name, ".") {
+		name = name + "."
+	}
 	srv.mux.HandleFunc(name, srv.setupServerFunc(zone))
 }
 
 // Remove removes the zone name from being handled by the server
 func (srv *Server) Remove(name string) {
+	// v2 ServeMux requires patterns to be in canonical form (FQDN with trailing dot)
+	if !strings.HasSuffix(name, ".") {
+		name = name + "."
+	}
 	srv.mux.HandleRemove(name)
 }
 

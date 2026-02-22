@@ -8,7 +8,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/golang/geo v0.0.0-20230421003525-6adc56603217
 	github.com/hamba/avro/v2 v2.27.0
-	github.com/miekg/dns v1.1.69
 	github.com/oschwald/geoip2-golang v1.11.0
 	github.com/pborman/uuid v1.2.1
 	github.com/prometheus/client_golang v1.23.2
@@ -42,10 +41,10 @@ require (
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/tools v0.40.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
