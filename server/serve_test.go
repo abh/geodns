@@ -14,7 +14,7 @@ import (
 	"github.com/abh/geodns/v3/appconfig"
 	"github.com/abh/geodns/v3/monitor"
 	"github.com/abh/geodns/v3/zones"
-	"github.com/miekg/dns"
+	dnsv1 "github.com/miekg/dns"
 )
 
 const (
@@ -52,17 +52,17 @@ func TestServe(t *testing.T) {
 }
 
 func testServing(t *testing.T) {
-	r := exchange(t, "_status.pgeodns.", dns.TypeTXT)
+	r := exchange(t, "_status.pgeodnsv1.", dnsv1.TypeTXT)
 	require.Len(t, r.Answer, 1, "1 txt record for _status.pgeodns")
-	txt := r.Answer[0].(*dns.TXT).Txt[0]
+	txt := r.Answer[0].(*dnsv1.TXT).Txt[0]
 	if !strings.HasPrefix(txt, "{") {
 		t.Log("Unexpected result for _status.pgeodns", txt)
 		t.Fail()
 	}
 
 	// Allow _country and _status queries as long as the first label is that
-	r = exchange(t, "_country.foo.pgeodns.", dns.TypeTXT)
-	txt = r.Answer[0].(*dns.TXT).Txt[0]
+	r = exchange(t, "_country.foo.pgeodnsv1.", dnsv1.TypeTXT)
+	txt = r.Answer[0].(*dnsv1.TXT).Txt[0]
 	// Got appropriate response for _country txt query
 	if !strings.HasPrefix(txt, "127.0.0.1:") {
 		t.Log("Unexpected result for _country.foo.pgeodns", txt)
@@ -70,7 +70,7 @@ func testServing(t *testing.T) {
 	}
 
 	// Make sure A requests for _status doesn't NXDOMAIN
-	r = exchange(t, "_status.pgeodns.", dns.TypeA)
+	r = exchange(t, "_status.pgeodnsv1.", dnsv1.TypeA)
 	if len(r.Answer) != 0 {
 		t.Log("got A record for _status.pgeodns")
 		t.Fail()
@@ -80,30 +80,30 @@ func testServing(t *testing.T) {
 		t.Fail()
 	}
 	// NOERROR for A request
-	checkRcode(t, r.Rcode, dns.RcodeSuccess, "_status.pgeodns")
+	checkRcode(t, r.Rcode, dnsv1.RcodeSuccess, "_status.pgeodns")
 
 	// bar is an alias
-	r = exchange(t, "bar.test.example.com.", dns.TypeA)
-	ip := r.Answer[0].(*dns.A).A
+	r = exchange(t, "bar.test.example.com.", dnsv1.TypeA)
+	ip := r.Answer[0].(*dnsv1.A).A
 	if ip.String() != "192.168.1.2" {
 		t.Logf("unexpected A record for bar.test.example.com: %s", ip.String())
 		t.Fail()
 	}
 
 	// bar is an alias to test, the SOA record should be for test
-	r = exchange(t, "_.root-alias.test.example.com.", dns.TypeA)
+	r = exchange(t, "_.root-alias.test.example.com.", dnsv1.TypeA)
 	if len(r.Answer) > 0 {
 		t.Errorf("got answers for _.root-alias.test.example.com")
 	}
 	if len(r.Ns) == 0 {
 		t.Fatalf("_.root-alias.test didn't return auth section")
 	}
-	if n := r.Ns[0].(*dns.SOA).Header().Name; n != "test.example.com." {
+	if n := r.Ns[0].(*dnsv1.SOA).Header().Name; n != "test.example.com." {
 		t.Fatalf("_.root-alias.test didn't have test.example.com soa: %s", n)
 	}
 
 	// root-alias is an alias to test (apex), but the NS records shouldn't be on root-alias
-	r = exchange(t, "root-alias.test.example.com.", dns.TypeNS)
+	r = exchange(t, "root-alias.test.example.com.", dnsv1.TypeNS)
 	if len(r.Answer) > 0 {
 		t.Errorf("got unexpected answers for root-alias.test.example.com NS")
 	}
@@ -111,96 +111,96 @@ func testServing(t *testing.T) {
 		t.Fatalf("root-alias.test NS didn't return auth section")
 	}
 
-	r = exchange(t, "test.example.com.", dns.TypeSOA)
-	soa := r.Answer[0].(*dns.SOA)
+	r = exchange(t, "test.example.com.", dnsv1.TypeSOA)
+	soa := r.Answer[0].(*dnsv1.SOA)
 	serial := soa.Serial
 	assert.Equal(t, 3, int(serial))
 
 	// no AAAA records for 'bar', so check we get a soa record back
-	r = exchange(t, "bar.test.example.com.", dns.TypeAAAA)
-	soa2 := r.Ns[0].(*dns.SOA)
+	r = exchange(t, "bar.test.example.com.", dnsv1.TypeAAAA)
+	soa2 := r.Ns[0].(*dnsv1.SOA)
 	if !reflect.DeepEqual(soa, soa2) {
 		t.Errorf("AAAA empty NOERROR soa record different from SOA request")
 	}
 
 	// CNAMEs
-	r = exchange(t, "www.test.example.com.", dns.TypeA)
-	// c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo.bitnames.com.")
+	r = exchange(t, "www.test.example.com.", dnsv1.TypeA)
+	// c.Check(r.Answer[0].(*dnsv1.CNAME).Target, Equals, "geo.bitnames.com.")
 	if int(r.Answer[0].Header().Ttl) != 1800 {
 		t.Logf("unexpected ttl '%d' for geo.bitnames.com (expected %d)", int(r.Answer[0].Header().Ttl), 1800)
 		t.Fail()
 	}
 
-	//SPF
-	r = exchange(t, "test.example.com.", dns.TypeSPF)
-	assert.Equal(t, r.Answer[0].(*dns.SPF).Txt[0], "v=spf1 ~all")
+	// SPF
+	r = exchange(t, "test.example.com.", dnsv1.TypeSPF)
+	assert.Equal(t, r.Answer[0].(*dnsv1.SPF).Txt[0], "v=spf1 ~all")
 
-	//SRV
-	r = exchange(t, "_sip._tcp.test.example.com.", dns.TypeSRV)
-	assert.Equal(t, r.Answer[0].(*dns.SRV).Target, "sipserver.example.com.")
-	assert.Equal(t, r.Answer[0].(*dns.SRV).Port, uint16(5060))
-	assert.Equal(t, r.Answer[0].(*dns.SRV).Priority, uint16(10))
-	assert.Equal(t, r.Answer[0].(*dns.SRV).Weight, uint16(100))
+	// SRV
+	r = exchange(t, "_sip._tcp.test.example.com.", dnsv1.TypeSRV)
+	assert.Equal(t, r.Answer[0].(*dnsv1.SRV).Target, "sipserver.example.com.")
+	assert.Equal(t, r.Answer[0].(*dnsv1.SRV).Port, uint16(5060))
+	assert.Equal(t, r.Answer[0].(*dnsv1.SRV).Priority, uint16(10))
+	assert.Equal(t, r.Answer[0].(*dnsv1.SRV).Weight, uint16(100))
 
 	// MX
-	r = exchange(t, "test.example.com.", dns.TypeMX)
-	assert.Equal(t, r.Answer[0].(*dns.MX).Mx, "mx.example.net.")
-	assert.Equal(t, r.Answer[1].(*dns.MX).Mx, "mx2.example.net.")
-	assert.Equal(t, r.Answer[1].(*dns.MX).Preference, uint16(20))
+	r = exchange(t, "test.example.com.", dnsv1.TypeMX)
+	assert.Equal(t, r.Answer[0].(*dnsv1.MX).Mx, "mx.example.net.")
+	assert.Equal(t, r.Answer[1].(*dnsv1.MX).Mx, "mx2.example.net.")
+	assert.Equal(t, r.Answer[1].(*dnsv1.MX).Preference, uint16(20))
 
 	// Verify the first A record was created
-	r = exchange(t, "a.b.c.test.example.com.", dns.TypeA)
-	ip = r.Answer[0].(*dns.A).A
+	r = exchange(t, "a.b.c.test.example.com.", dnsv1.TypeA)
+	ip = r.Answer[0].(*dnsv1.A).A
 	assert.Equal(t, ip.String(), "192.168.1.7")
 
 	// Verify sub-labels are created
-	r = exchange(t, "b.c.test.example.com.", dns.TypeA)
+	r = exchange(t, "b.c.test.example.com.", dnsv1.TypeA)
 	assert.Len(t, r.Answer, 0, "expect 0 answer records for b.c.test.example.com")
-	checkRcode(t, r.Rcode, dns.RcodeSuccess, "b.c.test.example.com")
+	checkRcode(t, r.Rcode, dnsv1.RcodeSuccess, "b.c.test.example.com")
 
-	r = exchange(t, "c.test.example.com.", dns.TypeA)
+	r = exchange(t, "c.test.example.com.", dnsv1.TypeA)
 	assert.Len(t, r.Answer, 0, "expect 0 answer records for c.test.example.com")
-	checkRcode(t, r.Rcode, dns.RcodeSuccess, "c.test.example.com")
+	checkRcode(t, r.Rcode, dnsv1.RcodeSuccess, "c.test.example.com")
 
 	// Verify the first A record was created
-	r = exchange(t, "three.two.one.test.example.com.", dns.TypeA)
-	ip = r.Answer[0].(*dns.A).A
+	r = exchange(t, "three.two.one.test.example.com.", dnsv1.TypeA)
+	ip = r.Answer[0].(*dnsv1.A).A
 
 	assert.Equal(t, ip.String(), "192.168.1.5", "three.two.one.test.example.com A record")
 
 	// Verify single sub-labels is created and no record is returned
-	r = exchange(t, "two.one.test.example.com.", dns.TypeA)
+	r = exchange(t, "two.one.test.example.com.", dnsv1.TypeA)
 	assert.Len(t, r.Answer, 0, "expect 0 answer records for two.one.test.example.com")
-	checkRcode(t, r.Rcode, dns.RcodeSuccess, "two.one.test.example.com")
+	checkRcode(t, r.Rcode, dnsv1.RcodeSuccess, "two.one.test.example.com")
 
 	// Verify the A record wasn't over written
-	r = exchange(t, "one.test.example.com.", dns.TypeA)
-	ip = r.Answer[0].(*dns.A).A
+	r = exchange(t, "one.test.example.com.", dnsv1.TypeA)
+	ip = r.Answer[0].(*dnsv1.A).A
 	assert.Equal(t, ip.String(), "192.168.1.6", "one.test.example.com A record")
 
 	// PTR
-	r = exchange(t, "2.1.168.192.IN-ADDR.ARPA.", dns.TypePTR)
+	r = exchange(t, "2.1.168.192.IN-ADDR.ARPA.", dnsv1.TypePTR)
 	assert.Len(t, r.Answer, 1, "expect 1 answer records for 2.1.168.192.IN-ADDR.ARPA")
-	checkRcode(t, r.Rcode, dns.RcodeSuccess, "2.1.168.192.IN-ADDR.ARPA")
+	checkRcode(t, r.Rcode, dnsv1.RcodeSuccess, "2.1.168.192.IN-ADDR.ARPA")
 
-	name := r.Answer[0].(*dns.PTR).Ptr
+	name := r.Answer[0].(*dnsv1.PTR).Ptr
 	assert.Equal(t, name, "bar.example.com.", "PTR record")
 }
 
 // func TestServingMixedCase(t *testing.T) {
 
-// 	r := exchange(c, "_sTaTUs.pGEOdns.", dns.TypeTXT)
-// 	checkRcode(t, r.Rcode, dns.RcodeSuccess, "_sTaTUs.pGEOdns.")
+// 	r := exchange(c, "_sTaTUs.pGEOdnsv1.", dnsv1.TypeTXT)
+// 	checkRcode(t, r.Rcode, dnsv1.RcodeSuccess, "_sTaTUs.pGEOdnsv1.")
 
-// 	txt := r.Answer[0].(*dns.TXT).Txt[0]
+// 	txt := r.Answer[0].(*dnsv1.TXT).Txt[0]
 // 	if !strings.HasPrefix(txt, "{") {
 // 		t.Log("Unexpected result for _status.pgeodns", txt)
 // 		t.Fail()
 // 	}
 
 // 	n := "baR.test.eXAmPLe.cOM."
-// 	r = exchange(c, n, dns.TypeA)
-// 	ip := r.Answer[0].(*dns.A).A
+// 	r = exchange(c, n, dnsv1.TypeA)
+// 	ip := r.Answer[0].(*dnsv1.A).A
 // 	c.Check(ip.String(), Equals, "192.168.1.2")
 // 	c.Check(r.Answer[0].Header().Name, Equals, n)
 
@@ -212,10 +212,10 @@ func testServing(t *testing.T) {
 // 	results := make(map[string]int)
 
 // 	for i := 0; i < 10; i++ {
-// 		r := exchange(c, "www.se.test.example.com.", dns.TypeA)
+// 		r := exchange(c, "www.se.test.example.com.", dnsv1.TypeA)
 // 		// only return one CNAME even if there are multiple options
 // 		c.Check(r.Answer, HasLen, 1)
-// 		target := r.Answer[0].(*dns.CNAME).Target
+// 		target := r.Answer[0].(*dnsv1.CNAME).Target
 // 		results[target]++
 // 	}
 
@@ -224,49 +224,49 @@ func testServing(t *testing.T) {
 // }
 
 // func testUnknownDomain(t *testing.T) {
-// 	r := exchange(t, "no.such.domain.", dns.TypeAAAA)
-// 	c.Assert(r.Rcode, Equals, dns.RcodeRefused)
+// 	r := exchange(t, "no.such.domain.", dnsv1.TypeAAAA)
+// 	c.Assert(r.Rcode, Equals, dnsv1.RcodeRefused)
 // }
 
 // func testServingAliases(t *testing.T) {
 // 	// Alias, no geo matches
-// 	r := exchange(c, "bar-alias.test.example.com.", dns.TypeA)
-// 	ip := r.Answer[0].(*dns.A).A
+// 	r := exchange(c, "bar-alias.test.example.com.", dnsv1.TypeA)
+// 	ip := r.Answer[0].(*dnsv1.A).A
 // 	c.Check(ip.String(), Equals, "192.168.1.2")
 
 // 	// Alias to a cname record
-// 	r = exchange(c, "www-alias.test.example.com.", dns.TypeA)
-// 	c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo.bitnames.com.")
+// 	r = exchange(c, "www-alias.test.example.com.", dnsv1.TypeA)
+// 	c.Check(r.Answer[0].(*dnsv1.CNAME).Target, Equals, "geo.bitnames.com.")
 
 // 	// Alias returning a cname, with geo overrides
-// 	r = exchangeSubnet(c, "www-alias.test.example.com.", dns.TypeA, "194.239.134.1")
+// 	r = exchangeSubnet(c, "www-alias.test.example.com.", dnsv1.TypeA, "194.239.134.1")
 // 	c.Check(r.Answer, HasLen, 1)
 // 	if len(r.Answer) > 0 {
-// 		c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo-europe.bitnames.com.")
+// 		c.Check(r.Answer[0].(*dnsv1.CNAME).Target, Equals, "geo-europe.bitnames.com.")
 // 	}
 
 // 	// Alias to Ns records
-// 	r = exchange(c, "sub-alias.test.example.org.", dns.TypeNS)
-// 	c.Check(r.Answer[0].(*dns.NS).Ns, Equals, "ns1.example.com.")
+// 	r = exchange(c, "sub-alias.test.example.org.", dnsv1.TypeNS)
+// 	c.Check(r.Answer[0].(*dnsv1.NS).Ns, Equals, "ns1.example.com.")
 
 // }
 
 // func testServingEDNS(t *testing.T) {
 // 	// MX test
-// 	r := exchangeSubnet(t, "test.example.com.", dns.TypeMX, "194.239.134.1")
+// 	r := exchangeSubnet(t, "test.example.com.", dnsv1.TypeMX, "194.239.134.1")
 // 	c.Check(r.Answer, HasLen, 1)
 // 	if len(r.Answer) > 0 {
-// 		c.Check(r.Answer[0].(*dns.MX).Mx, Equals, "mx-eu.example.net.")
+// 		c.Check(r.Answer[0].(*dnsv1.MX).Mx, Equals, "mx-eu.example.net.")
 // 	}
 
 // 	c.Log("Testing www.test.example.com from .dk, should match www.europe (a cname)")
 
-// 	r = exchangeSubnet(c, "www.test.example.com.", dns.TypeA, "194.239.134.0")
+// 	r = exchangeSubnet(c, "www.test.example.com.", dnsv1.TypeA, "194.239.134.0")
 // 	// www.test from .dk IP address gets at least one answer
 // 	c.Check(r.Answer, HasLen, 1)
 // 	if len(r.Answer) > 0 {
 // 		// EDNS-SUBNET test (request A, respond CNAME)
-// 		c.Check(r.Answer[0].(*dns.CNAME).Target, Equals, "geo-europe.bitnames.com.")
+// 		c.Check(r.Answer[0].(*dnsv1.CNAME).Target, Equals, "geo-europe.bitnames.com.")
 // 	}
 
 // }
@@ -285,7 +285,7 @@ func testServing(t *testing.T) {
 
 // func BenchmarkServingCountryDebug(b *testing.B) {
 // 	for i := 0; i < b.N; i++ {
-// 		exchange(b, "_country.foo.pgeodns.", dns.TypeTXT)
+// 		exchange(b, "_country.foo.pgeodnsv1.", dnsv1.TypeTXT)
 // 	}
 // }
 
@@ -301,27 +301,27 @@ func testServing(t *testing.T) {
 
 // 	for i := 0; i < c.N; i++ {
 // 		name := testNames[rnd.Int63()%int64(len(testNames))]
-// 		exchange(t, name, dns.TypeA)
+// 		exchange(t, name, dnsv1.TypeA)
 // 	}
 // }
 
 func checkRcode(t *testing.T, rcode int, expected int, name string) {
 	if rcode != expected {
-		t.Logf("'%s': rcode!=%s: %s", name, dns.RcodeToString[expected], dns.RcodeToString[rcode])
+		t.Logf("'%s': rcode!=%s: %s", name, dnsv1.RcodeToString[expected], dnsv1.RcodeToString[rcode])
 		t.Fail()
 	}
 }
 
-func exchangeSubnet(t *testing.T, name string, dnstype uint16, ip string) *dns.Msg {
-	msg := new(dns.Msg)
+func exchangeSubnet(t *testing.T, name string, dnstype uint16, ip string) *dnsv1.Msg {
+	msg := new(dnsv1.Msg)
 
 	msg.SetQuestion(name, dnstype)
 
-	o := new(dns.OPT)
+	o := new(dnsv1.OPT)
 	o.Hdr.Name = "."
-	o.Hdr.Rrtype = dns.TypeOPT
-	e := new(dns.EDNS0_SUBNET)
-	e.Code = dns.EDNS0SUBNET
+	o.Hdr.Rrtype = dnsv1.TypeOPT
+	e := new(dnsv1.EDNS0_SUBNET)
+	e.Code = dnsv1.EDNS0SUBNET
 	e.SourceScope = 0
 	e.Address = net.ParseIP(ip)
 	e.Family = 1 // IP4
@@ -334,15 +334,15 @@ func exchangeSubnet(t *testing.T, name string, dnstype uint16, ip string) *dns.M
 	return dorequest(t, msg)
 }
 
-func exchange(t *testing.T, name string, dnstype uint16) *dns.Msg {
-	msg := new(dns.Msg)
+func exchange(t *testing.T, name string, dnstype uint16) *dnsv1.Msg {
+	msg := new(dnsv1.Msg)
 
 	msg.SetQuestion(name, dnstype)
 	return dorequest(t, msg)
 }
 
-func dorequest(t *testing.T, msg *dns.Msg) *dns.Msg {
-	cli := new(dns.Client)
+func dorequest(t *testing.T, msg *dnsv1.Msg) *dnsv1.Msg {
+	cli := new(dnsv1.Client)
 	// cli.ReadTimeout = 2 * time.Second
 	r, _, err := cli.Exchange(msg, "127.0.0.1"+PORT)
 	if err != nil {

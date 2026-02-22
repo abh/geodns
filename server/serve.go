@@ -17,18 +17,17 @@ import (
 	"github.com/abh/geodns/v3/querylog"
 	"github.com/abh/geodns/v3/zones"
 
-	"github.com/miekg/dns"
+	dnsv1 "github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 func getQuestionName(z *zones.Zone, fqdn string) string {
-	lx := dns.SplitDomainName(fqdn)
+	lx := dnsv1.SplitDomainName(fqdn)
 	ql := lx[0 : len(lx)-z.LabelCount]
 	return strings.ToLower(strings.Join(ql, "."))
 }
 
-func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
-
+func (srv *Server) serve(w dnsv1.ResponseWriter, req *dnsv1.Msg, z *zones.Zone) {
 	qnamefqdn := req.Question[0].Name
 	qtype := req.Question[0].Qtype
 
@@ -53,7 +52,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 	}
 
 	applog.Printf("[zone %s] incoming  %s %s (id %d) from %s\n", z.Origin, qnamefqdn,
-		dns.TypeToString[qtype], req.Id, w.RemoteAddr())
+		dnsv1.TypeToString[qtype], req.Id, w.RemoteAddr())
 
 	applog.Println("Got request", req)
 
@@ -79,12 +78,12 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 	z.Metrics.ClientStats.Add(realIP.String())
 
 	var ip net.IP // EDNS CLIENT SUBNET or real IP
-	var ecs *dns.EDNS0_SUBNET
+	var ecs *dnsv1.EDNS0_SUBNET
 
 	if option := req.IsEdns0(); option != nil {
 		for _, s := range option.Option {
 			switch e := s.(type) {
-			case *dns.EDNS0_SUBNET:
+			case *dnsv1.EDNS0_SUBNET:
 				applog.Println("Got edns-client-subnet", e.Address, e.Family, e.SourceNetmask, e.SourceScope)
 				if e.Address != nil {
 					ecs = e
@@ -121,7 +120,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		targets, netmask, location = z.Options.Targeting.GetTargets(realIP, z.HasClosest)
 	}
 
-	m := &dns.Msg{}
+	m := &dnsv1.Msg{}
 
 	// setup logging of answers and rcode
 	if qle != nil {
@@ -133,19 +132,19 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 			for _, rr := range m.Answer {
 				var s string
 				switch a := rr.(type) {
-				case *dns.A:
+				case *dnsv1.A:
 					s = a.A.String()
-				case *dns.AAAA:
+				case *dnsv1.AAAA:
 					s = a.AAAA.String()
-				case *dns.CNAME:
+				case *dnsv1.CNAME:
 					s = a.Target
-				case *dns.MX:
+				case *dnsv1.MX:
 					s = a.Mx
-				case *dns.NS:
+				case *dnsv1.NS:
 					s = a.Ns
-				case *dns.SRV:
+				case *dnsv1.SRV:
 					s = a.Target
-				case *dns.TXT:
+				case *dnsv1.TXT:
 					s = strings.Join(a.Txt, " ")
 				}
 				if len(s) > 0 {
@@ -168,13 +167,12 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 	m.SetReply(req)
 
 	if option := edns.SetSizeAndDo(req, m); option != nil {
-
 		for _, s := range option.Option {
 			switch e := s.(type) {
-			case *dns.EDNS0_NSID:
-				e.Code = dns.EDNS0NSID
+			case *dnsv1.EDNS0_NSID:
+				e.Code = dnsv1.EDNS0NSID
 				e.Nsid = hex.EncodeToString([]byte(srv.info.ID))
-			case *dns.EDNS0_SUBNET:
+			case *dnsv1.EDNS0_SUBNET:
 				// access e.Family, e.Address, etc.
 				// TODO: set scope to 0 if there are no alternate responses
 				if ecs.Family != 0 {
@@ -189,7 +187,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 
 	m.Authoritative = true
 
-	labelMatches := z.FindLabels(qlabel, targets, []uint16{dns.TypeMF, dns.TypeCNAME, qtype})
+	labelMatches := z.FindLabels(qlabel, targets, []uint16{dnsv1.TypeMF, dnsv1.TypeCNAME, qtype})
 
 	if len(labelMatches) == 0 {
 
@@ -202,7 +200,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		}
 
 		if permitDebug && firstLabel == "_status" {
-			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
+			if qtype == dnsv1.TypeANY || qtype == dnsv1.TypeTXT {
 				m.Answer = srv.statusRR(qlabel + "." + z.Origin + ".")
 			} else {
 				m.Ns = append(m.Ns, z.SoaRR())
@@ -213,7 +211,7 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		}
 
 		if permitDebug && firstLabel == "_health" {
-			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
+			if qtype == dnsv1.TypeANY || qtype == dnsv1.TypeTXT {
 				baseLabel := strings.Join((strings.Split(qlabel, "."))[1:], ".")
 				m.Answer = z.HealthRR(qlabel+"."+z.Origin+".", baseLabel)
 				m.Authoritative = true
@@ -227,8 +225,8 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		}
 
 		if firstLabel == "_country" {
-			if qtype == dns.TypeANY || qtype == dns.TypeTXT {
-				h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
+			if qtype == dnsv1.TypeANY || qtype == dnsv1.TypeTXT {
+				h := dnsv1.RR_Header{Ttl: 1, Class: dnsv1.ClassINET, Rrtype: dnsv1.TypeTXT}
 				h.Name = qnamefqdn
 
 				txt := []string{
@@ -245,7 +243,8 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 					txt = append(txt, "()")
 				}
 
-				m.Answer = []dns.RR{&dns.TXT{Hdr: h,
+				m.Answer = []dnsv1.RR{&dnsv1.TXT{
+					Hdr: h,
 					Txt: txt,
 				}}
 			} else {
@@ -259,17 +258,17 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		}
 
 		// return NXDOMAIN
-		m.SetRcode(req, dns.RcodeNameError)
+		m.SetRcode(req, dnsv1.RcodeNameError)
 		srv.metrics.Queries.With(
 			prometheus.Labels{
 				"zone":  z.Origin,
-				"qtype": dns.TypeToString[qtype],
+				"qtype": dnsv1.TypeToString[qtype],
 				"qname": "_error",
-				"rcode": dns.RcodeToString[m.Rcode],
+				"rcode": dnsv1.RcodeToString[m.Rcode],
 			}).Inc()
 		m.Authoritative = true
 
-		m.Ns = []dns.RR{z.SoaRR()}
+		m.Ns = []dnsv1.RR{z.SoaRR()}
 
 		w.WriteMsg(m)
 		return
@@ -284,9 +283,9 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 		}
 
 		if servers := z.Picker(label, labelQtype, label.MaxHosts, location); servers != nil {
-			var rrs []dns.RR
+			var rrs []dnsv1.RR
 			for _, record := range servers {
-				rr := dns.Copy(record.RR)
+				rr := dnsv1.Copy(record.RR)
 				rr.Header().Name = qnamefqdn
 				rrs = append(rrs, rr)
 			}
@@ -319,9 +318,9 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 	srv.metrics.Queries.With(
 		prometheus.Labels{
 			"zone":  z.Origin,
-			"qtype": dns.TypeToString[qtype],
+			"qtype": dnsv1.TypeToString[qtype],
 			"qname": qlabelMetric,
-			"rcode": dns.RcodeToString[m.Rcode],
+			"rcode": dnsv1.RcodeToString[m.Rcode],
 		}).Inc()
 
 	applog.Println(m)
@@ -334,13 +333,12 @@ func (srv *Server) serve(w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
 	if err != nil {
 		// if Pack'ing fails the Write fails. Return SERVFAIL.
 		applog.Printf("Error writing packet: %q, %s", err, m)
-		dns.HandleFailed(w, req)
+		dnsv1.HandleFailed(w, req)
 	}
-
 }
 
-func (srv *Server) statusRR(label string) []dns.RR {
-	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
+func (srv *Server) statusRR(label string) []dnsv1.RR {
+	h := dnsv1.RR_Header{Ttl: 1, Class: dnsv1.ClassINET, Rrtype: dnsv1.TypeTXT}
 	h.Name = label
 
 	status := map[string]string{"v": srv.info.Version, "id": srv.info.ID}
@@ -357,5 +355,5 @@ func (srv *Server) statusRR(label string) []dns.RR {
 		log.Printf("error marshaling json status: %s", err)
 	}
 
-	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
+	return []dnsv1.RR{&dnsv1.TXT{Hdr: h, Txt: []string{string(js)}}}
 }

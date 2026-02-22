@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/miekg/dns"
+	dnsv1 "github.com/miekg/dns"
 )
 
 var sup = &supported{m: make(map[uint16]struct{})}
@@ -18,7 +18,7 @@ type supported struct {
 // SetSupportedOption adds a new supported option the set of EDNS0 options that we support. Plugins typically call
 // this in their setup code to signal support for a new option.
 // By default we support:
-// dns.EDNS0NSID, dns.EDNS0EXPIRE, dns.EDNS0COOKIE, dns.EDNS0TCPKEEPALIVE, dns.EDNS0PADDING. These
+// dnsv1.EDNS0NSID, dnsv1.EDNS0EXPIRE, dnsv1.EDNS0COOKIE, dnsv1.EDNS0TCPKEEPALIVE, dnsv1.EDNS0PADDING. These
 // values are not in this map and checked directly in the server.
 func SetSupportedOption(option uint16) {
 	sup.Lock()
@@ -38,7 +38,7 @@ func SupportedOption(option uint16) bool {
 // is nil everything is OK and we can invoke the plugin. If non-nil, the
 // returned Msg is valid to be returned to the client (and should). For some
 // reason this response should not contain a question RR in the question section.
-func Version(req *dns.Msg) (*dns.Msg, error) {
+func Version(req *dnsv1.Msg) (*dnsv1.Msg, error) {
 	opt := req.IsEdns0()
 	if opt == nil {
 		return nil, nil
@@ -46,18 +46,18 @@ func Version(req *dns.Msg) (*dns.Msg, error) {
 	if opt.Version() == 0 {
 		return nil, nil
 	}
-	m := new(dns.Msg)
+	m := new(dnsv1.Msg)
 	m.SetReply(req)
 	// zero out question section, wtf.
 	m.Question = nil
 
-	o := new(dns.OPT)
+	o := new(dnsv1.OPT)
 	o.Hdr.Name = "."
-	o.Hdr.Rrtype = dns.TypeOPT
+	o.Hdr.Rrtype = dnsv1.TypeOPT
 	o.SetVersion(0)
-	m.Rcode = dns.RcodeBadVers
-	o.SetExtendedRcode(dns.RcodeBadVers)
-	m.Extra = []dns.RR{o}
+	m.Rcode = dnsv1.RcodeBadVers
+	o.SetExtendedRcode(dnsv1.RcodeBadVers)
+	m.Extra = []dnsv1.RR{o}
 
 	return m, errors.New("EDNS0 BADVERS")
 }
@@ -65,10 +65,10 @@ func Version(req *dns.Msg) (*dns.Msg, error) {
 // Size returns a normalized size based on proto.
 func Size(proto string, size uint16) uint16 {
 	if proto == "tcp" {
-		return dns.MaxMsgSize
+		return dnsv1.MaxMsgSize
 	}
-	if size < dns.MinMsgSize {
-		return dns.MinMsgSize
+	if size < dnsv1.MinMsgSize {
+		return dnsv1.MinMsgSize
 	}
 	return size
 }
@@ -80,7 +80,7 @@ The below wasn't from the edns package
 */
 
 // SetSizeAndDo adds an OPT record that the reflects the intent from request.
-func SetSizeAndDo(req, m *dns.Msg) *dns.OPT {
+func SetSizeAndDo(req, m *dnsv1.Msg) *dnsv1.OPT {
 	o := req.IsEdns0()
 	if o == nil {
 		return nil
@@ -88,7 +88,7 @@ func SetSizeAndDo(req, m *dns.Msg) *dns.OPT {
 
 	if mo := m.IsEdns0(); mo != nil {
 		mo.Hdr.Name = "."
-		mo.Hdr.Rrtype = dns.TypeOPT
+		mo.Hdr.Rrtype = dnsv1.TypeOPT
 		mo.SetVersion(0)
 		mo.SetUDPSize(o.UDPSize())
 		mo.Hdr.Ttl &= 0xff00 // clear flags
@@ -103,7 +103,7 @@ func SetSizeAndDo(req, m *dns.Msg) *dns.OPT {
 
 	// Reuse the request's OPT record and tack it to m.
 	o.Hdr.Name = "."
-	o.Hdr.Rrtype = dns.TypeOPT
+	o.Hdr.Rrtype = dnsv1.TypeOPT
 	o.SetVersion(0)
 	o.Hdr.Ttl &= 0xff00 // clear flags
 
@@ -115,21 +115,20 @@ func SetSizeAndDo(req, m *dns.Msg) *dns.OPT {
 	return o
 }
 
-func SupportedOptions(o []dns.EDNS0) []dns.EDNS0 {
-	var supported = make([]dns.EDNS0, 0, 3)
+func SupportedOptions(o []dnsv1.EDNS0) []dnsv1.EDNS0 {
+	supported := make([]dnsv1.EDNS0, 0, 3)
 	// For as long as possible try avoid looking up in the map, because that need an Rlock.
 	for _, opt := range o {
 		switch code := opt.Option(); code {
-		case dns.EDNS0NSID:
+		case dnsv1.EDNS0NSID:
 			fallthrough
-		case dns.EDNS0COOKIE:
+		case dnsv1.EDNS0COOKIE:
 			fallthrough
-		case dns.EDNS0SUBNET:
+		case dnsv1.EDNS0SUBNET:
 			supported = append(supported, opt)
 		default:
 			if SupportedOption(code) {
 				supported = append(supported, opt)
-
 			}
 		}
 	}

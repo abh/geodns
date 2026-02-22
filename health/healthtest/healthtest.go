@@ -10,12 +10,10 @@ import (
 	"github.com/abh/geodns/v3/applog"
 	"github.com/abh/geodns/v3/typeutil"
 
-	"github.com/miekg/dns"
+	dnsv1 "github.com/miekg/dns"
 )
 
-var (
-	Qtypes = []uint16{dns.TypeA, dns.TypeAAAA}
-)
+var Qtypes = []uint16{dnsv1.TypeA, dnsv1.TypeAAAA}
 
 type HealthTester interface {
 	String() string
@@ -157,8 +155,8 @@ func (ht *HealthTest) run() {
 			}
 			pollStart = time.Time{}
 			applog.Printf("Check result for %s health=%v, next poll at %s", ht.ipAddress, h, nextPoll)
-			//randomDelay := rand.Int63n(time.Second.Nanoseconds())
-			//nextPoll = nextPoll.Add(time.Duration(randomDelay))
+			// randomDelay := rand.Int63n(time.Second.Nanoseconds())
+			// nextPoll = nextPoll.Add(time.Duration(randomDelay))
 		}
 	}
 }
@@ -197,6 +195,7 @@ func (ht *HealthTest) Stop() (err error) {
 func (ht *HealthTest) IP() net.IP {
 	return ht.ipAddress
 }
+
 func (ht *HealthTest) IsHealthy() bool {
 	return ht.isHealthy()
 }
@@ -334,5 +333,4 @@ func NewFromMap(i map[string]interface{}) (*HealthTest, error) {
 
 	tester := NewTest(nil, htp, &h)
 	return tester, nil
-
 }

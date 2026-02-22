@@ -14,7 +14,7 @@ import (
 	"go.ntppool.org/common/version"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/miekg/dns"
+	dnsv1 "github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -28,17 +28,17 @@ type Server struct {
 	DetailedMetrics    bool
 
 	queryLogger querylog.QueryLogger
-	mux         *dns.ServeMux
+	mux         *dnsv1.ServeMux
 	info        *monitor.ServerInfo
 	metrics     *serverMetrics
 
 	lock       sync.Mutex
-	dnsServers []*dns.Server
+	dnsServers []*dnsv1.Server
 }
 
 // NewServer ...
 func NewServer(config *appconfig.AppConfig, si *monitor.ServerInfo) *Server {
-	mux := dns.NewServeMux()
+	mux := dnsv1.NewServeMux()
 
 	queries := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -106,18 +106,18 @@ func (srv *Server) Remove(name string) {
 	srv.mux.HandleRemove(name)
 }
 
-func (srv *Server) setupServerFunc(zone *zones.Zone) func(dns.ResponseWriter, *dns.Msg) {
-	return func(w dns.ResponseWriter, r *dns.Msg) {
+func (srv *Server) setupServerFunc(zone *zones.Zone) func(dnsv1.ResponseWriter, *dnsv1.Msg) {
+	return func(w dnsv1.ResponseWriter, r *dnsv1.Msg) {
 		srv.serve(w, r, zone)
 	}
 }
 
 // ServeDNS calls ServeDNS in the dns package
-func (srv *Server) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
+func (srv *Server) ServeDNS(w dnsv1.ResponseWriter, r *dnsv1.Msg) {
 	srv.mux.ServeDNS(w, r)
 }
 
-func (srv *Server) addDNSServer(dnsServer *dns.Server) {
+func (srv *Server) addDNSServer(dnsServer *dnsv1.Server) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 	srv.dnsServers = append(srv.dnsServers, dnsServer)
@@ -127,7 +127,6 @@ func (srv *Server) addDNSServer(dnsServer *dns.Server) {
 // (both tcp and udp). It returns an error if
 // something goes wrong.
 func (srv *Server) ListenAndServe(ctx context.Context, ip string) error {
-
 	prots := []string{"udp", "tcp"}
 
 	g, _ := errgroup.WithContext(ctx)
@@ -137,7 +136,7 @@ func (srv *Server) ListenAndServe(ctx context.Context, ip string) error {
 		p := prot
 
 		g.Go(func() error {
-			server := &dns.Server{
+			server := &dnsv1.Server{
 				Addr:    ip,
 				Net:     p,
 				Handler: srv,

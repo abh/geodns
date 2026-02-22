@@ -14,7 +14,7 @@ import (
 	"github.com/abh/geodns/v3/targeting"
 	"github.com/abh/geodns/v3/targeting/geo"
 
-	"github.com/miekg/dns"
+	dnsv1 "github.com/miekg/dns"
 )
 
 type ZoneOptions struct {
@@ -36,7 +36,7 @@ type ZoneLogging struct {
 }
 
 type Record struct {
-	RR     dns.RR
+	RR     dnsv1.RR
 	Weight int
 	Loc    *geo.Location
 	Test   string
@@ -91,7 +91,7 @@ func NewZone(name string) *Zone {
 	zone := new(Zone)
 	zone.Labels = make(labelmap)
 	zone.Origin = name
-	zone.LabelCount = dns.CountLabel(zone.Origin)
+	zone.LabelCount = dnsv1.CountLabel(zone.Origin)
 
 	// defaults
 	zone.Options.Ttl = 120
@@ -128,7 +128,7 @@ func (z *Zone) Close() {
 	}
 }
 
-func (l *Label) FirstRR(dnsType uint16) dns.RR {
+func (l *Label) FirstRR(dnsType uint16) dnsv1.RR {
 	return l.Records[dnsType][0].RR
 }
 
@@ -147,8 +147,8 @@ func (z *Zone) AddLabel(k string) *Label {
 	return label
 }
 
-func (z *Zone) SoaRR() dns.RR {
-	return z.Labels[""].FirstRR(dns.TypeSOA)
+func (z *Zone) SoaRR() dnsv1.RR {
+	return z.Labels[""].FirstRR(dnsv1.TypeSOA)
 }
 
 func (zone *Zone) AddSOA() {
@@ -168,8 +168,8 @@ func (zone *Zone) addSOA() {
 		label = zone.AddLabel("")
 	}
 
-	if record, ok := label.Records[dns.TypeNS]; ok {
-		primaryNs = record[0].RR.(*dns.NS).Ns
+	if record, ok := label.Records[dnsv1.TypeNS]; ok {
+		primaryNs = record[0].RR.(*dnsv1.NS).Ns
 	}
 
 	ttl := zone.Options.Ttl * 10
@@ -189,8 +189,7 @@ func (zone *Zone) addSOA() {
 
 	// log.Println("SOA: ", s)
 
-	rr, err := dns.NewRR(s)
-
+	rr, err := dnsv1.NewRR(s)
 	if err != nil {
 		log.Println("SOA Error", err)
 		panic("Could not setup SOA")
@@ -198,8 +197,8 @@ func (zone *Zone) addSOA() {
 
 	record := Record{RR: rr}
 
-	label.Records[dns.TypeSOA] = make([]*Record, 1)
-	label.Records[dns.TypeSOA][0] = &record
+	label.Records[dnsv1.TypeSOA] = make([]*Record, 1)
+	label.Records[dnsv1.TypeSOA][0] = &record
 }
 
 func (z *Zone) findFirstLabel(s string, targets []string, qts []uint16) *LabelMatch {
@@ -218,7 +217,6 @@ func (z *Zone) findFirstLabel(s string, targets []string, qts []uint16) *LabelMa
 // matches the targeting will allow so health check filtering won't
 // filter out the "best" results leaving no others.
 func (z *Zone) FindLabels(s string, targets []string, qts []uint16) []LabelMatch {
-
 	matches := make([]LabelMatch, 0)
 
 	for _, target := range targets {
@@ -239,26 +237,26 @@ func (z *Zone) FindLabels(s string, targets []string, qts []uint16) []LabelMatch
 			var name string
 			for _, qtype := range qts {
 				switch qtype {
-				case dns.TypeANY:
+				case dnsv1.TypeANY:
 					// short-circuit mostly to avoid subtle bugs later
 					// to be correct we should run through all the selectors and
 					// pick types not already picked
 					matches = append(matches, LabelMatch{z.Labels[s], qtype})
 					continue
-				case dns.TypeMF:
-					if label.Records[dns.TypeMF] != nil {
+				case dnsv1.TypeMF:
+					if label.Records[dnsv1.TypeMF] != nil {
 
 						// don't follow NS and SOA records for aliases
 						aliasQts := slices.DeleteFunc(qts, func(q uint16) bool {
 							if slices.Contains(
-								[]uint16{dns.TypeNS, dns.TypeSOA},
+								[]uint16{dnsv1.TypeNS, dnsv1.TypeSOA},
 								q) {
 								return true
 							}
 							return false
 						})
 
-						name = label.FirstRR(dns.TypeMF).(*dns.MF).Mf
+						name = label.FirstRR(dnsv1.TypeMF).(*dnsv1.MF).Mf
 						// TODO: need to avoid loops here somehow
 						aliases := z.FindLabels(name, targets, aliasQts)
 						matches = append(matches, aliases...)
@@ -291,7 +289,7 @@ func (z *Zone) FindLabels(s string, targets []string, qts []uint16) []LabelMatch
 // being we'll just use GeoIP.
 func (z *Zone) SetLocations() {
 	geo := targeting.Geo()
-	qtypes := []uint16{dns.TypeA, dns.TypeAAAA}
+	qtypes := []uint16{dnsv1.TypeA, dnsv1.TypeAAAA}
 	for _, label := range z.Labels {
 		if label.Closest {
 			for _, qtype := range qtypes {
@@ -301,10 +299,10 @@ func (z *Zone) SetLocations() {
 						rr := label.Records[qtype][i].RR
 						var ip *net.IP
 						switch rr.(type) {
-						case *dns.A:
-							ip = &rr.(*dns.A).A
-						case *dns.AAAA:
-							ip = &rr.(*dns.AAAA).AAAA
+						case *dnsv1.A:
+							ip = &rr.(*dnsv1.A).A
+						case *dnsv1.AAAA:
+							ip = &rr.(*dnsv1.AAAA).AAAA
 						default:
 							log.Printf("Can't lookup location of type %T", rr)
 						}
@@ -324,7 +322,6 @@ func (z *Zone) SetLocations() {
 }
 
 func (z *Zone) addHealthReference(l *Label, data interface{}) {
-
 	// First safely get rid of any old test. As label tests
 	// should never run this should never be executed
 	// if l.Test != nil {
@@ -362,11 +359,11 @@ func (z *Zone) setupHealthTests() {
 				}
 				var t string
 				switch rrt := rec.RR.(type) {
-				case *dns.A:
+				case *dnsv1.A:
 					t = rrt.A.String()
-				case *dns.AAAA:
+				case *dnsv1.AAAA:
 					t = rrt.AAAA.String()
-				case *dns.MX:
+				case *dnsv1.MX:
 					t = rrt.Mx
 				default:
 					continue
@@ -386,9 +383,9 @@ func (z *Zone) setupHealthTests() {
 // 					rr := label.Records[qtype][i].RR
 // 					var ip net.IP
 // 					switch rrt := rr.(type) {
-// 					case *dns.A:
+// 					case *dnsv1.A:
 // 						ip = rrt.A
-// 					case *dns.AAAA:
+// 					case *dnsv1.AAAA:
 // 						ip = rrt.AAAA
 // 					default:
 // 						continue
@@ -420,9 +417,9 @@ func (z *Zone) setupHealthTests() {
 // 											oRecord := oLabel.Records[qtype][i]
 // 											var oip net.IP
 // 											switch orrt := oRecord.RR.(type) {
-// 											case *dns.A:
+// 											case *dnsv1.A:
 // 												oip = orrt.A
-// 											case *dns.AAAA:
+// 											case *dnsv1.AAAA:
 // 												oip = orrt.AAAA
 // 											default:
 // 												continue
@@ -453,15 +450,15 @@ func (z *Zone) setupHealthTests() {
 // 		}
 // 	}
 
-func (z *Zone) HealthRR(label string, baseLabel string) []dns.RR {
-	h := dns.RR_Header{Ttl: 1, Class: dns.ClassINET, Rrtype: dns.TypeTXT}
+func (z *Zone) HealthRR(label string, baseLabel string) []dnsv1.RR {
+	h := dnsv1.RR_Header{Ttl: 1, Class: dnsv1.ClassINET, Rrtype: dnsv1.TypeTXT}
 	h.Name = label
 
 	healthstatus := make(map[string]map[string]bool)
 
 	// if l, ok := z.Labels[baseLabel]; ok {
 	// 	for qt, records := range l.Records {
-	// 		if qts, ok := dns.TypeToString[qt]; ok {
+	// 		if qts, ok := dnsv1.TypeToString[qt]; ok {
 	// 			hmap := make(map[string]bool)
 	// 			for _, record := range records {
 	// 				if record.Test != nil {
@@ -475,5 +472,5 @@ func (z *Zone) HealthRR(label string, baseLabel string) []dns.RR {
 
 	js, _ := json.Marshal(healthstatus)
 
-	return []dns.RR{&dns.TXT{Hdr: h, Txt: []string{string(js)}}}
+	return []dnsv1.RR{&dnsv1.TXT{Hdr: h, Txt: []string{string(js)}}}
 }

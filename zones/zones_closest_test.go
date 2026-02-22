@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/miekg/dns"
+	dnsv1 "github.com/miekg/dns"
 )
 
 func TestClosest(t *testing.T) {
@@ -20,9 +20,9 @@ func TestClosest(t *testing.T) {
 		QType     uint16
 		MaxHosts  int
 	}{
-		{"closest", "212.237.144.84", []string{"194.106.223.155"}, dns.TypeA, 1},
-		{"closest", "208.113.157.108", []string{"207.171.7.49", "207.171.7.59"}, dns.TypeA, 2},
-		{"closest", "2620:0:872::1", []string{"2607:f238:3::1:45"}, dns.TypeAAAA, 1},
+		{"closest", "212.237.144.84", []string{"194.106.223.155"}, dnsv1.TypeA, 1},
+		{"closest", "208.113.157.108", []string{"207.171.7.49", "207.171.7.59"}, dnsv1.TypeA, 2},
+		{"closest", "2620:0:872::1", []string{"2607:f238:3::1:45"}, dnsv1.TypeAAAA, 1},
 		// {"closest", "208.113.157.108", []string{"207.171.7.59"}, 1},
 	}
 
@@ -45,7 +45,7 @@ func TestClosest(t *testing.T) {
 		labelMatches := tz.FindLabels(
 			x.Label,
 			targets,
-			[]uint16{dns.TypeMF, dns.TypeCNAME, x.QType},
+			[]uint16{dnsv1.TypeMF, dnsv1.TypeCNAME, x.QType},
 		)
 
 		if len(labelMatches) == 0 {
@@ -76,11 +76,10 @@ func TestClosest(t *testing.T) {
 			ips := []string{}
 
 			for _, r := range records {
-
 				switch rr := r.RR.(type) {
-				case *dns.A:
+				case *dnsv1.A:
 					ips = append(ips, rr.A.String())
-				case *dns.AAAA:
+				case *dnsv1.AAAA:
 					ips = append(ips, rr.AAAA.String())
 				default:
 					t.Fatalf("unexpected RR type: %s", rr.Header().String())
