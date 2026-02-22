@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	dns "codeberg.org/miekg/dns"
 	"github.com/abh/geodns/v3/appconfig"
 	"github.com/abh/geodns/v3/monitor"
 	"github.com/abh/geodns/v3/querylog"
@@ -14,7 +15,6 @@ import (
 	"go.ntppool.org/common/version"
 	"golang.org/x/sync/errgroup"
 
-	dnsv1 "github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -28,17 +28,17 @@ type Server struct {
 	DetailedMetrics    bool
 
 	queryLogger querylog.QueryLogger
-	mux         *dnsv1.ServeMux
+	mux         *dns.ServeMux
 	info        *monitor.ServerInfo
 	metrics     *serverMetrics
 
 	lock       sync.Mutex
-	dnsServers []*dnsv1.Server
+	dnsServers []*dns.Server
 }
 
 // NewServer ...
 func NewServer(config *appconfig.AppConfig, si *monitor.ServerInfo) *Server {
-	mux := dnsv1.NewServeMux()
+	mux := dns.NewServeMux()
 
 	queries := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -106,18 +106,18 @@ func (srv *Server) Remove(name string) {
 	srv.mux.HandleRemove(name)
 }
 
-func (srv *Server) setupServerFunc(zone *zones.Zone) func(dnsv1.ResponseWriter, *dnsv1.Msg) {
-	return func(w dnsv1.ResponseWriter, r *dnsv1.Msg) {
-		srv.serve(w, r, zone)
+func (srv *Server) setupServerFunc(zone *zones.Zone) func(context.Context, dns.ResponseWriter, *dns.Msg) {
+	return func(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) {
+		srv.serve(ctx, w, r, zone)
 	}
 }
 
 // ServeDNS calls ServeDNS in the dns package
-func (srv *Server) ServeDNS(w dnsv1.ResponseWriter, r *dnsv1.Msg) {
-	srv.mux.ServeDNS(w, r)
+func (srv *Server) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) {
+	srv.mux.ServeDNS(ctx, w, r)
 }
 
-func (srv *Server) addDNSServer(dnsServer *dnsv1.Server) {
+func (srv *Server) addDNSServer(dnsServer *dns.Server) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 	srv.dnsServers = append(srv.dnsServers, dnsServer)
@@ -136,7 +136,7 @@ func (srv *Server) ListenAndServe(ctx context.Context, ip string) error {
 		p := prot
 
 		g.Go(func() error {
-			server := &dnsv1.Server{
+			server := &dns.Server{
 				Addr:    ip,
 				Net:     p,
 				Handler: srv,
@@ -164,10 +164,7 @@ func (srv *Server) Shutdown() error {
 	for _, dnsServer := range srv.dnsServers {
 		timeoutCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-		err := dnsServer.ShutdownContext(timeoutCtx)
-		if err != nil {
-			errs = append(errs, err)
-		}
+		dnsServer.Shutdown(timeoutCtx)
 	}
 
 	if srv.queryLogger != nil {
