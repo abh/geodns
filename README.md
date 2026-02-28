@@ -181,7 +181,7 @@ A record for users in Europe than anywhere else, use:
                 "ns": [ "ns.example.net", "ns2.example.net" ],
                 "txt": "Example zone",
                 "spf": [ { "spf": "v=spf1 ~all", "weight": 1 } ],
-                "mx": { "mx": "mail.example.com", "preference": 10 }
+                "mx": [ { "mx": "mail.example.com", "preference": 10 } ]
             },
             "mail": { "a": [ ["192.168.0.1", 100], ["192.168.10.1", 50] ] },
             "mail.europe": { "a": [ ["192.168.255.1", 0] ] },
