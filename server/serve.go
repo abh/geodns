@@ -35,6 +35,11 @@ func getQuestionName(z *zones.Zone, fqdn string) string {
 }
 
 func (srv *Server) serve(ctx context.Context, w dns.ResponseWriter, req *dns.Msg, z *zones.Zone) {
+	if err := req.Unpack(); err != nil {
+		applog.Printf("error unpacking request: %s", err)
+		return
+	}
+
 	qrr := req.Question[0]
 	qnamefqdn := qrr.Header().Name
 	qtype := dns.RRToType(qrr)

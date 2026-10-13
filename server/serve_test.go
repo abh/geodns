@@ -232,12 +232,26 @@ func testServingAliases(t *testing.T) {
 }
 
 func testServingEDNS(t *testing.T) {
+	// ECS address must reach the handler.
+	//
+	// The _country TXT response returns [remoteAddr, targetIP, targets...].
+	// When an ECS option is present, targetIP must be the ECS address,
+	// not the loopback address of the test connection.
+	const ecsIP = "8.8.8.8"
+	r := exchangeSubnet(t, "_country.pgeodns.", dns.TypeTXT, ecsIP)
+	require.NotEmpty(t, r.Answer, "_country query must return TXT records")
+	txt := r.Answer[0].(*dns.TXT).TXT.Txt
+	require.GreaterOrEqual(t, len(txt), 2, "_country TXT must have at least 2 fields")
+	// txt[1] is the IP the server used for targeting (ECS or real remote addr).
+	assert.Equal(t, ecsIP, txt[1],
+		"Server ignored ECS; used %q instead of ECS address %q for targeting", txt[1], ecsIP)
+
 	if targeting.Geo() == nil {
-		t.Skip("GeoIP not available")
+		t.Skip("GeoIP not available for geo-specific EDNS tests")
 	}
 
 	// MX test with geo override
-	r := exchangeSubnet(t, "test.example.com.", dns.TypeMX, "194.239.134.1")
+	r = exchangeSubnet(t, "test.example.com.", dns.TypeMX, "194.239.134.1")
 	require.Len(t, r.Answer, 1)
 	assert.Equal(t, "mx-eu.example.net.", r.Answer[0].(*dns.MX).MX.Mx)
 

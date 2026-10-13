@@ -9,15 +9,29 @@ import (
 	"codeberg.org/miekg/dns/dnsutil"
 )
 
-// FindOPT returns the OPT record from the Pseudo section of the message, or nil if not found.
-// This replaces the v1 IsEdns0() method.
+// FindOPT synthesizes an OPT record from the EDNS fields of m. In dns v2 the OPT
+// wrapper is never placed in m.Pseudo after Unpack; instead its metadata lands on
+// the Msg itself (UDPSize, Security, Version) and each option appears directly in
+// m.Pseudo as its concrete EDNS0 type. FindOPT reconstructs a *dns.OPT from those
+// fields so callers can inspect and modify options through the familiar interface.
+// Returns nil when m carries no EDNS option (UDPSize == 0).
 func FindOPT(m *dns.Msg) *dns.OPT {
+	if m.UDPSize == 0 {
+		return nil
+	}
+	opt := new(dns.OPT)
+	opt.Hdr.Name = "."
+	opt.SetUDPSize(m.UDPSize)
+	if m.Security {
+		opt.SetSecurity(true)
+	}
+	opt.SetVersion(m.Version)
 	for _, rr := range m.Pseudo {
-		if opt, ok := rr.(*dns.OPT); ok {
-			return opt
+		if e, ok := rr.(dns.EDNS0); ok {
+			opt.Options = append(opt.Options, e)
 		}
 	}
-	return nil
+	return opt
 }
 
 var sup = &supported{m: make(map[uint16]struct{})}
@@ -51,25 +65,17 @@ func SupportedOption(option uint16) bool {
 // returned Msg is valid to be returned to the client (and should). For some
 // reason this response should not contain a question RR in the question section.
 func Version(req *dns.Msg) (*dns.Msg, error) {
-	opt := FindOPT(req)
-	if opt == nil {
+	if req.UDPSize == 0 {
 		return nil, nil
 	}
-	if opt.Version() == 0 {
+	if req.Version == 0 {
 		return nil, nil
 	}
 	m := new(dns.Msg)
 	dnsutil.SetReply(m, req)
-	// zero out question section, wtf.
 	m.Question = nil
-
-	o := new(dns.OPT)
-	o.Hdr.Name = "."
-	o.SetVersion(0)
+	m.UDPSize = dns.MinMsgSize
 	m.Rcode = dns.RcodeBadVers
-	o.SetRcode(dns.RcodeBadVers)
-	m.Pseudo = []dns.RR{o}
-
 	return m, errors.New("EDNS0 BADVERS")
 }
 
@@ -90,58 +96,40 @@ The below wasn't from the edns package
 
 */
 
-// SetSizeAndDo adds an OPT record that the reflects the intent from request.
+// SetSizeAndDo copies EDNS settings from req into m and appends supported options
+// from req.Pseudo into m.Pseudo. It returns a synthetic OPT built from m so the
+// caller can inspect or modify the copied options (modifications to option fields
+// affect the objects now stored in m.Pseudo). Returns nil if req carries no EDNS.
 func SetSizeAndDo(req, m *dns.Msg) *dns.OPT {
-	o := FindOPT(req)
-	if o == nil {
+	if req.UDPSize == 0 {
 		return nil
 	}
-
-	if mo := FindOPT(m); mo != nil {
-		mo.Hdr.Name = "."
-		mo.SetVersion(0)
-		mo.SetUDPSize(o.UDPSize())
-		mo.SetRcode(0)        // clear extended RCODE
-		mo.SetZ(0)            // clear Z flags
-		mo.SetSecurity(false) // clear DO bit
-
-		// Assume if the message m has options set, they are OK and represent what an upstream can do.
-
-		if o.Security() {
-			mo.SetSecurity(true)
-		}
-		return mo
+	m.UDPSize = req.UDPSize
+	if req.Security {
+		m.Security = true
 	}
-
-	// Reuse the request's OPT record and tack it to m.
-	o.Hdr.Name = "."
-	o.SetVersion(0)
-	o.SetRcode(0)        // clear extended RCODE
-	o.SetZ(0)            // clear Z flags
-	o.SetSecurity(false) // clear DO bit
-
-	if len(o.Options) > 0 {
-		o.Options = SupportedOptions(o.Options)
-	}
-
-	m.Pseudo = append(m.Pseudo, o)
-	return o
+	m.Pseudo = append(m.Pseudo, SupportedOptions(req.Pseudo)...)
+	return FindOPT(m)
 }
 
-func SupportedOptions(o []dns.EDNS0) []dns.EDNS0 {
-	supported := make([]dns.EDNS0, 0, 3)
+func SupportedOptions(o []dns.RR) []dns.RR {
+	supported := make([]dns.RR, 0, 3)
 	// For as long as possible try avoid looking up in the map, because that need an Rlock.
-	for _, opt := range o {
-		switch code := dns.RRToCode(opt); code {
+	for _, rr := range o {
+		e, ok := rr.(dns.EDNS0)
+		if !ok {
+			continue
+		}
+		switch code := dns.RRToCode(e); code {
 		case dns.CodeNSID:
 			fallthrough
 		case dns.CodeCOOKIE:
 			fallthrough
 		case dns.CodeSUBNET:
-			supported = append(supported, opt)
+			supported = append(supported, rr)
 		default:
 			if SupportedOption(code) {
-				supported = append(supported, opt)
+				supported = append(supported, rr)
 			}
 		}
 	}
