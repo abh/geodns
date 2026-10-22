@@ -153,8 +153,12 @@ func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *geo.Loca
 	}
 
 	for si := 0; si < max; si++ {
-		n := rand.Intn(sum + 1)
+
+		n := 0
 		s := 0
+		if sum > 0 { // if sum == 0, rand.Intn(0) panics. n keeps 0 should be fine.
+			n = rand.Intn(sum) + 1 // [1, sum]: one slot per unit of weight.
+		}
 
 		for i := range servers {
 			s += int(servers[i].Weight)
