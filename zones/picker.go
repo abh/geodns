@@ -153,7 +153,7 @@ func (zone *Zone) Picker(label *Label, qtype uint16, max int, location *geo.Loca
 	}
 
 	for si := 0; si < max; si++ {
-		n := rand.Intn(sum + 1)
+		n := rand.Intn(sum) + 1
 		s := 0
 
 		for i := range servers {
